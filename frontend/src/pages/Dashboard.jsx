@@ -40,10 +40,18 @@ export default function Dashboard() {
     setScanAll(true)
     try {
       await scanAll()
-      await load()
+      // Poll every 5s for 2 minutes while scans complete in background
+      let polls = 0
+      const interval = setInterval(async () => {
+        await load()
+        polls++
+        if (polls >= 24) {
+          clearInterval(interval)
+          setScanAll(false)
+        }
+      }, 5000)
     } catch (e) {
       console.error('Scan all failed:', e)
-    } finally {
       setScanAll(false)
     }
   }
