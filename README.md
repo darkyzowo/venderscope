@@ -2,6 +2,10 @@
 
 > **Still running annual vendor audits? Your next breach won't wait 12 months.**
 
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
+[![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
+[![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
+
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time.
 
 ---
@@ -140,7 +144,18 @@ Scores are capped at 100. Vendors scoring ≥70 trigger email alerts.
 
 ---
 
-## 💡 Motivation
+## ⚠️ Known Limitations (Free Tier Deployment)
+
+VenderScope is deployed on Render's free tier (0.1 CPU / 512MB RAM). This affects the **Scan All** feature:
+
+- Each vendor scan sequentially calls 4 external APIs — HIBP, NVD, EPSS, and Companies House
+- Scanning 3+ vendors chains 12–16 sequential API calls together
+- On the free tier, this can take 3–5 minutes or time out entirely
+- **Workaround:** Use the individual ⚡ Scan Now button on each vendor card — this works reliably every time
+
+This is a known infrastructure constraint, not a code issue. The fix would be upgrading to a paid Render instance or migrating from SQLite to PostgreSQL with async task queuing (e.g. Celery + Redis). This has been logged as a future improvement in the roadmap.
+
+---
 
 Built from direct experience managing 50+ vendor audits annually. Traditional GRC tooling (Vanta, SecurityScorecard) is enterprise-priced and reactive. VenderScope is open-source, UK-aware, and continuously passive — it watches your vendors so you don't have to.
 
@@ -154,10 +169,11 @@ Built from direct experience managing 50+ vendor audits annually. Traditional GR
 - [x] Email alert engine
 - [x] PDF audit export (ISO 27001 ready)
 - [x] Shodan exposed infrastructure detection
-- [ ] EPSS exploit probability scoring
-- [ ] NewsAPI vendor reputation monitoring
-- [ ] Deployment (Render + Vercel)
-- [ ] Multi-user support
+- [x] EPSS exploit probability scoring
+- [x] NewsAPI vendor reputation monitoring
+- [x] Deployment (Render + Vercel)
+- [ ] Async task queue (Celery + Redis) for reliable Scan All on free tier
+- [ ] PostgreSQL migration for production deployments
 
 ---
 
@@ -167,5 +183,6 @@ Built from direct experience managing 50+ vendor audits annually. Traditional GR
 Compliance Analyst & MSc Cyber Security Student
 [LinkedIn](https://linkedin.com/in/zarak-hassan7) · [GitHub](https://github.com/darkyzowo)
 
-NOTE:
-\_VenderScope is an independent open-source project. Data is sourced from public APIs and should be reviewed by a qualified security professional.
+---
+
+VenderScope is an independent open-source project. Data is sourced from public APIs and should be reviewed by a qualified security professional.

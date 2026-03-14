@@ -74,6 +74,7 @@ export default function Dashboard() {
             </p>
           </div>
           <div className="flex gap-3">
+          <div className="relative group">
             <button
               onClick={handleScanAll}
               disabled={scanningAll || vendors.length === 0}
@@ -81,6 +82,10 @@ export default function Dashboard() {
             >
               {scanningAll ? 'Scanning all...' : '⚡ Scan All'}
             </button>
+            <div className="absolute right-0 top-10 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
+              ⚠️ <span className="text-yellow-400 font-semibold">Heads up:</span> Scan All works best with 1 and 2 vendors on the free tier. Each scan hits multiple external APIs (HIBP, NVD, EPSS, Companies House) sequentially. On Render's free tier (0.1 CPU / 512MB RAM), scanning 3+ vendors can take 3 to 5 minutes or time out entirely. <span className="text-indigo-400">Use individual Scan Now buttons for reliable results.</span>
+            </div>
+          </div>
             <button
               onClick={() => setShowModal(true)}
               className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition"
