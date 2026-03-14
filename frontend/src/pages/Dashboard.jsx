@@ -1,4 +1,3 @@
-// src/pages/Dashboard.jsx
 import { useEffect, useState } from 'react'
 import { getVendors, addVendor, deleteVendor, scanVendor, scanAll } from '../api/client'
 import VendorCard from '../components/VendorCard'
@@ -27,16 +26,26 @@ export default function Dashboard() {
 
   const handleScan = async (id) => {
     setScanning(s => ({ ...s, [id]: true }))
-    await scanVendor(id)
-    await load()
-    setScanning(s => ({ ...s, [id]: false }))
+    try {
+      await scanVendor(id)
+      await load()
+    } catch (e) {
+      console.error('Scan failed:', e)
+    } finally {
+      setScanning(s => ({ ...s, [id]: false }))
+    }
   }
 
   const handleScanAll = async () => {
     setScanAll(true)
-    await scanAll()
-    await load()
-    setScanAll(false)
+    try {
+      await scanAll()
+      await load()
+    } catch (e) {
+      console.error('Scan all failed:', e)
+    } finally {
+      setScanAll(false)
+    }
   }
 
   const high   = vendors.filter(v => v.risk_score >= 70).length
