@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getVendors, addVendor, deleteVendor, scanVendor, scanAll } from '../api/client'
+import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
 
@@ -39,19 +39,19 @@ export default function Dashboard() {
   const handleScanAll = async () => {
     setScanAll(true)
     try {
-      await scanAll()
-      // Poll every 5s for 2 minutes while scans complete in background
-      let polls = 0
-      const interval = setInterval(async () => {
-        await load()
-        polls++
-        if (polls >= 24) {
-          clearInterval(interval)
-          setScanAll(false)
+      // Scan each vendor one at a time, updating the card as each completes
+      const current = await getVendors()
+      for (const v of current.data) {
+        try {
+          await scanVendor(v.id)
+          await load() // refresh dashboard after each vendor completes
+        } catch (e) {
+          console.error(`Scan failed for ${v.name}:`, e)
         }
-      }, 5000)
+      }
     } catch (e) {
       console.error('Scan all failed:', e)
+    } finally {
       setScanAll(false)
     }
   }

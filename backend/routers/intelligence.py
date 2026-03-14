@@ -14,28 +14,14 @@ def trigger_scan(vendor_id: int, db: Session = Depends(get_db)):
     result = run_full_scan(vendor, db)
     return {"message": f"Scan complete for {vendor.name}", "new_score": result}
 
-import threading
-
 @router.post("/scan-all")
 def scan_all_vendors(db: Session = Depends(get_db)):
     vendors = db.query(Vendor).all()
-    vendor_ids = [v.id for v in vendors]
-
-    def run_scans():
-        from database import SessionLocal
-        scan_db = SessionLocal()
+    results = {}
+    for v in vendors:
         try:
-            for vid in vendor_ids:
-                try:
-                    vendor = scan_db.query(Vendor).filter(Vendor.id == vid).first()
-                    if vendor:
-                        run_full_scan(vendor, scan_db)
-                except Exception as e:
-                    print(f"[ScanAll] Error scanning vendor {vid}: {e}")
-        finally:
-            scan_db.close()
-
-    thread = threading.Thread(target=run_scans, daemon=True)
-    thread.start()
-
-    return {"message": f"Scanning {len(vendor_ids)} vendors in background", "vendor_ids": vendor_ids}
+            score = run_full_scan(v, db)
+            results[v.name] = score
+        except Exception as e:
+            results[v.name] = f"error: {str(e)}"
+    return {"scanned": len(vendors), "scores": results}
