@@ -39,12 +39,10 @@ export default function Dashboard() {
   const handleScanAll = async () => {
     setScanAll(true)
     try {
-      // Scan each vendor one at a time, updating the card as each completes
       const current = await getVendors()
       for (const v of current.data) {
         try {
           await scanVendor(v.id)
-          await load() // refresh dashboard after each vendor completes
         } catch (e) {
           console.error(`Scan failed for ${v.name}:`, e)
         }
@@ -53,6 +51,7 @@ export default function Dashboard() {
       console.error('Scan all failed:', e)
     } finally {
       setScanAll(false)
+      window.location.reload()
     }
   }
 
