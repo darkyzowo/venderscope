@@ -1,4 +1,3 @@
-# backend/routers/intelligence.py
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
@@ -20,6 +19,9 @@ def scan_all_vendors(db: Session = Depends(get_db)):
     vendors = db.query(Vendor).all()
     results = {}
     for v in vendors:
-        score = run_full_scan(v, db)
-        results[v.name] = score
+        try:
+            score = run_full_scan(v, db)
+            results[v.name] = score
+        except Exception as e:
+            results[v.name] = f"error: {str(e)}"
     return {"scanned": len(vendors), "scores": results}
