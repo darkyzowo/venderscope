@@ -1,0 +1,10 @@
+fastapi
+uvicorn
+requests
+python-dotenv
+apscheduler
+sqlalchemy
+aiohttp
+pydantic
+shodan
+reportlab

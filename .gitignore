@@ -1,0 +1,21 @@
+# Environment variables
+.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Database
+*.db
+
+# Node modules
+node_modules/
+
+# Vite build
+frontend/dist/
+
+# VS Code
+.vscode/
