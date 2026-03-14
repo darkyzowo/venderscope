@@ -64,7 +64,10 @@ def check_shodan_exposure(domain: str) -> list[dict]:
         return events
 
     except shodan.APIError as e:
-        print(f"[Shodan] API error for {domain}: {e}")
+        if "403" in str(e) or "Access denied" in str(e):
+            print(f"[Shodan] Free tier does not support search API — skipping {domain}")
+        else:
+            print(f"[Shodan] API error for {domain}: {e}")
         return []
     except Exception as e:
         print(f"[Shodan] Unexpected error for {domain}: {e}")

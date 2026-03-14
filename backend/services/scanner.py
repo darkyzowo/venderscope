@@ -6,6 +6,7 @@ from services.nvd import check_vendor_cves
 from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
+from services.epss import get_epss_scores
 
 SEVERITY_WEIGHTS = {
     "CRITICAL": 25,
@@ -22,8 +23,16 @@ def run_full_scan(vendor: Vendor, db: Session) -> float:
     for b in check_domain_breaches(vendor.domain):
         all_events.append({**b, "source": "HIBP"})
 
-    # 2. NVD
-    for c in check_vendor_cves(vendor.name):
+    # 2. NVD — CVE check
+    cves = check_vendor_cves(vendor.name)
+    cve_ids = [c["title"] for c in cves if c["title"].startswith("CVE-")]
+
+    # Enrich with EPSS exploit probability scores
+    epss_scores = get_epss_scores(cve_ids)
+    for c in cves:
+        epss = epss_scores.get(c["title"])
+        if epss is not None:
+            c["description"] = f"[EPSS: {epss}% exploit probability] " + c.get("description", "")
         all_events.append({**c, "source": "NVD"})
 
     # 3. Companies House
