@@ -21,7 +21,12 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "https://venderscope.vercel.app",
+        "https://venderscope-3466b3jpg-darkyzowos-projects.vercel.app",
+    ],
     allow_methods=["*"],
     allow_headers=["*"],
 )
