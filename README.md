@@ -6,6 +6,8 @@
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
 
+> **⚡ Performance note:** VenderScope is deployed on Render's free tier. The first scan after a period of inactivity includes a ~50 second cold start while the server wakes up. The actual scan logic runs in 8–15 seconds using concurrent API calls to HIBP, NVD, Companies House, and Shodan simultaneously. In a production environment with a persistent server, scans would be near-instant. The architectural fix — PostgreSQL + async task queue (Celery/Redis) — is documented in the roadmap below.
+
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time.
 
 ---
@@ -169,9 +171,9 @@ Built from direct experience managing 50+ vendor audits annually. Traditional GR
 - [x] Email alert engine
 - [x] PDF audit export (ISO 27001 ready)
 - [x] Shodan exposed infrastructure detection
-- [x] EPSS exploit probability scoring
-- [x] NewsAPI vendor reputation monitoring
-- [x] Deployment (Render + Vercel)
+- [ ] EPSS exploit probability scoring
+- [ ] NewsAPI vendor reputation monitoring
+- [ ] Deployment (Render + Vercel)
 - [ ] Async task queue (Celery + Redis) for reliable Scan All on free tier
 - [ ] PostgreSQL migration for production deployments
 
@@ -185,4 +187,4 @@ Compliance Analyst & MSc Cyber Security Student
 
 ---
 
-VenderScope is an independent open-source project. Data is sourced from public APIs and should be reviewed by a qualified security professional.
+_VenderScope is an independent open-source project. Data is sourced from public APIs and should be reviewed by a qualified security professional._

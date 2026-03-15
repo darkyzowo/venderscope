@@ -45,7 +45,7 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
                             topMargin=margin, bottomMargin=margin)
 
     # Styles
-    title_s  = ParagraphStyle("t",  fontSize=20, textColor=INDIGO, spaceAfter=2, fontName="Helvetica-Bold")
+    title_s  = ParagraphStyle("t",  fontSize=20, leading=26, textColor=INDIGO, spaceAfter=8, fontName="Helvetica-Bold")
     meta_s   = ParagraphStyle("m",  fontSize=8,  textColor=GREY,   spaceAfter=14)
     h2_s     = ParagraphStyle("h2", fontSize=12, textColor=DARK,   spaceBefore=14, spaceAfter=6, fontName="Helvetica-Bold")
     body_s   = ParagraphStyle("b",  fontSize=9,  textColor=DARK,   spaceAfter=4)
