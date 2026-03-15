@@ -76,10 +76,12 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     for e in results.get("ch", []):
         all_events.append({**e, "source": "CompaniesHouse"})
 
-    # ── Deduplicate and persist new events ──────────────────────────────────
-    existing_titles = {e.title for e in db.query(RiskEvent)
-                       .filter(RiskEvent.vendor_id == vendor.id).all()}
-    new_events = [e for e in all_events if e["title"] not in existing_titles]
+    # Deduplicate — match on CVE ID only (first word of title), ignoring EPSS prefix changes
+    existing_titles = set()
+    for e in db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all():
+        existing_titles.add(e.title.split(' ')[0])
+
+    new_events = [e for e in all_events if e["title"].split(' ')[0] not in existing_titles]
 
     for evt in new_events:
         db.add(RiskEvent(
