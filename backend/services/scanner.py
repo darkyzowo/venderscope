@@ -1,3 +1,4 @@
+import re
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
@@ -76,11 +77,10 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     for e in results.get("ch", []):
         all_events.append({**e, "source": "CompaniesHouse"})
 
-    # Deduplicate — match on CVE ID only (first word of title), ignoring EPSS prefix changes
+    # Deduplicate — match on CVE ID only (first word of title)
     existing_titles = set()
     for e in db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all():
         existing_titles.add(e.title.split(' ')[0])
-
     new_events = [e for e in all_events if e["title"].split(' ')[0] not in existing_titles]
 
     for evt in new_events:
@@ -92,8 +92,21 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
             description = evt.get("description", ""),
         ))
 
-    # ── Score and persist ───────────────────────────────────────────────────
-    score               = _compute_score(all_events)
+    # ── Smarter scoring — weighted average not additive sum ─────────────────
+    # Max possible score per event type, then blend into 0-100
+    sev_map    = {"CRITICAL": 100, "HIGH": 70, "MEDIUM": 40, "LOW": 15}
+    epss_boost = lambda desc: min(float(re.search(r'\[EPSS: ([\d.]+)%', desc or '').group(1)) / 100 * 20, 20) \
+                              if re.search(r'\[EPSS: ([\d.]+)%', desc or '') else 0
+
+    if not all_events:
+        score = 0.0
+    else:
+        raw_scores = [sev_map.get(e.get("severity", "LOW"), 15) + epss_boost(e.get("description",""))
+                      for e in all_events]
+        # Take the top 5 events' average, boosted by event count
+        top5_avg   = sum(sorted(raw_scores, reverse=True)[:5]) / min(len(raw_scores), 5)
+        count_mult = min(1.0 + (len(all_events) - 1) * 0.05, 1.5)  # up to 50% boost for many events
+        score      = min(round(top5_avg * count_mult, 1), 100.0)
     vendor.risk_score   = score
     vendor.last_scanned = datetime.utcnow()
     db.add(RiskScoreHistory(vendor_id=vendor.id, score=score))
