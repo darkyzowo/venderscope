@@ -1,13 +1,15 @@
+import smtplib
 import os
-import requests
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
 load_dotenv()
 
-SENDGRID_API_KEY = os.getenv("SENDGRID_API_KEY")
 GMAIL_ADDRESS    = os.getenv("GMAIL_ADDRESS")
+GMAIL_APP_PASS   = os.getenv("GMAIL_APP_PASSWORD")
 ALERT_THRESHOLD  = float(os.getenv("ALERT_THRESHOLD", 70))
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL     = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 def send_alert_email(vendor_name: str, domain: str, score: float, events: list, vendor_id: int = None):
@@ -15,14 +17,15 @@ def send_alert_email(vendor_name: str, domain: str, score: float, events: list, 
     Sends a risk alert email via SendGrid HTTP API.
     Works on Render free tier — no SMTP ports needed.
     """
-    if not SENDGRID_API_KEY or not GMAIL_ADDRESS:
-        print("[Alerts] Missing SENDGRID_API_KEY or GMAIL_ADDRESS — skipping.")
+    if not GMAIL_ADDRESS or not GMAIL_APP_PASS:
+        print("[Alerts] Missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD — skipping.")
         return
 
     if score < ALERT_THRESHOLD:
         return
 
     print(f"[Alerts] Sending alert for {vendor_name} (score: {score})...")
+    subject = f"🚨 VenderScope Alert — {vendor_name} Risk Score: {score}/100"
 
     sev_order  = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     top_events = sorted(events, key=lambda e: sev_order.get(e.severity, 4))[:10]
@@ -100,26 +103,23 @@ def send_alert_email(vendor_name: str, domain: str, score: float, events: list, 
     </html>
     """
 
-    payload = {
-        "personalizations": [{"to": [{"email": GMAIL_ADDRESS}]}],
-        "from":    {"email": GMAIL_ADDRESS, "name": "VenderScope"},
-        "subject": f"🚨 VenderScope Alert — {vendor_name} Risk Score: {score}/100",
-        "content": [{"type": "text/html", "value": html}]
-    }
-
     try:
-        resp = requests.post(
-            SENDGRID_URL,
-            json=payload,
-            headers={
-                "Authorization": f"Bearer {SENDGRID_API_KEY}",
-                "Content-Type":  "application/json"
-            },
-            timeout=10
-        )
-        if resp.status_code in (200, 202):
-            print(f"[Alerts] ✅ Email sent for {vendor_name} (score: {score})")
-        else:
-            print(f"[Alerts] ❌ SendGrid error {resp.status_code}: {resp.text}")
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = GMAIL_ADDRESS
+        msg["To"]      = GMAIL_ADDRESS
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
+            server.sendmail(GMAIL_ADDRESS, GMAIL_ADDRESS, msg.as_string())
+
+        print(f"[Alerts] ✅ Email sent for {vendor_name} (score: {score})")
+
+    except smtplib.SMTPAuthenticationError:
+        print("[Alerts] ❌ Auth failed — check GMAIL_APP_PASSWORD in .env")
     except Exception as e:
-        print(f"[Alerts] ❌ Unexpected error: {e}")
+        print(f"[Alerts] ❌ Error: {e}")

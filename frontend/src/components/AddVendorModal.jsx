@@ -2,18 +2,29 @@ import { useState } from 'react'
 
 export default function AddVendorModal({ onAdd, onClose }) {
   const [form, setForm] = useState({ name: '', domain: '', company_number: '' })
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   const submit = async () => {
     if (!form.name || !form.domain) return
     setLoading(true)
-    await onAdd({
-      name: form.name,
-      domain: form.domain,
-      company_number: form.company_number || null
-    })
-    setLoading(false)
-    onClose()
+    setError('')
+    try {
+      await onAdd({
+        name: form.name,
+        domain: form.domain,
+        company_number: form.company_number || null
+      })
+      setLoading(false)
+      onClose()
+    } catch (e) {
+      setLoading(false)
+      if (e.response?.status === 400) {
+        setError('This vendor domain already exists.')
+      } else {
+        setError('Something went wrong. Please try again.')
+      }
+    }
   }
 
   return (
@@ -53,7 +64,13 @@ export default function AddVendorModal({ onAdd, onClose }) {
           </div>
         </div>
 
-        <div className="flex gap-3 mt-8">
+        {error && (
+          <p className="mt-4 text-sm text-red-400 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-2">
+            ⚠️ {error}
+          </p>
+        )}
+
+        <div className="flex gap-3 mt-4">
           <button
             onClick={onClose}
             className="flex-1 py-2.5 rounded-lg border border-slate-600 text-slate-400 hover:text-white hover:border-slate-400 transition"
