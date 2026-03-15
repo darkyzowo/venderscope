@@ -1,13 +1,14 @@
+import io
+import re
+from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
-from reportlab.lib.enums import TA_CENTER, TA_LEFT
-from datetime import datetime
-import io
+from reportlab.lib.enums import TA_CENTER
 
-# Colour palette
+# Colours
 INDIGO  = colors.HexColor("#6366f1")
 RED     = colors.HexColor("#dc2626")
 ORANGE  = colors.HexColor("#ea580c")
@@ -18,92 +19,81 @@ LIGHT   = colors.HexColor("#f3f4f6")
 DARK    = colors.HexColor("#1e293b")
 WHITE   = colors.white
 
+SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+
 def sev_color(sev: str):
     return {"CRITICAL": RED, "HIGH": ORANGE, "MEDIUM": YELLOW, "LOW": GREEN}.get(sev, GREY)
 
-import re
-
-SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-
-def _parse_epss(desc: str) -> float:
+def parse_epss(desc: str) -> float:
     m = re.search(r'\[EPSS: ([\d.]+)%', desc or '')
     return float(m.group(1)) if m else 0.0
 
-def _sort_events(events):
+def sort_events(events):
     return sorted(events, key=lambda e: (
         SEVERITY_ORDER.get(e.severity, 4),
-        -_parse_epss(e.description)
+        -parse_epss(e.description)
     ))
 
 def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
-    events = _sort_events(events)  # All events, sorted by severity + EPSS
-    buf = io.BytesIO()
-    W, H = A4  # 210 x 297mm
-    margin = 20 * mm
+    buf     = io.BytesIO()
+    W, H    = A4
+    margin  = 20 * mm
+    usable  = W - 2 * margin
 
-    doc = SimpleDocTemplate(
-        buf, pagesize=A4,
-        leftMargin=margin, rightMargin=margin,
-        topMargin=margin, bottomMargin=margin
-    )
+    doc = SimpleDocTemplate(buf, pagesize=A4,
+                            leftMargin=margin, rightMargin=margin,
+                            topMargin=margin, bottomMargin=margin)
 
-    usable_w = W - 2 * margin  # ~170mm
-
-    # ── Styles ──────────────────────────────────────────────
-    title_s  = ParagraphStyle("t",  fontSize=20, textColor=INDIGO,  spaceAfter=2,  fontName="Helvetica-Bold")
-    meta_s   = ParagraphStyle("m",  fontSize=8,  textColor=GREY,    spaceAfter=14)
-    h2_s     = ParagraphStyle("h2", fontSize=12, textColor=DARK,    spaceBefore=14, spaceAfter=6, fontName="Helvetica-Bold")
-    body_s   = ParagraphStyle("b",  fontSize=9,  textColor=DARK,    spaceAfter=4)
+    # Styles
+    title_s  = ParagraphStyle("t",  fontSize=20, textColor=INDIGO, spaceAfter=2, fontName="Helvetica-Bold")
+    meta_s   = ParagraphStyle("m",  fontSize=8,  textColor=GREY,   spaceAfter=14)
+    h2_s     = ParagraphStyle("h2", fontSize=12, textColor=DARK,   spaceBefore=14, spaceAfter=6, fontName="Helvetica-Bold")
+    body_s   = ParagraphStyle("b",  fontSize=9,  textColor=DARK,   spaceAfter=4)
     score_s  = ParagraphStyle("sc", fontSize=42, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=8, spaceBefore=8)
     label_s  = ParagraphStyle("sl", fontSize=11, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=4)
     trend_s  = ParagraphStyle("tr", fontSize=8,  alignment=TA_CENTER, textColor=GREY, spaceAfter=10)
-    cell_s   = ParagraphStyle("c",  fontSize=8,  textColor=DARK,    leading=10)
-    footer_s = ParagraphStyle("f",  fontSize=7,  textColor=GREY,    spaceBefore=12)
+    cell_s   = ParagraphStyle("c",  fontSize=8,  textColor=DARK,   leading=10)
+    footer_s = ParagraphStyle("f",  fontSize=7,  textColor=GREY,   spaceBefore=12)
 
     score       = vendor.risk_score
     score_color = RED if score >= 70 else YELLOW if score >= 35 else GREEN
     risk_label  = "HIGH RISK" if score >= 70 else "MEDIUM RISK" if score >= 35 else "LOW RISK"
+    events      = sort_events(events)
 
     story = []
 
-    # ── Header ──────────────────────────────────────────────
+    # Header
     story.append(Paragraph("VenderScope — Vendor Risk Audit Report", title_s))
     story.append(Paragraph(
         f"Generated: {datetime.utcnow().strftime('%d %B %Y, %H:%M UTC')}  |  "
-        f"ISO 27001 Annex A / Cyber Essentials compliance review",
-        meta_s
-    ))
+        f"ISO 27001 Annex A / Cyber Essentials compliance review", meta_s))
     story.append(HRFlowable(width="100%", thickness=1, color=LIGHT, spaceAfter=8))
 
-    # ── Vendor Summary ───────────────────────────────────────
+    # Vendor summary table
     story.append(Paragraph("Vendor Summary", h2_s))
-
-    rows = [
-        ["Vendor Name",  vendor.name],
-        ["Domain",       vendor.domain],
-        ["Last Scanned", vendor.last_scanned.strftime('%d %B %Y, %H:%M UTC')
-                         if vendor.last_scanned else "Never"],
-    ]
+    rows = [["Vendor Name", vendor.name], ["Domain", vendor.domain],
+            ["Last Scanned", vendor.last_scanned.strftime('%d %B %Y, %H:%M UTC')
+             if vendor.last_scanned else "Never"]]
     if vendor.company_number:
         rows.append(["Companies House", vendor.company_number])
 
-    col_w = [45*mm, usable_w - 45*mm]
+    col_w = [45*mm, usable - 45*mm]
     t = Table(rows, colWidths=col_w)
     t.setStyle(TableStyle([
-        ("FONTNAME",   (0,0), (0,-1), "Helvetica-Bold"),
-        ("FONTSIZE",   (0,0), (-1,-1), 9),
-        ("TEXTCOLOR",  (0,0), (0,-1), DARK),
-        ("BACKGROUND", (0,0), (0,-1), LIGHT),
-        ("GRID",       (0,0), (-1,-1), 0.4, colors.HexColor("#e5e7eb")),
-        ("ROWBACKGROUNDS", (0,0), (-1,-1), [WHITE, LIGHT]),
-        ("PADDING",    (0,0), (-1,-1), 6),
-        ("VALIGN",     (0,0), (-1,-1), "MIDDLE"),
+        ("FONTNAME",        (0,0), (0,-1), "Helvetica-Bold"),
+        ("FONTSIZE",        (0,0), (-1,-1), 9),
+        ("BACKGROUND",      (0,0), (0,-1), LIGHT),
+        ("GRID",            (0,0), (-1,-1), 0.4, colors.HexColor("#e5e7eb")),
+        ("ROWBACKGROUNDS",  (0,0), (-1,-1), [WHITE, LIGHT]),
+        ("PADDING",         (0,0), (-1,-1), 6),
+        ("VALIGN",          (0,0), (-1,-1), "MIDDLE"),
     ]))
     story.append(t)
 
-    # ── Risk Score ───────────────────────────────────────────
+    # Risk score block
     story.append(Paragraph("Risk Score", h2_s))
 
+    hex_col = score_color.hexval()[2:]
     trend_text = ""
     if history:
         first = history[0].score
@@ -111,13 +101,11 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
         trend = "↑ Increasing" if last > first else "↓ Decreasing" if last < first else "→ Stable"
         trend_text = f"Score Trend: {trend}  |  {first} → {last}  |  {len(history)} scan(s) recorded"
 
-    score_block = Table([[
-        Paragraph(f'<font color="#{score_color.hexval()[2:]}">{int(score)}</font>', score_s)
-    ],[
-        Paragraph(f'<font color="#{score_color.hexval()[2:]}">{risk_label}</font>', label_s)
-    ],[
-        Paragraph(trend_text, trend_s)
-    ]], colWidths=[usable_w])
+    score_block = Table([
+        [Paragraph(f'<font color="#{hex_col}">{int(score)}</font>', score_s)],
+        [Paragraph(f'<font color="#{hex_col}">{risk_label}</font>',  label_s)],
+        [Paragraph(trend_text, trend_s)],
+    ], colWidths=[usable])
     score_block.setStyle(TableStyle([
         ("ALIGN",   (0,0), (-1,-1), "CENTER"),
         ("VALIGN",  (0,0), (-1,-1), "MIDDLE"),
@@ -125,52 +113,43 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
     ]))
     story.append(score_block)
 
-    # ── Risk Events ──────────────────────────────────────────
-    story.append(Paragraph(f"Risk Events  ({len(events)} total)", h2_s))
+    # Risk events — ALL events, sorted by severity + EPSS
+    story.append(Paragraph(f"Risk Events  ({len(events)} total — all events, sorted by severity &amp; exploitability)", h2_s))
 
     if not events:
         story.append(Paragraph("No risk events detected.", body_s))
     else:
-        # Column widths: Source | Event title | Severity | Date
-        cw = [22*mm, usable_w - 22*mm - 22*mm - 24*mm, 22*mm, 24*mm]
-        hdr = [
-            Paragraph("<b>Source</b>",   cell_s),
-            Paragraph("<b>Event</b>",    cell_s),
-            Paragraph("<b>Severity</b>", cell_s),
-            Paragraph("<b>Detected</b>", cell_s),
-        ]
+        cw  = [22*mm, usable - 22*mm - 22*mm - 24*mm, 22*mm, 24*mm]
+        hdr = [Paragraph(f"<b>{h}</b>", cell_s) for h in ["Source", "Event", "Severity", "Detected"]]
         data = [hdr]
         for evt in events:
             data.append([
                 Paragraph(evt.source, cell_s),
                 Paragraph(evt.title,  cell_s),
                 Paragraph(f"<b>{evt.severity}</b>", ParagraphStyle(
-                    "sev", fontSize=8, textColor=sev_color(evt.severity), fontName="Helvetica-Bold"
-                )),
+                    "sev", fontSize=8, textColor=sev_color(evt.severity), fontName="Helvetica-Bold")),
                 Paragraph(evt.detected_at.strftime('%d/%m/%Y') if evt.detected_at else "N/A", cell_s),
             ])
 
         tbl = Table(data, colWidths=cw, repeatRows=1)
-        style_cmds = [
-            ("BACKGROUND", (0,0), (-1,0), DARK),
-            ("TEXTCOLOR",  (0,0), (-1,0), WHITE),
-            ("FONTSIZE",   (0,0), (-1,-1), 8),
-            ("GRID",       (0,0), (-1,-1), 0.4, colors.HexColor("#e5e7eb")),
-            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, LIGHT]),
-            ("PADDING",    (0,0), (-1,-1), 5),
-            ("VALIGN",     (0,0), (-1,-1), "TOP"),
-        ]
-        tbl.setStyle(TableStyle(style_cmds))
+        tbl.setStyle(TableStyle([
+            ("BACKGROUND",      (0,0), (-1,0), DARK),
+            ("TEXTCOLOR",       (0,0), (-1,0), WHITE),
+            ("FONTSIZE",        (0,0), (-1,-1), 8),
+            ("GRID",            (0,0), (-1,-1), 0.4, colors.HexColor("#e5e7eb")),
+            ("ROWBACKGROUNDS",  (0,1), (-1,-1), [WHITE, LIGHT]),
+            ("PADDING",         (0,0), (-1,-1), 5),
+            ("VALIGN",          (0,0), (-1,-1), "TOP"),
+        ]))
         story.append(tbl)
 
-    # ── Footer ───────────────────────────────────────────────
+    # Footer
     story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT, spaceBefore=16, spaceAfter=6))
     story.append(Paragraph(
         "VenderScope  ·  Continuous Passive Vendor Risk Intelligence  ·  "
         "Data sources: HIBP, NVD (NIST), Companies House, Shodan  ·  "
         "This report should be reviewed by a qualified security professional.",
-        footer_s
-    ))
+        footer_s))
 
     doc.build(story)
     return buf.getvalue()

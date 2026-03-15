@@ -66,8 +66,11 @@ def run_full_scan(vendor: Vendor, db: Session) -> float:
             description = evt.get("description", ""),
         ))
 
+    # Score based on top 20 most severe events only — prevents inflation from large CVE lists
+    SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+    top_events = sorted(all_events, key=lambda e: SEVERITY_ORDER.get(e.get("severity", "LOW"), 3))[:20]
     score = min(
-        sum(SEVERITY_WEIGHTS.get(e.get("severity", "LOW"), 2) for e in all_events),
+        sum(SEVERITY_WEIGHTS.get(e.get("severity", "LOW"), 2) for e in top_events),
         100.0
     )
 
