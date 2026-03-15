@@ -61,7 +61,14 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#0f1117] p-8">
-      {/* Header */}
+              {/* Demo banner */}
+        <div className="mb-6 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-3 text-yellow-400 text-sm">
+          ⚠️ <strong>Demo instance</strong> — this is a shared database for portfolio demonstration.
+          Vendors added here are visible to all visitors.
+          To use VenderScope privately, <a href="https://github.com/darkyzowo/venderscope" target="_blank" rel="noreferrer" className="underline hover:text-yellow-300">self-host your own instance</a>.
+        </div>
+
+        {/* Header */}
       <div className="max-w-7xl mx-auto">
         <div className="flex items-start justify-between mb-10">
           <div>
@@ -83,7 +90,7 @@ export default function Dashboard() {
               {scanningAll ? 'Scanning all...' : '⚡ Scan All'}
             </button>
             <div className="absolute right-0 top-10 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
-              ⚠️ <span className="text-yellow-400 font-semibold">Heads up:</span> Scan All works best with 1 and 2 vendors on the free tier. Each scan hits multiple external APIs (HIBP, NVD, EPSS, Companies House) sequentially. On Render's free tier (0.1 CPU / 512MB RAM), scanning 3+ vendors can take 3 to 5 minutes or time out entirely. <span className="text-indigo-400">Use individual Scan Now buttons for reliable results.</span>
+              ⚠️ <span className="text-yellow-400 font-semibold">Heads up:</span> Scan All works best with 1–2 vendors on the free tier. Each scan hits multiple external APIs (HIBP, NVD, EPSS, Companies House) sequentially. On Render's free tier (0.1 CPU / 512MB RAM), scanning 3+ vendors can take 3–5 minutes or time out entirely. <span className="text-indigo-400">Use individual Scan Now buttons for reliable results.</span>
             </div>
           </div>
             <button

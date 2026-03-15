@@ -163,7 +163,9 @@ VenderScope is deployed on Render's free tier (0.1 CPU / 512MB RAM). The first s
 **Email alerts (local only):**
 Email alerts work correctly when running VenderScope locally. Cloud hosting providers including Render's free tier block outbound SMTP connections at the network level. A future version will integrate an HTTP-based email API (e.g. SendGrid) to enable alerts in production. This is logged in the roadmap below.
 
-**No user authentication:**
+**Shared demo database:**
+The live demo at `venderscope.vercel.app` uses a single shared database. All visitors see the same vendor list. This is intentional for demo purposes — in real use, VenderScope should be self-hosted or deployed with user authentication. Multi-user auth is on the roadmap.
+
 The current deployment is a single-user demo. Anyone with the API URL can add or delete vendors. Authentication is on the roadmap.
 
 ---
