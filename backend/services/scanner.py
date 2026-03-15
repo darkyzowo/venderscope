@@ -1,5 +1,5 @@
-from datetime import datetime
-from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
 from models import Vendor, RiskEvent, RiskScoreHistory
 from services.hibp import check_domain_breaches
@@ -9,50 +9,74 @@ from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
 from services.epss import get_epss_scores
 
-SEVERITY_WEIGHTS = {
-    "CRITICAL": 25,
-    "HIGH":     15,
-    "MEDIUM":    7,
-    "LOW":       2,
-}
+SEVERITY_WEIGHTS = {"CRITICAL": 25, "HIGH": 15, "MEDIUM": 7, "LOW": 2}
+CACHE_TTL_HOURS  = 24  # Skip external API calls if scanned within this window
 
-def run_full_scan(vendor: Vendor, db: Session) -> float:
+def _is_cached(vendor: Vendor) -> bool:
+    """Returns True if vendor was scanned recently enough to use cached data."""
+    if not vendor.last_scanned:
+        return False
+    age = datetime.utcnow() - vendor.last_scanned
+    return age < timedelta(hours=CACHE_TTL_HOURS)
+
+def _compute_score(events: list) -> float:
+    return min(sum(SEVERITY_WEIGHTS.get(e.get("severity", "LOW"), 2) for e in events), 100.0)
+
+def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
+    """
+    Orchestrates all intelligence sources for a vendor.
+    Uses cached DB data if scanned within CACHE_TTL_HOURS unless force=True.
+    """
+    # ── Cache hit: return existing score instantly ──────────────────────────
+    if not force and _is_cached(vendor):
+        print(f"[Scanner] {vendor.name} — cache hit, returning stored score {vendor.risk_score}")
+        return vendor.risk_score
+
     print(f"[Scanner] Scanning {vendor.name} ({vendor.domain})...")
+    start = datetime.utcnow()
+
+    # ── Fetch all sources concurrently ──────────────────────────────────────
+    tasks = {
+        "hibp":   (check_domain_breaches, vendor.domain),
+        "nvd":    (check_vendor_cves,     vendor.name),
+        "shodan": (check_shodan_exposure,  vendor.domain),
+    }
+    if vendor.company_number:
+        tasks["ch"] = (check_company_health, vendor.company_number)
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=4) as ex:
+        futures = {ex.submit(fn, arg): key for key, (fn, arg) in tasks.items()}
+        for future in as_completed(futures):
+            key = futures[future]
+            try:
+                results[key] = future.result()
+            except Exception as e:
+                print(f"[Scanner] {key} failed for {vendor.name}: {e}")
+                results[key] = []
+
+    # ── Assemble raw events ─────────────────────────────────────────────────
     all_events = []
 
-    # Run HIBP, NVD, Shodan concurrently — 3-4x faster than sequential
-    with ThreadPoolExecutor(max_workers=4) as executor:
-        future_hibp   = executor.submit(check_domain_breaches, vendor.domain)
-        future_nvd    = executor.submit(check_vendor_cves, vendor.name)
-        future_shodan = executor.submit(check_shodan_exposure, vendor.domain)
-        future_ch     = executor.submit(check_company_health, vendor.company_number) \
-                        if vendor.company_number else None
-
-        hibp_results   = future_hibp.result()
-        nvd_results    = future_nvd.result()
-        shodan_results = future_shodan.result()
-        ch_results     = future_ch.result() if future_ch else []
-
-    # Enrich CVEs with EPSS exploit probability
-    cve_ids = [c["title"] for c in nvd_results if c["title"].startswith("CVE-")]
-    epss_scores = get_epss_scores(cve_ids)
-
-    for b in hibp_results:
+    for b in results.get("hibp", []):
         all_events.append({**b, "source": "HIBP"})
 
+    nvd_results = results.get("nvd", [])
+    cve_ids     = [c["title"] for c in nvd_results if c["title"].startswith("CVE-")]
+    epss_scores = get_epss_scores(cve_ids)
     for c in nvd_results:
         epss = epss_scores.get(c["title"])
         if epss is not None:
             c["description"] = f"[EPSS: {epss}% exploit probability] " + c.get("description", "")
         all_events.append({**c, "source": "NVD"})
 
-    for s in shodan_results:
+    for s in results.get("shodan", []):
         all_events.append({**s, "source": "Shodan"})
 
-    for e in ch_results:
+    for e in results.get("ch", []):
         all_events.append({**e, "source": "CompaniesHouse"})
 
-    # Deduplicate against existing stored events
+    # ── Deduplicate and persist new events ──────────────────────────────────
     existing_titles = {e.title for e in db.query(RiskEvent)
                        .filter(RiskEvent.vendor_id == vendor.id).all()}
     new_events = [e for e in all_events if e["title"] not in existing_titles]
@@ -66,21 +90,17 @@ def run_full_scan(vendor: Vendor, db: Session) -> float:
             description = evt.get("description", ""),
         ))
 
-    # Score based on top 20 most severe events only — prevents inflation from large CVE lists
-    SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-    top_events = sorted(all_events, key=lambda e: SEVERITY_ORDER.get(e.get("severity", "LOW"), 3))[:20]
-    score = min(
-        sum(SEVERITY_WEIGHTS.get(e.get("severity", "LOW"), 2) for e in top_events),
-        100.0
-    )
-
+    # ── Score and persist ───────────────────────────────────────────────────
+    score               = _compute_score(all_events)
     vendor.risk_score   = score
     vendor.last_scanned = datetime.utcnow()
     db.add(RiskScoreHistory(vendor_id=vendor.id, score=score))
     db.commit()
 
+    # ── Alert if score crossed threshold ────────────────────────────────────
     all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
     send_alert_email(vendor.name, vendor.domain, score, all_stored)
 
-    print(f"[Scanner] {vendor.name} → Score: {score} | New events: {len(new_events)}")
+    elapsed = (datetime.utcnow() - start).seconds
+    print(f"[Scanner] {vendor.name} → {score} | +{len(new_events)} events | {elapsed}s")
     return score

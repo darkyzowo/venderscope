@@ -7,20 +7,30 @@ from services.scanner import run_full_scan
 router = APIRouter()
 
 @router.post("/scan/{vendor_id}")
-def trigger_scan(vendor_id: int, db: Session = Depends(get_db)):
+def trigger_scan(vendor_id: int, force: bool = True, db: Session = Depends(get_db)):
+    """
+    Scan a single vendor.
+    force=True (default) always fetches fresh data from external APIs.
+    force=False uses cached data if scanned within 24hrs.
+    """
     vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
-    result = run_full_scan(vendor, db)
+    result = run_full_scan(vendor, db, force=force)
     return {"message": f"Scan complete for {vendor.name}", "new_score": result}
 
 @router.post("/scan-all")
-def scan_all_vendors(db: Session = Depends(get_db)):
+def scan_all_vendors(force: bool = False, db: Session = Depends(get_db)):
+    """
+    Scan all vendors.
+    force=False (default) uses cache — makes Scan All fast for recently scanned vendors.
+    force=True fetches fresh data for everything.
+    """
     vendors = db.query(Vendor).all()
     results = {}
     for v in vendors:
         try:
-            score = run_full_scan(v, db)
+            score = run_full_scan(v, db, force=force)
             results[v.name] = score
         except Exception as e:
             results[v.name] = f"error: {str(e)}"

@@ -49,9 +49,9 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
     meta_s   = ParagraphStyle("m",  fontSize=8,  textColor=GREY,   spaceAfter=14)
     h2_s     = ParagraphStyle("h2", fontSize=12, textColor=DARK,   spaceBefore=14, spaceAfter=6, fontName="Helvetica-Bold")
     body_s   = ParagraphStyle("b",  fontSize=9,  textColor=DARK,   spaceAfter=4)
-    score_s  = ParagraphStyle("sc", fontSize=42, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=8, spaceBefore=8)
-    label_s  = ParagraphStyle("sl", fontSize=11, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=4)
-    trend_s  = ParagraphStyle("tr", fontSize=8,  alignment=TA_CENTER, textColor=GREY, spaceAfter=10)
+    score_s  = ParagraphStyle("sc", fontSize=42, leading=54, alignment=TA_CENTER, fontName="Helvetica-Bold")
+    label_s  = ParagraphStyle("sl", fontSize=13, leading=18, alignment=TA_CENTER, fontName="Helvetica-Bold")
+    trend_s  = ParagraphStyle("tr", fontSize=8,  leading=12, alignment=TA_CENTER, textColor=GREY)
     cell_s   = ParagraphStyle("c",  fontSize=8,  textColor=DARK,   leading=10)
     footer_s = ParagraphStyle("f",  fontSize=7,  textColor=GREY,   spaceBefore=12)
 
@@ -101,17 +101,13 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
         trend = "↑ Increasing" if last > first else "↓ Decreasing" if last < first else "→ Stable"
         trend_text = f"Score Trend: {trend}  |  {first} → {last}  |  {len(history)} scan(s) recorded"
 
-    score_block = Table([
-        [Paragraph(f'<font color="#{hex_col}">{int(score)}</font>', score_s)],
-        [Paragraph(f'<font color="#{hex_col}">{risk_label}</font>',  label_s)],
-        [Paragraph(trend_text, trend_s)],
-    ], colWidths=[usable])
-    score_block.setStyle(TableStyle([
-        ("ALIGN",   (0,0), (-1,-1), "CENTER"),
-        ("VALIGN",  (0,0), (-1,-1), "MIDDLE"),
-        ("PADDING", (0,0), (-1,-1), 4),
-    ]))
-    story.append(score_block)
+    story.append(Spacer(1, 14))
+    story.append(Paragraph(f'<font color="#{hex_col}">{int(score)}</font>', score_s))
+    story.append(Spacer(1, 10))
+    story.append(Paragraph(f'<font color="#{hex_col}">{risk_label}</font>', label_s))
+    story.append(Spacer(1, 8))
+    story.append(Paragraph(trend_text, trend_s))
+    story.append(Spacer(1, 14))
 
     # Risk events — ALL events, sorted by severity + EPSS
     story.append(Paragraph(f"Risk Events  ({len(events)} total — all events, sorted by severity &amp; exploitability)", h2_s))
