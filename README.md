@@ -19,9 +19,9 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 - **Live Risk Scoring** — Weighted severity scoring engine (0–100) with CRITICAL/HIGH/MEDIUM/LOW classification
 - **Risk Score Drift Timeline** — Visual chart showing how a vendor's risk posture changes over time
 - **UK-Native** — Companies House integration flags financial distress, overdue filings, and director changes
-- **Alert Engine** — Email notifications when a vendor's score crosses your defined risk threshold
 - **Audit Export** — One-click PDF reports per vendor, structured for ISO 27001 Annex A and Cyber Essentials reviews
 - **Exposed Infrastructure Detection** — Shodan integration flags dangerous open ports (RDP, SMB, MongoDB, etc.)
+- **24hr Intelligent Caching** — Repeat scans within 24 hours return instantly; nightly scheduler forces fresh data overnight
 
 ---
 
@@ -34,7 +34,7 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 | Frontend      | React, Vite, TailwindCSS, Recharts                      |
 | Intelligence  | HIBP API, NVD/NIST API, Companies House API, Shodan API |
 | PDF Export    | ReportLab                                               |
-| Auth / Alerts | Gmail SMTP via App Password                             |
+| Rate Limiting | SlowAPI                                                 |
 
 ---
 
@@ -54,33 +54,33 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 ```
 VenderScope/
 ├── backend/
-│   ├── main.py              # FastAPI app entry point
-│   ├── models.py            # SQLAlchemy DB models
-│   ├── database.py          # DB connection and session
-│   ├── scheduler.py         # 24hr background scan scheduler
+│   ├── main.py                  # FastAPI app, CORS, rate limiting
+│   ├── models.py                # SQLAlchemy DB models
+│   ├── database.py              # DB connection and session
+│   ├── scheduler.py             # 24hr background scan + keep-alive
 │   ├── routers/
-│   │   ├── vendors.py       # Vendor CRUD endpoints
-│   │   ├── intelligence.py  # Scan trigger endpoints
-│   │   └── export.py        # PDF export endpoint
+│   │   ├── vendors.py           # Vendor CRUD endpoints
+│   │   ├── intelligence.py      # Scan trigger endpoints
+│   │   └── export.py            # PDF export endpoint
 │   └── services/
-│       ├── scanner.py       # Scan orchestrator
-│       ├── hibp.py          # HIBP breach intelligence
-│       ├── nvd.py           # NVD CVE intelligence
-│       ├── companies_house.py # UK governance checks
-│       ├── shodan_service.py  # Exposed infrastructure checks
-│       ├── alerts.py        # Email alert engine
-│       └── pdf_export.py    # ReportLab PDF generator
+│       ├── scanner.py           # Concurrent scan orchestrator + caching
+│       ├── hibp.py              # HIBP breach intelligence
+│       ├── nvd.py               # NVD CVE intelligence
+│       ├── companies_house.py   # UK governance checks
+│       ├── shodan_service.py    # Exposed infrastructure checks
+│       ├── alerts.py            # Email alert engine (local only)
+│       └── pdf_export.py        # ReportLab PDF generator
 └── frontend/
     └── src/
         ├── pages/
-        │   ├── Dashboard.jsx    # Main vendor overview
-        │   └── VendorDetail.jsx # Per-vendor risk detail
+        │   ├── Dashboard.jsx        # Main vendor overview
+        │   └── VendorDetail.jsx     # Per-vendor risk detail
         ├── components/
-        │   ├── VendorCard.jsx      # Risk score card
-        │   ├── ScoreChart.jsx      # Drift timeline chart
-        │   ├── EventFeed.jsx       # Risk events list
-        │   └── AddVendorModal.jsx  # Add vendor form
-        └── api/client.js          # Axios API client
+        │   ├── VendorCard.jsx       # Risk score card
+        │   ├── ScoreChart.jsx       # Drift timeline chart
+        │   ├── EventFeed.jsx        # Risk events list
+        │   └── AddVendorModal.jsx   # Add vendor form
+        └── api/client.js            # Axios API client
 ```
 
 ---
@@ -91,7 +91,7 @@ VenderScope/
 
 - Python 3.11+
 - Node.js 18+
-- API keys for: NVD, Companies House, Shodan, NewsAPI
+- API keys for: NVD, Companies House, Shodan
 
 ### Backend
 
@@ -106,7 +106,6 @@ Create a `.env` file in `/backend`:
 NVD_API_KEY=your_key
 COMPANIES_HOUSE_API_KEY=your_key
 SHODAN_API_KEY=your_key
-NEWS_API_KEY=your_key
 GMAIL_ADDRESS=your@gmail.com
 GMAIL_APP_PASSWORD=your_app_password
 ALERT_THRESHOLD=70
@@ -133,33 +132,45 @@ Frontend runs at `http://localhost:5173`
 
 ## 📊 Risk Scoring
 
-Risk scores are calculated by aggregating weighted severity events across all intelligence sources:
+Risk scores use a weighted average of the top detected events, with a count multiplier for vendors with many signals. This prevents low-severity CVE lists from inflating scores artificially.
 
-| Severity | Weight    |
-| -------- | --------- |
-| CRITICAL | 25 points |
-| HIGH     | 15 points |
-| MEDIUM   | 7 points  |
-| LOW      | 2 points  |
+| Severity | Score Value |
+| -------- | ----------- |
+| CRITICAL | 100         |
+| HIGH     | 70          |
+| MEDIUM   | 40          |
+| LOW      | 15          |
 
-Scores are capped at 100. Vendors scoring ≥70 trigger email alerts.
-
----
-
-## ⚠️ Known Limitations (Free Tier Deployment)
-
-VenderScope is deployed on Render's free tier (0.1 CPU / 512MB RAM). This affects the **Scan All** feature:
-
-- Each vendor scan sequentially calls 4 external APIs — HIBP, NVD, EPSS, and Companies House
-- Scanning 3+ vendors chains 12–16 sequential API calls together
-- On the free tier, this can take 3–5 minutes or time out entirely
-- **Workaround:** Use the individual ⚡ Scan Now button on each vendor card — this works reliably every time
-
-This is a known infrastructure constraint, not a code issue. The fix would be upgrading to a paid Render instance or migrating from SQLite to PostgreSQL with async task queuing (e.g. Celery + Redis). This has been logged as a future improvement in the roadmap.
+The top 5 events by severity are averaged, then multiplied by a count factor (up to 1.4x for vendors with many signals), capped at 100. Vendors scoring ≥70 trigger email alerts when running locally.
 
 ---
 
-Built from direct experience managing 50+ vendor audits annually. Traditional GRC tooling (Vanta, SecurityScorecard) is enterprise-priced and reactive. VenderScope is open-source, UK-aware, and continuously passive — it watches your vendors so you don't have to.
+## 🔒 Security Notes
+
+- **CORS** is locked to the production Vercel domain — no wildcard origins in production
+- **Rate limiting** is applied via SlowAPI to prevent API abuse
+- **All API keys** are stored as environment variables — never committed to the repo
+- **No authentication layer** — this is a single-user portfolio tool. Multi-user auth (JWT/OAuth) is on the roadmap
+- **SQLite** is used for simplicity — not suitable for multi-user production; PostgreSQL migration is on the roadmap
+
+---
+
+## ⚠️ Known Limitations
+
+**Scan speed on free tier:**
+VenderScope is deployed on Render's free tier (0.1 CPU / 512MB RAM). The first scan after inactivity includes a cold start delay of ~50 seconds. Actual scan time is 8–15 seconds. Use individual ⚡ Scan Now buttons rather than Scan All for best results on the free tier.
+
+**Email alerts (local only):**
+Email alerts work correctly when running VenderScope locally. Cloud hosting providers including Render's free tier block outbound SMTP connections at the network level. A future version will integrate an HTTP-based email API (e.g. SendGrid) to enable alerts in production. This is logged in the roadmap below.
+
+**No user authentication:**
+The current deployment is a single-user demo. Anyone with the API URL can add or delete vendors. Authentication is on the roadmap.
+
+---
+
+## 💡 Motivation
+
+Built from direct experience managing 50+ vendor audits annually at Thrive Learning. Traditional GRC tooling (Vanta, SecurityScorecard, BitSight) costs thousands per year and is reactive — it tells you where you stand today, not where you're heading. VenderScope is open-source, UK-aware via Companies House, and continuously passive — it watches your vendors so you don't have to.
 
 ---
 
@@ -168,14 +179,17 @@ Built from direct experience managing 50+ vendor audits annually. Traditional GR
 - [x] Multi-source passive intelligence engine
 - [x] Risk score drift timeline
 - [x] Companies House UK integration
-- [x] Email alert engine
 - [x] PDF audit export (ISO 27001 ready)
 - [x] Shodan exposed infrastructure detection
-- [ ] EPSS exploit probability scoring
-- [ ] NewsAPI vendor reputation monitoring
-- [ ] Deployment (Render + Vercel)
-- [ ] Async task queue (Celery + Redis) for reliable Scan All on free tier
+- [x] 24hr intelligent caching
+- [x] Concurrent API fetching for scan speed
+- [x] Deployment (Render + Vercel)
+- [ ] Email alerts in production (HTTP-based, e.g. SendGrid)
+- [ ] User authentication (JWT / OAuth)
+- [ ] Async task queue (Celery + Redis) for reliable Scan All
 - [ ] PostgreSQL migration for production deployments
+- [ ] Multi-user support with vendor estate isolation
+- [ ] NewsAPI vendor reputation monitoring
 
 ---
 

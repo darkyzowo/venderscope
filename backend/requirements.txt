@@ -9,3 +9,4 @@ pydantic
 shodan
 reportlab
 httpx
+slowapi
