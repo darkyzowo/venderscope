@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from typing import Optional
+from datetime import datetime
 from datetime import datetime
 from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory
@@ -10,9 +11,27 @@ router = APIRouter()
 
 # --- Schemas ---
 class VendorCreate(BaseModel):
-    name: str
-    domain: str
+    name:           str
+    domain:         str
     company_number: Optional[str] = None
+
+    @field_validator('name')
+    @classmethod
+    def name_length(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Name cannot be empty')
+        if len(v) > 100:
+            raise ValueError('Name must be under 100 characters')
+        return v.strip()
+
+    @field_validator('domain')
+    @classmethod
+    def domain_length(cls, v):
+        if len(v.strip()) == 0:
+            raise ValueError('Domain cannot be empty')
+        if len(v) > 253:
+            raise ValueError('Domain must be under 253 characters')
+        return v.strip().lower().replace('https://', '').replace('http://', '').rstrip('/')
 
 class VendorOut(BaseModel):
     id: int
