@@ -4,6 +4,20 @@ import { getVendors, getVendorEvents, getScoreHistory, scanVendor } from '../api
 import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
 
+const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
+const EVENTS_SHOWN = 20
+
+const parseEPSS = (desc) => {
+  const m = desc?.match(/\[EPSS: ([\d.]+)%/)
+  return m ? parseFloat(m[1]) : 0
+}
+
+const sortEvents = (evts) => [...evts].sort((a, b) => {
+  const sevDiff = (SEVERITY_ORDER[a.severity] ?? 4) - (SEVERITY_ORDER[b.severity] ?? 4)
+  if (sevDiff !== 0) return sevDiff
+  return parseEPSS(b.description) - parseEPSS(a.description)
+})
+
 export default function VendorDetail() {
   const { id }  = useParams()
   const nav     = useNavigate()
@@ -12,36 +26,41 @@ export default function VendorDetail() {
   const [history, setHistory] = useState([])
   const [scanning, setScan]   = useState(false)
 
-  useEffect(() => {
-    const load = async () => {
-      const [vRes, eRes, hRes] = await Promise.all([
-        getVendors(),
-        getVendorEvents(id),
-        getScoreHistory(id)
-      ])
-      setVendor(vRes.data.find(v => v.id === parseInt(id)))
-      setEvents(eRes.data)
-      setHistory(hRes.data)
-    }
-    load()
-  }, [id])
-
-  const load = async () => {
+  const fetchData = async () => {
     const [vRes, eRes, hRes] = await Promise.all([
       getVendors(),
       getVendorEvents(id),
       getScoreHistory(id)
     ])
     setVendor(vRes.data.find(v => v.id === parseInt(id)))
-    setEvents(eRes.data)
+    setEvents(sortEvents(eRes.data))
     setHistory(hRes.data)
   }
 
+  useEffect(() => {
+    const init = async () => {
+      const [vRes, eRes, hRes] = await Promise.all([
+        getVendors(),
+        getVendorEvents(id),
+        getScoreHistory(id)
+      ])
+      setVendor(vRes.data.find(v => v.id === parseInt(id)))
+      setEvents(sortEvents(eRes.data))
+      setHistory(hRes.data)
+    }
+    init()
+  }, [id])
+
   const handleScan = async () => {
     setScan(true)
-    await scanVendor(id)
-    await load()
-    setScan(false)
+    try {
+      await scanVendor(id)
+      await fetchData()
+    } catch (e) {
+      console.error('Scan failed:', e)
+    } finally {
+      setScan(false)
+    }
   }
 
   if (!vendor) return (
@@ -53,10 +72,13 @@ export default function VendorDetail() {
   const scoreColor = vendor.risk_score >= 70 ? 'text-red-400'
     : vendor.risk_score >= 35 ? 'text-yellow-400' : 'text-green-400'
 
+  const displayedEvents = events.slice(0, EVENTS_SHOWN)
+  const hiddenCount     = events.length - EVENTS_SHOWN
+  const apiBase         = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
+
   return (
     <div className="min-h-screen bg-[#0f1117] p-8">
       <div className="max-w-5xl mx-auto">
-        {/* Back + header */}
         <button onClick={() => nav('/')} className="text-slate-400 hover:text-white text-sm mb-6 transition">
           ← Back to Dashboard
         </button>
@@ -75,32 +97,45 @@ export default function VendorDetail() {
             <button
               onClick={handleScan}
               disabled={scanning}
-              className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-50 transition"
+              className="mt-3 px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm disabled:opacity-50 transition block w-full"
             >
               {scanning ? 'Scanning...' : '⚡ Scan Now'}
             </button>
             <a
-              href={`http://127.0.0.1:8000/api/export/${id}/pdf`}
+              href={`${apiBase}/export/${id}/pdf`}
               target="_blank"
               rel="noreferrer"
               className="mt-2 block px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm text-center transition"
             >
               📄 Export PDF Report
             </a>
+            {hiddenCount > 0 && (
+              <p className="text-xs text-slate-500 mt-2">
+                PDF includes {hiddenCount} more event{hiddenCount > 1 ? 's' : ''}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Chart */}
         <div className="mb-8">
           <ScoreChart history={history} />
         </div>
 
-        {/* Events */}
         <div className="bg-[#1a1d27] rounded-xl border border-slate-700 p-6">
-          <h3 className="text-white font-semibold mb-4">
-            Risk Events <span className="text-slate-500 font-normal text-sm">({events.length} total)</span>
-          </h3>
-          <EventFeed events={events} />
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-white font-semibold">
+              Risk Events{' '}
+              <span className="text-slate-500 font-normal text-sm">
+                (showing {displayedEvents.length} of {events.length} · sorted by severity &amp; exploitability)
+              </span>
+            </h3>
+            {hiddenCount > 0 && (
+              <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full">
+                📄 +{hiddenCount} more in PDF
+              </span>
+            )}
+          </div>
+          <EventFeed events={displayedEvents} />
         </div>
       </div>
     </div>

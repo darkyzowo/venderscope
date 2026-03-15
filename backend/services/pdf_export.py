@@ -21,7 +21,22 @@ WHITE   = colors.white
 def sev_color(sev: str):
     return {"CRITICAL": RED, "HIGH": ORANGE, "MEDIUM": YELLOW, "LOW": GREEN}.get(sev, GREY)
 
+import re
+
+SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+
+def _parse_epss(desc: str) -> float:
+    m = re.search(r'\[EPSS: ([\d.]+)%', desc or '')
+    return float(m.group(1)) if m else 0.0
+
+def _sort_events(events):
+    return sorted(events, key=lambda e: (
+        SEVERITY_ORDER.get(e.severity, 4),
+        -_parse_epss(e.description)
+    ))
+
 def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
+    events = _sort_events(events)  # All events, sorted by severity + EPSS
     buf = io.BytesIO()
     W, H = A4  # 210 x 297mm
     margin = 20 * mm
@@ -35,16 +50,13 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
     usable_w = W - 2 * margin  # ~170mm
 
     # ── Styles ──────────────────────────────────────────────
-    title_s  = ParagraphStyle("t",  fontSize=20, textColor=INDIGO,  spaceAfter=10, fontName="Helvetica-Bold")
+    title_s  = ParagraphStyle("t",  fontSize=20, textColor=INDIGO,  spaceAfter=2,  fontName="Helvetica-Bold")
     meta_s   = ParagraphStyle("m",  fontSize=8,  textColor=GREY,    spaceAfter=14)
     h2_s     = ParagraphStyle("h2", fontSize=12, textColor=DARK,    spaceBefore=14, spaceAfter=6, fontName="Helvetica-Bold")
     body_s   = ParagraphStyle("b",  fontSize=9,  textColor=DARK,    spaceAfter=4)
-    # leading MUST be set explicitly for large fonts — ReportLab miscalculates
-    # bounding boxes when leading is auto-derived for font sizes > ~18pt,
-    # causing paragraphs to stack with zero real gap.
-    score_s  = ParagraphStyle("sc", fontSize=42, leading=54, alignment=TA_CENTER, fontName="Helvetica-Bold")
-    label_s  = ParagraphStyle("sl", fontSize=13, leading=18, alignment=TA_CENTER, fontName="Helvetica-Bold")
-    trend_s  = ParagraphStyle("tr", fontSize=8,  leading=12, alignment=TA_CENTER, textColor=GREY)
+    score_s  = ParagraphStyle("sc", fontSize=42, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=8, spaceBefore=8)
+    label_s  = ParagraphStyle("sl", fontSize=11, alignment=TA_CENTER, fontName="Helvetica-Bold", spaceAfter=4)
+    trend_s  = ParagraphStyle("tr", fontSize=8,  alignment=TA_CENTER, textColor=GREY, spaceAfter=10)
     cell_s   = ParagraphStyle("c",  fontSize=8,  textColor=DARK,    leading=10)
     footer_s = ParagraphStyle("f",  fontSize=7,  textColor=GREY,    spaceBefore=12)
 
@@ -99,19 +111,19 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
         trend = "↑ Increasing" if last > first else "↓ Decreasing" if last < first else "→ Stable"
         trend_text = f"Score Trend: {trend}  |  {first} → {last}  |  {len(history)} scan(s) recorded"
 
-    # Spacer is a guaranteed flowable gap — unlike spaceBefore/spaceAfter
-    # which can collapse or be ignored by ReportLab's layout engine.
-    story.append(Spacer(1, 14))
-    story.append(Paragraph(
-        f'<font color="#{score_color.hexval()[2:]}">{int(score)}</font>', score_s
-    ))
-    story.append(Spacer(1, 10))
-    story.append(Paragraph(
-        f'<font color="#{score_color.hexval()[2:]}">{risk_label}</font>', label_s
-    ))
-    story.append(Spacer(1, 8))
-    story.append(Paragraph(trend_text, trend_s))
-    story.append(Spacer(1, 14))
+    score_block = Table([[
+        Paragraph(f'<font color="#{score_color.hexval()[2:]}">{int(score)}</font>', score_s)
+    ],[
+        Paragraph(f'<font color="#{score_color.hexval()[2:]}">{risk_label}</font>', label_s)
+    ],[
+        Paragraph(trend_text, trend_s)
+    ]], colWidths=[usable_w])
+    score_block.setStyle(TableStyle([
+        ("ALIGN",   (0,0), (-1,-1), "CENTER"),
+        ("VALIGN",  (0,0), (-1,-1), "MIDDLE"),
+        ("PADDING", (0,0), (-1,-1), 4),
+    ]))
+    story.append(score_block)
 
     # ── Risk Events ──────────────────────────────────────────
     story.append(Paragraph(f"Risk Events  ({len(events)} total)", h2_s))
