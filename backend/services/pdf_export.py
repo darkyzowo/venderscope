@@ -109,8 +109,8 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
     story.append(Paragraph(trend_text, trend_s))
     story.append(Spacer(1, 14))
 
-    # Risk events — ALL events, sorted by severity + EPSS
-    story.append(Paragraph(f"Risk Events  ({len(events)} total — all events, sorted by severity &amp; exploitability)", h2_s))
+    # Risk events — sorted by severity + EPSS
+    story.append(Paragraph(f"Risk Events  (top {len(events)} by severity &amp; exploitability)", h2_s))
 
     if not events:
         story.append(Paragraph("No risk events detected.", body_s))

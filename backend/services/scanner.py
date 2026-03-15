@@ -8,35 +8,39 @@ from services.nvd import check_vendor_cves
 from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
-from services.epss import get_epss_scores
 
+# Severity weights for scoring
 SEVERITY_WEIGHTS = {"CRITICAL": 25, "HIGH": 15, "MEDIUM": 7, "LOW": 2}
-CACHE_TTL_HOURS  = 24  # Skip external API calls if scanned within this window
+CACHE_TTL_HOURS  = 24
 
 def _is_cached(vendor: Vendor) -> bool:
-    """Returns True if vendor was scanned recently enough to use cached data."""
     if not vendor.last_scanned:
         return False
-    age = datetime.utcnow() - vendor.last_scanned
-    return age < timedelta(hours=CACHE_TTL_HOURS)
+    return (datetime.utcnow() - vendor.last_scanned) < timedelta(hours=CACHE_TTL_HOURS)
 
 def _compute_score(events: list) -> float:
-    return min(sum(SEVERITY_WEIGHTS.get(e.get("severity", "LOW"), 2) for e in events), 100.0)
+    """
+    Weighted average of top 5 events + count multiplier.
+    Prevents everything hitting 100 with many low-severity events.
+    """
+    if not events:
+        return 0.0
+    sev_map   = {"CRITICAL": 100, "HIGH": 70, "MEDIUM": 40, "LOW": 15}
+    raw       = sorted([sev_map.get(e.get("severity", "LOW"), 15) for e in events], reverse=True)
+    top5_avg  = sum(raw[:5]) / min(len(raw), 5)
+    count_mul = min(1.0 + (len(events) - 1) * 0.04, 1.4)
+    return min(round(top5_avg * count_mul, 1), 100.0)
 
 def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
-    """
-    Orchestrates all intelligence sources for a vendor.
-    Uses cached DB data if scanned within CACHE_TTL_HOURS unless force=True.
-    """
-    # ── Cache hit: return existing score instantly ──────────────────────────
+    # Cache hit — return instantly
     if not force and _is_cached(vendor):
-        print(f"[Scanner] {vendor.name} — cache hit, returning stored score {vendor.risk_score}")
+        print(f"[Scanner] {vendor.name} — cache hit ({vendor.risk_score})")
         return vendor.risk_score
 
-    print(f"[Scanner] Scanning {vendor.name} ({vendor.domain})...")
+    print(f"[Scanner] Scanning {vendor.name}...")
     start = datetime.utcnow()
 
-    # ── Fetch all sources concurrently ──────────────────────────────────────
+    # Run all sources concurrently with a shared timeout
     tasks = {
         "hibp":   (check_domain_breaches, vendor.domain),
         "nvd":    (check_vendor_cves,     vendor.name),
@@ -45,43 +49,28 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     if vendor.company_number:
         tasks["ch"] = (check_company_health, vendor.company_number)
 
-    results = {}
+    raw = {}
     with ThreadPoolExecutor(max_workers=4) as ex:
         futures = {ex.submit(fn, arg): key for key, (fn, arg) in tasks.items()}
-        for future in as_completed(futures):
-            key = futures[future]
+        for f in as_completed(futures, timeout=30):
+            key = futures[f]
             try:
-                results[key] = future.result()
+                raw[key] = f.result()
             except Exception as e:
-                print(f"[Scanner] {key} failed for {vendor.name}: {e}")
-                results[key] = []
+                print(f"[Scanner] {key} failed: {e}")
+                raw[key] = []
 
-    # ── Assemble raw events ─────────────────────────────────────────────────
+    # Assemble all events
     all_events = []
+    for b in raw.get("hibp",   []): all_events.append({**b, "source": "HIBP"})
+    for c in raw.get("nvd",    []): all_events.append({**c, "source": "NVD"})
+    for s in raw.get("shodan", []): all_events.append({**s, "source": "Shodan"})
+    for e in raw.get("ch",     []): all_events.append({**e, "source": "CompaniesHouse"})
 
-    for b in results.get("hibp", []):
-        all_events.append({**b, "source": "HIBP"})
-
-    nvd_results = results.get("nvd", [])
-    cve_ids     = [c["title"] for c in nvd_results if c["title"].startswith("CVE-")]
-    epss_scores = get_epss_scores(cve_ids)
-    for c in nvd_results:
-        epss = epss_scores.get(c["title"])
-        if epss is not None:
-            c["description"] = f"[EPSS: {epss}% exploit probability] " + c.get("description", "")
-        all_events.append({**c, "source": "NVD"})
-
-    for s in results.get("shodan", []):
-        all_events.append({**s, "source": "Shodan"})
-
-    for e in results.get("ch", []):
-        all_events.append({**e, "source": "CompaniesHouse"})
-
-    # Deduplicate — match on CVE ID only (first word of title)
-    existing_titles = set()
-    for e in db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all():
-        existing_titles.add(e.title.split(' ')[0])
-    new_events = [e for e in all_events if e["title"].split(' ')[0] not in existing_titles]
+    # Deduplicate against DB — match on CVE ID prefix only
+    stored = {e.title.split()[0] for e in
+              db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()}
+    new_events = [e for e in all_events if e["title"].split()[0] not in stored]
 
     for evt in new_events:
         db.add(RiskEvent(
@@ -92,30 +81,15 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
             description = evt.get("description", ""),
         ))
 
-    # ── Smarter scoring — weighted average not additive sum ─────────────────
-    # Max possible score per event type, then blend into 0-100
-    sev_map    = {"CRITICAL": 100, "HIGH": 70, "MEDIUM": 40, "LOW": 15}
-    epss_boost = lambda desc: min(float(re.search(r'\[EPSS: ([\d.]+)%', desc or '').group(1)) / 100 * 20, 20) \
-                              if re.search(r'\[EPSS: ([\d.]+)%', desc or '') else 0
-
-    if not all_events:
-        score = 0.0
-    else:
-        raw_scores = [sev_map.get(e.get("severity", "LOW"), 15) + epss_boost(e.get("description",""))
-                      for e in all_events]
-        # Take the top 5 events' average, boosted by event count
-        top5_avg   = sum(sorted(raw_scores, reverse=True)[:5]) / min(len(raw_scores), 5)
-        count_mult = min(1.0 + (len(all_events) - 1) * 0.05, 1.5)  # up to 50% boost for many events
-        score      = min(round(top5_avg * count_mult, 1), 100.0)
+    score               = _compute_score(all_events)
     vendor.risk_score   = score
     vendor.last_scanned = datetime.utcnow()
     db.add(RiskScoreHistory(vendor_id=vendor.id, score=score))
     db.commit()
 
-    # ── Alert if score crossed threshold ────────────────────────────────────
     all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
     send_alert_email(vendor.name, vendor.domain, score, all_stored)
 
     elapsed = (datetime.utcnow() - start).seconds
-    print(f"[Scanner] {vendor.name} → {score} | +{len(new_events)} events | {elapsed}s")
+    print(f"[Scanner] {vendor.name} → {score} | +{len(new_events)} new events | {elapsed}s")
     return score

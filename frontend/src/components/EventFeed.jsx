@@ -14,11 +14,8 @@ const sourceIcon = {
 }
 
 const getCVELink = (title) => {
-  if (!title) return null
-  const cveId = title.split(' ')[0]
-  return cveId.startsWith('CVE-')
-    ? `https://nvd.nist.gov/vuln/detail/${cveId}`
-    : null
+  const id = title?.split(' ')[0]
+  return id?.startsWith('CVE-') ? `https://nvd.nist.gov/vuln/detail/${id}` : null
 }
 
 export default function EventFeed({ events }) {
@@ -29,7 +26,8 @@ export default function EventFeed({ events }) {
   return (
     <div className="space-y-3">
       {events.map(evt => {
-        const cveLink = getCVELink(evt.title)
+        // Only show clickable NVD links for CRITICAL events
+        const cveLink = evt.severity === 'CRITICAL' ? getCVELink(evt.title) : null
         return (
           <div key={evt.id} className={`rounded-lg border p-4 ${severityStyle[evt.severity] || severityStyle.LOW}`}>
             <div className="flex items-center justify-between mb-1">

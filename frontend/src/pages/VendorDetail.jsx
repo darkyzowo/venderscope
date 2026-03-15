@@ -5,7 +5,7 @@ import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
-const EVENTS_SHOWN = 20
+const EVENTS_SHOWN = 10
 
 const parseEPSS = (desc) => {
   const m = desc?.match(/\[EPSS: ([\d.]+)%/)
@@ -26,7 +26,7 @@ export default function VendorDetail() {
   const [history, setHistory] = useState([])
   const [scanning, setScan]   = useState(false)
 
-  const fetchData = async () => {
+  const load = async () => {
     const [vRes, eRes, hRes] = await Promise.all([
       getVendors(),
       getVendorEvents(id),
@@ -55,7 +55,7 @@ export default function VendorDetail() {
     setScan(true)
     try {
       await scanVendor(id)
-      await fetchData()
+      await load()
     } catch (e) {
       console.error('Scan failed:', e)
     } finally {
@@ -73,7 +73,7 @@ export default function VendorDetail() {
     : vendor.risk_score >= 35 ? 'text-yellow-400' : 'text-green-400'
 
   const displayedEvents = events.slice(0, EVENTS_SHOWN)
-  const hiddenCount     = events.length - EVENTS_SHOWN
+  const hiddenCount     = Math.max(0, events.length - EVENTS_SHOWN)
   const apiBase         = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
 
   return (
@@ -94,6 +94,14 @@ export default function VendorDetail() {
           <div className="text-right">
             <div className={`text-5xl font-bold ${scoreColor}`}>{vendor.risk_score}</div>
             <div className="text-slate-400 text-sm mt-1">Risk Score</div>
+            <div className="group relative mt-1">
+              <span className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-600">
+                ℹ️ How is this calculated?
+              </span>
+              <div className="absolute right-0 top-5 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
+                This score is estimated from the <strong className="text-white">top 10 most recent CVEs</strong> detected via NVD, plus breach data from HIBP, Companies House signals, and Shodan exposure. Each event is weighted by severity (CRITICAL=25, HIGH=15, MEDIUM=7, LOW=2), capped at 100. <span className="text-indigo-400">The full PDF export contains all detected events for a complete picture.</span>
+              </div>
+            </div>
             <button
               onClick={handleScan}
               disabled={scanning}
@@ -126,7 +134,7 @@ export default function VendorDetail() {
             <h3 className="text-white font-semibold">
               Risk Events{' '}
               <span className="text-slate-500 font-normal text-sm">
-                (showing {displayedEvents.length} of {events.length} · sorted by severity &amp; exploitability)
+                (top {displayedEvents.length} by severity · {events.length} total in PDF)
               </span>
             </h3>
             {hiddenCount > 0 && (
