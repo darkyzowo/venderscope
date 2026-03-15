@@ -88,7 +88,7 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     db.commit()
 
     all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
-    send_alert_email(vendor.name, vendor.domain, score, all_stored)
+    send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id)
 
     elapsed = (datetime.utcnow() - start).seconds
     print(f"[Scanner] {vendor.name} → {score} | +{len(new_events)} new events | {elapsed}s")
