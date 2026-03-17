@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -13,9 +13,9 @@ class Vendor(Base):
     risk_score     = Column(Float, default=0.0)
     added_at       = Column(DateTime, default=datetime.utcnow)
     last_scanned   = Column(DateTime, nullable=True)
-    compliance     = Column(JSON, nullable=True)   # stores discovery results
+    compliance     = Column(Text, nullable=True)  # JSON stored as string
 
-    events  = relationship("RiskEvent",       back_populates="vendor", cascade="all, delete")
+    events  = relationship("RiskEvent",        back_populates="vendor", cascade="all, delete")
     scores  = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
 
 

@@ -1,4 +1,5 @@
 import re
+import json
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
@@ -83,10 +84,10 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
             description = evt.get("description", ""),
         ))
 
-    # Save compliance discovery results to vendor record
+    # Save compliance as JSON string
     compliance_data = raw.get("compliance", {})
     if compliance_data:
-        vendor.compliance = compliance_data
+        vendor.compliance = json.dumps(compliance_data)
 
     score               = _compute_score(all_events)
     vendor.risk_score   = score

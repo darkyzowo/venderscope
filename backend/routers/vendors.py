@@ -1,3 +1,4 @@
+import json
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
@@ -50,7 +51,14 @@ class VendorOut(BaseModel):
 
 @router.get("/", response_model=list[VendorOut])
 def list_vendors(db: Session = Depends(get_db)):
-    return db.query(Vendor).all()
+    vendors = db.query(Vendor).all()
+    for v in vendors:
+        if isinstance(v.compliance, str):
+            try:
+                v.compliance = json.loads(v.compliance)
+            except Exception:
+                v.compliance = None
+    return vendors
 
 
 @router.post("/", response_model=VendorOut)
