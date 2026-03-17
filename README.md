@@ -22,6 +22,10 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 - **Audit Export** — One-click PDF reports per vendor, structured for ISO 27001 Annex A and Cyber Essentials reviews
 - **Exposed Infrastructure Detection** — Shodan integration flags dangerous open ports (RDP, SMB, MongoDB, etc.)
 - **24hr Intelligent Caching** — Repeat scans within 24 hours return instantly; nightly scheduler forces fresh data overnight
+- **Compliance Posture Discovery** — Auto-discovers privacy policies, terms, trust centres, and security contacts from vendor websites
+- **Two-Stage Certification Detection** — Scrapes vendor pages for ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS, and DPA evidence; falls back to Google Custom Search for vendors without trust centres
+- **Verified Security Contacts** — Finds real security/privacy contact emails via RFC 9116 `security.txt`, page scraping, and web search — never fabricates
+- **Scan Quota Tracker** — Live banner showing remaining Full Intelligence Scans (Google CSE quota), with automatic daily reset at midnight UTC
 
 ---
 
@@ -33,6 +37,7 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 | Database      | SQLite                                                  |
 | Frontend      | React, Vite, TailwindCSS, Recharts                      |
 | Intelligence  | HIBP API, NVD/NIST API, Companies House API, Shodan API |
+| Compliance    | Google Custom Search API, BeautifulSoup, security.txt   |
 | PDF Export    | ReportLab                                               |
 | Rate Limiting | SlowAPI                                                 |
 
@@ -46,6 +51,7 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 | **NVD (NIST)**      | CVEs associated with vendor products and services         |
 | **Companies House** | UK company status, overdue filings, director resignations |
 | **Shodan**          | Exposed ports and services on vendor infrastructure       |
+| **Google CSE**      | External certification evidence for ISO 27001, SOC 2, DPA, and more |
 
 ---
 
@@ -61,9 +67,12 @@ VenderScope/
 │   ├── routers/
 │   │   ├── vendors.py           # Vendor CRUD endpoints
 │   │   ├── intelligence.py      # Scan trigger endpoints
-│   │   └── export.py            # PDF export endpoint
+│   │   ├── export.py            # PDF export endpoint
+│   │   └── quota.py             # Scan quota status endpoint
 │   └── services/
 │       ├── scanner.py           # Concurrent scan orchestrator + caching
+│       ├── compliance_discovery.py  # Two-stage compliance + cert discovery
+│       ├── quota.py             # Google CSE quota tracker (auto-resets daily)
 │       ├── hibp.py              # HIBP breach intelligence
 │       ├── nvd.py               # NVD CVE intelligence
 │       ├── companies_house.py   # UK governance checks
@@ -79,7 +88,9 @@ VenderScope/
         │   ├── VendorCard.jsx       # Risk score card
         │   ├── ScoreChart.jsx       # Drift timeline chart
         │   ├── EventFeed.jsx        # Risk events list
-        │   └── AddVendorModal.jsx   # Add vendor form
+        │   ├── AddVendorModal.jsx   # Add vendor form
+        │   ├── CompliancePanel.jsx  # Compliance posture display
+        │   └── QuotaBanner.jsx      # Daily scan quota tracker
         └── api/client.js            # Axios API client
 ```
 
@@ -91,7 +102,7 @@ VenderScope/
 
 - Python 3.11+
 - Node.js 18+
-- API keys for: NVD, Companies House, Shodan
+- API keys for: NVD, Companies House, Shodan, Google Custom Search
 
 ### Backend
 
@@ -110,6 +121,8 @@ GMAIL_ADDRESS=your@gmail.com
 GMAIL_APP_PASSWORD=your_app_password
 ALERT_THRESHOLD=70
 DATABASE_URL=sqlite:///./vendorscope.db
+GOOGLE_CSE_API_KEY=your_key
+GOOGLE_CSE_ID=your_cse_id
 ```
 
 ```bash
@@ -127,6 +140,31 @@ npm run dev
 ```
 
 Frontend runs at `http://localhost:5173`
+
+---
+
+## 🔍 Compliance Discovery
+
+VenderScope automatically discovers a vendor's compliance posture during each scan using a two-stage pipeline:
+
+**Stage 1 — Page scrape:** Fetches the vendor homepage, security page, privacy policy, and trust centre (if detected). Searches for keyword evidence of ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS, and Data Processing Agreements.
+
+**Stage 2 — Web search fallback (Full Intelligence Scan):** For any certification not found on the vendor's own pages, fires targeted Google Custom Search queries to find external evidence — press releases, certification body registers, blog posts, and PDFs.
+
+Results are labelled by source:
+- ✅ **Evidence found** — found on vendor's own website
+- 🌐 **Evidence found (external)** — found via web search, links to source
+- ⚠️ **No public evidence** — nothing found anywhere
+
+### Scan Quota
+
+Google Custom Search has a free tier of 100 queries/day. VenderScope tracks this automatically:
+
+- Each **Full Intelligence Scan** costs 14 quota units (worst case)
+- At 100 units/day, this allows ~7 full scans per day at no cost
+- When quota is exhausted, scans automatically fall back to **Standard Scan** (page scrape only — no Google API calls)
+- Quota resets automatically at midnight UTC — no configuration needed
+- The quota banner on the dashboard and vendor detail pages shows remaining scans in real time
 
 ---
 
@@ -150,14 +188,10 @@ The top 5 events by severity are averaged, then multiplied by a count factor (up
 - **CORS** is locked to the production Vercel domain — no wildcard origins in production
 - **Rate limiting** is applied via SlowAPI to prevent API abuse
 - **All API keys** are stored as environment variables — never committed to the repo
+- **SSRF protection** — compliance discovery blocks all private/internal IP ranges before making any outbound requests
 - **No authentication layer** — this is a single-user portfolio tool. Multi-user auth (JWT/OAuth) is on the roadmap
 - **SQLite** is used for simplicity — not suitable for multi-user production; PostgreSQL migration is on the roadmap
-- **All user inputs are validated and sanitised server-side using Pydantic validators** —
-vendor names are capped at 100 characters, domains are automatically stripped of
-`https://` prefixes and normalised to lowercase, and SQLAlchemy's ORM prevents
-SQL injection by design. React's rendering engine handles XSS protection on the
-frontend automatically. The API is rate-limited via SlowAPI and CORS is locked to
-the production Vercel domain only.
+- **All user inputs are validated and sanitised server-side using Pydantic validators** — vendor names are capped at 100 characters, domains are automatically stripped of `https://` prefixes and normalised to lowercase, and SQLAlchemy's ORM prevents SQL injection by design. React's rendering engine handles XSS protection on the frontend automatically.
 
 ---
 
@@ -166,13 +200,14 @@ the production Vercel domain only.
 **Scan speed on free tier:**
 VenderScope is deployed on Render's free tier (0.1 CPU / 512MB RAM). The first scan after inactivity includes a cold start delay of ~50 seconds. Actual scan time is 8–15 seconds. Use individual ⚡ Scan Now buttons rather than Scan All for best results on the free tier.
 
+**Compliance discovery on JS-rendered trust centres:**
+Vendors using Vanta or similar JS-rendered trust centre platforms load their content dynamically after page render. VenderScope's scraper fetches raw HTML and cannot execute JavaScript, so certifications hosted exclusively inside these portals rely on the Google CSE web search fallback to be detected.
+
 **Email alerts (local only):**
 Email alerts work correctly when running VenderScope locally. Cloud hosting providers including Render's free tier block outbound SMTP connections at the network level. A future version will integrate an HTTP-based email API (e.g. SendGrid) to enable alerts in production. This is logged in the roadmap below.
 
 **Shared demo database:**
 The live demo at `venderscope.vercel.app` uses a single shared database. All visitors see the same vendor list. This is intentional for demo purposes — in real use, VenderScope should be self-hosted or deployed with user authentication. Multi-user auth is on the roadmap.
-
-The current deployment is a single-user demo. Anyone with the API URL can add or delete vendors. Authentication is on the roadmap.
 
 ---
 
@@ -192,6 +227,10 @@ Built from direct experience managing 50+ vendor audits annually at Thrive Learn
 - [x] 24hr intelligent caching
 - [x] Concurrent API fetching for scan speed
 - [x] Deployment (Render + Vercel)
+- [x] Compliance posture auto-discovery (documents, trust centre, certifications)
+- [x] Two-stage certification detection (page scrape + Google CSE web search fallback)
+- [x] Verified security contact discovery (security.txt, page scrape, web search)
+- [x] Daily scan quota tracker with automatic reset
 - [ ] Email alerts in production (HTTP-based, e.g. SendGrid)
 - [ ] User authentication (JWT / OAuth)
 - [ ] Async task queue (Celery + Redis) for reliable Scan All
