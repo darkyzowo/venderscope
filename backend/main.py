@@ -7,6 +7,9 @@ from slowapi.errors import RateLimitExceeded
 from database import engine, Base
 from routers import vendors, intelligence, export
 from scheduler import start_scheduler
+import os
+print(">>> CWD:", os.getcwd())
+print(">>> DATABASE_URL:", os.getenv("DATABASE_URL"))
 
 Base.metadata.create_all(bind=engine)
 
