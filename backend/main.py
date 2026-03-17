@@ -5,9 +5,11 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from database import engine, Base
-from routers import vendors, intelligence, export
+import models
+from routers import vendors, intelligence, export, quota
 from scheduler import start_scheduler
 import os
+
 print(">>> CWD:", os.getcwd())
 print(">>> DATABASE_URL:", os.getenv("DATABASE_URL"))
 
@@ -46,6 +48,7 @@ app.add_middleware(
 app.include_router(vendors.router,      prefix="/api/vendors",      tags=["Vendors"])
 app.include_router(intelligence.router, prefix="/api/intelligence", tags=["Intelligence"])
 app.include_router(export.router,       prefix="/api/export",       tags=["Export"])
+app.include_router(quota.router,        prefix="/api/quota",        tags=["Quota"])
 
 @app.get("/")
 def root():

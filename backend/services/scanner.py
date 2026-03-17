@@ -10,6 +10,7 @@ from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
 from services.compliance_discovery import run_compliance_discovery
+from services.quota import check_and_consume
 
 # Severity weights for scoring
 SEVERITY_WEIGHTS = {"CRITICAL": 25, "HIGH": 15, "MEDIUM": 7, "LOW": 2}
@@ -42,12 +43,16 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     print(f"[Scanner] Scanning {vendor.name}...")
     start = datetime.utcnow()
 
-    # Run all sources concurrently with a shared timeout
-    # Compliance is submitted separately as it requires two args
+    # Check quota before firing compliance web searches
+    quota_ok = check_and_consume()
+    if not quota_ok:
+        print(f"[Scanner] Quota exhausted — {vendor.name} will run Standard Scan (no web search).")
+
+    # Run all intelligence sources concurrently
     tasks = {
-        "hibp":    (check_domain_breaches,  vendor.domain),
-        "nvd":     (check_vendor_cves,      vendor.name),
-        "shodan":  (check_shodan_exposure,  vendor.domain),
+        "hibp":   (check_domain_breaches, vendor.domain),
+        "nvd":    (check_vendor_cves,     vendor.name),
+        "shodan": (check_shodan_exposure, vendor.domain),
     }
     if vendor.company_number:
         tasks["ch"] = (check_company_health, vendor.company_number)
@@ -56,13 +61,13 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     with ThreadPoolExecutor(max_workers=5) as ex:
         futures = {ex.submit(fn, arg): key for key, (fn, arg) in tasks.items()}
 
-        # Compliance needs two args so submitted separately
+        # Compliance submitted separately — needs two args + quota flag
         compliance_future = ex.submit(
-            run_compliance_discovery, vendor.domain, vendor.name
+            run_compliance_discovery, vendor.domain, vendor.name, quota_ok
         )
         futures[compliance_future] = "compliance"
 
-        for f in as_completed(futures, timeout=60):  # raised to 60s — web search adds latency
+        for f in as_completed(futures, timeout=60):
             key = futures[f]
             try:
                 raw[key] = f.result()
@@ -105,6 +110,8 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
     send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id)
 
-    elapsed = (datetime.utcnow() - start).seconds
-    print(f"[Scanner] {vendor.name} → {score} | +{len(new_events)} new events | {elapsed}s")
+    scan_type = "Full Intelligence" if quota_ok else "Standard"
+    elapsed   = (datetime.utcnow() - start).seconds
+    print(f"[Scanner] {vendor.name} → {score} ({scan_type} Scan) | "
+          f"+{len(new_events)} new events | {elapsed}s")
     return score
