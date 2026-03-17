@@ -74,7 +74,7 @@ export default function VendorDetail() {
       await fetchData();
       // Refresh quota state after scan
       api
-        .get("/quota")
+        .get("/quota/")
         .then((r) => setQuotaEx(r.data.exhausted))
         .catch(() => {});
     } catch (e) {
