@@ -3,7 +3,6 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Vendor
 from services.scanner import run_full_scan
-from services.quota import get_quota_status, get_remaining_full_scans
 
 
 router = APIRouter()
@@ -37,13 +36,3 @@ def scan_all_vendors(force: bool = False, db: Session = Depends(get_db)):
         except Exception as e:
             results[v.name] = f"error: {str(e)}"
     return {"scanned": len(vendors), "scores": results}
-    
-@router.get("/")
-def quota_status():
-    """
-    Returns current Google CSE quota status.
-    Used by the frontend to show the scan quota banner.
-    """
-    status = get_quota_status()
-    status["full_scans_remaining"] = get_remaining_full_scans()
-    return status
