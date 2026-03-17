@@ -152,6 +152,12 @@ The top 5 events by severity are averaged, then multiplied by a count factor (up
 - **All API keys** are stored as environment variables — never committed to the repo
 - **No authentication layer** — this is a single-user portfolio tool. Multi-user auth (JWT/OAuth) is on the roadmap
 - **SQLite** is used for simplicity — not suitable for multi-user production; PostgreSQL migration is on the roadmap
+- **All user inputs are validated and sanitised server-side using Pydantic validators** —
+vendor names are capped at 100 characters, domains are automatically stripped of
+`https://` prefixes and normalised to lowercase, and SQLAlchemy's ORM prevents
+SQL injection by design. React's rendering engine handles XSS protection on the
+frontend automatically. The API is rate-limited via SlowAPI and CORS is locked to
+the production Vercel domain only.
 
 ---
 
