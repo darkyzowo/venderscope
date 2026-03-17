@@ -3,7 +3,6 @@ const DOC_LABELS = {
   terms: "Terms of Service",
   security: "Security Page",
   cookie_policy: "Cookie Policy",
-  // DPA removed — now evidence-checked under Certifications
 };
 
 const CERT_LABELS = {
@@ -15,16 +14,37 @@ const CERT_LABELS = {
   dpa: "Data Processing Agreement (DPA)",
 };
 
-const Found = () => (
-  <span className="text-green-400 font-semibold">✅ Found</span>
-);
 const Missing = () => <span className="text-slate-500">❌ Not found</span>;
-const Evidence = () => (
-  <span className="text-green-400 font-semibold">✅ Evidence found</span>
-);
 const NoEvidence = () => (
   <span className="text-yellow-500">⚠️ No public evidence</span>
 );
+
+const CertBadge = ({ cert }) => {
+  if (!cert || cert.status === "not_found") return <NoEvidence />;
+
+  if (cert.source === "external") {
+    return cert.url ? (
+      <a
+        href={cert.url}
+        target="_blank"
+        rel="noreferrer"
+        title={cert.title || "External source"}
+        className="text-blue-400 hover:text-blue-300 font-semibold text-sm underline"
+      >
+        🌐 Evidence found (external) →
+      </a>
+    ) : (
+      <span className="text-blue-400 font-semibold">
+        🌐 Evidence found (external)
+      </span>
+    );
+  }
+
+  // source === "site"
+  return (
+    <span className="text-green-400 font-semibold">✅ Evidence found</span>
+  );
+};
 
 export default function CompliancePanel({ compliance }) {
   if (!compliance || Object.keys(compliance).length === 0)
@@ -41,11 +61,20 @@ export default function CompliancePanel({ compliance }) {
     certifications = {},
     security_contact,
   } = compliance;
-
-  // security_contact is now {email, verified, source} or null — never a bare fabricated string
   const verifiedContact = security_contact?.verified
     ? security_contact.email
     : null;
+
+  // Support both old format (string) and new format ({status, source})
+  const normaliseCert = (val) => {
+    if (!val) return { status: "not_found" };
+    if (typeof val === "string")
+      return {
+        status: val === "found" ? "found" : "not_found",
+        source: "site",
+      };
+    return val;
+  };
 
   return (
     <div className="space-y-6">
@@ -106,17 +135,15 @@ export default function CompliancePanel({ compliance }) {
           </div>
         )}
 
-        {/* Security contact — only shown when verified via security.txt */}
         {verifiedContact && (
           <div className="mt-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-4 py-3">
             <p className="text-indigo-300 text-xs">
               📧 <strong>Security contact</strong>{" "}
               <span className="text-indigo-400/60 font-normal">
-                (verified via security.txt)
-              </span>
-              {": "}
+                (verified via security.txt):
+              </span>{" "}
               <a
-                href={`mailto:${verifiedContact}?subject=Trust Centre Access Request — [Your Company]`}
+                href={`mailto:${verifiedContact}?subject=Trust Centre Access Request - [Your Company]`}
                 className="underline hover:text-indigo-200"
               >
                 {verifiedContact}
@@ -127,14 +154,14 @@ export default function CompliancePanel({ compliance }) {
         )}
       </div>
 
-      {/* Certifications + DPA */}
+      {/* Certifications & Compliance */}
       <div>
         <h4 className="text-slate-300 font-semibold text-sm mb-1 uppercase tracking-wider">
-          🏅 Certifications &amp; Compliance
+          🏅 Certifications & Compliance
         </h4>
         <p className="text-slate-600 text-xs mb-3">
-          Based on public evidence found on vendor website — not a verified
-          certification check.
+          Based on public evidence — not a verified certification check. 🌐
+          External = found via web search outside vendor's own site.
         </p>
         <div className="space-y-2">
           {Object.entries(CERT_LABELS).map(([key, label]) => (
@@ -143,7 +170,7 @@ export default function CompliancePanel({ compliance }) {
               className="flex items-center justify-between py-2 border-b border-slate-700/50"
             >
               <span className="text-slate-300 text-sm">{label}</span>
-              {certifications[key] === "found" ? <Evidence /> : <NoEvidence />}
+              <CertBadge cert={normaliseCert(certifications[key])} />
             </div>
           ))}
         </div>

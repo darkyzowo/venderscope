@@ -43,25 +43,32 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     start = datetime.utcnow()
 
     # Run all sources concurrently with a shared timeout
+    # Compliance is submitted separately as it requires two args
     tasks = {
-        "hibp":        (check_domain_breaches,    vendor.domain),
-        "nvd":         (check_vendor_cves,         vendor.name),
-        "shodan":      (check_shodan_exposure,     vendor.domain),
-        "compliance":  (run_compliance_discovery,  vendor.domain),
+        "hibp":    (check_domain_breaches,  vendor.domain),
+        "nvd":     (check_vendor_cves,      vendor.name),
+        "shodan":  (check_shodan_exposure,  vendor.domain),
     }
     if vendor.company_number:
         tasks["ch"] = (check_company_health, vendor.company_number)
 
     raw = {}
-    with ThreadPoolExecutor(max_workers=4) as ex:
+    with ThreadPoolExecutor(max_workers=5) as ex:
         futures = {ex.submit(fn, arg): key for key, (fn, arg) in tasks.items()}
-        for f in as_completed(futures, timeout=30):
+
+        # Compliance needs two args so submitted separately
+        compliance_future = ex.submit(
+            run_compliance_discovery, vendor.domain, vendor.name
+        )
+        futures[compliance_future] = "compliance"
+
+        for f in as_completed(futures, timeout=60):  # raised to 60s — web search adds latency
             key = futures[f]
             try:
                 raw[key] = f.result()
             except Exception as e:
                 print(f"[Scanner] {key} failed: {e}")
-                raw[key] = []
+                raw[key] = [] if key != "compliance" else {}
 
     # Assemble all events
     all_events = []
