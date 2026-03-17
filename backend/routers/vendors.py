@@ -34,12 +34,13 @@ class VendorCreate(BaseModel):
         return v.strip().lower().replace('https://', '').replace('http://', '').rstrip('/')
 
 class VendorOut(BaseModel):
-    id: int
-    name: str
-    domain: str
+    id:             int
+    name:           str
+    domain:         str
     company_number: Optional[str]
-    risk_score: float
-    last_scanned: Optional[datetime] = None
+    risk_score:     float
+    last_scanned:   Optional[datetime] = None
+    compliance:     Optional[dict]     = None
 
     class Config:
         from_attributes = True

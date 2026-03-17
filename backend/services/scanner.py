@@ -8,6 +8,7 @@ from services.nvd import check_vendor_cves
 from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
+from services.compliance_discovery import run_compliance_discovery
 
 # Severity weights for scoring
 SEVERITY_WEIGHTS = {"CRITICAL": 25, "HIGH": 15, "MEDIUM": 7, "LOW": 2}
@@ -42,9 +43,10 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
 
     # Run all sources concurrently with a shared timeout
     tasks = {
-        "hibp":   (check_domain_breaches, vendor.domain),
-        "nvd":    (check_vendor_cves,     vendor.name),
-        "shodan": (check_shodan_exposure,  vendor.domain),
+        "hibp":        (check_domain_breaches,    vendor.domain),
+        "nvd":         (check_vendor_cves,         vendor.name),
+        "shodan":      (check_shodan_exposure,     vendor.domain),
+        "compliance":  (run_compliance_discovery,  vendor.domain),
     }
     if vendor.company_number:
         tasks["ch"] = (check_company_health, vendor.company_number)
@@ -80,6 +82,11 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
             title       = evt["title"],
             description = evt.get("description", ""),
         ))
+
+    # Save compliance discovery results to vendor record
+    compliance_data = raw.get("compliance", {})
+    if compliance_data:
+        vendor.compliance = compliance_data
 
     score               = _compute_score(all_events)
     vendor.risk_score   = score

@@ -1,5 +1,4 @@
-# backend/models.py
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, JSON
 from sqlalchemy.orm import relationship
 from datetime import datetime
 from database import Base
@@ -7,16 +6,17 @@ from database import Base
 class Vendor(Base):
     __tablename__ = "vendors"
 
-    id            = Column(Integer, primary_key=True, index=True)
-    name          = Column(String, nullable=False)
-    domain        = Column(String, unique=True, nullable=False)
-    company_number= Column(String, nullable=True)   # Companies House number (UK)
-    risk_score    = Column(Float, default=0.0)       # 0–100, higher = riskier
-    added_at      = Column(DateTime, default=datetime.utcnow)
-    last_scanned  = Column(DateTime, nullable=True)
+    id             = Column(Integer, primary_key=True, index=True)
+    name           = Column(String, nullable=False)
+    domain         = Column(String, unique=True, nullable=False)
+    company_number = Column(String, nullable=True)
+    risk_score     = Column(Float, default=0.0)
+    added_at       = Column(DateTime, default=datetime.utcnow)
+    last_scanned   = Column(DateTime, nullable=True)
+    compliance     = Column(JSON, nullable=True)   # stores discovery results
 
-    events = relationship("RiskEvent", back_populates="vendor", cascade="all, delete")
-    scores = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
+    events  = relationship("RiskEvent",       back_populates="vendor", cascade="all, delete")
+    scores  = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
 
 
 class RiskEvent(Base):

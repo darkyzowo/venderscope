@@ -10,3 +10,4 @@ shodan
 reportlab
 httpx
 slowapi
+beautifulsoup4

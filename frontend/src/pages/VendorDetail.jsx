@@ -3,9 +3,10 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { getVendors, getVendorEvents, getScoreHistory, scanVendor } from '../api/client'
 import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
+import CompliancePanel from '../components/CompliancePanel'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
-const EVENTS_SHOWN = 10
+const EVENTS_SHOWN   = 10
 
 const parseEPSS = (desc) => {
   const m = desc?.match(/\[EPSS: ([\d.]+)%/)
@@ -21,12 +22,26 @@ const sortEvents = (evts) => [...evts].sort((a, b) => {
 export default function VendorDetail() {
   const { id }  = useParams()
   const nav     = useNavigate()
-  const [vendor,  setVendor]  = useState(null)
-  const [events,  setEvents]  = useState([])
-  const [history, setHistory] = useState([])
-  const [scanning, setScan]   = useState(false)
+  const [vendor,   setVendor]  = useState(null)
+  const [events,   setEvents]  = useState([])
+  const [history,  setHistory] = useState([])
+  const [scanning, setScan]    = useState(false)
 
-  const load = async () => {
+  useEffect(() => {
+    const load = async () => {
+      const [vRes, eRes, hRes] = await Promise.all([
+        getVendors(),
+        getVendorEvents(id),
+        getScoreHistory(id)
+      ])
+      setVendor(vRes.data.find(v => v.id === parseInt(id)))
+      setEvents(sortEvents(eRes.data))
+      setHistory(hRes.data)
+    }
+    load()
+  }, [id])
+
+  const fetchData = async () => {
     const [vRes, eRes, hRes] = await Promise.all([
       getVendors(),
       getVendorEvents(id),
@@ -37,25 +52,11 @@ export default function VendorDetail() {
     setHistory(hRes.data)
   }
 
-  useEffect(() => {
-    const init = async () => {
-      const [vRes, eRes, hRes] = await Promise.all([
-        getVendors(),
-        getVendorEvents(id),
-        getScoreHistory(id)
-      ])
-      setVendor(vRes.data.find(v => v.id === parseInt(id)))
-      setEvents(sortEvents(eRes.data))
-      setHistory(hRes.data)
-    }
-    init()
-  }, [id])
-
   const handleScan = async () => {
     setScan(true)
     try {
       await scanVendor(id)
-      await load()
+      await fetchData()
     } catch (e) {
       console.error('Scan failed:', e)
     } finally {
@@ -69,20 +70,22 @@ export default function VendorDetail() {
     </div>
   )
 
-  const scoreColor = vendor.risk_score >= 70 ? 'text-red-400'
+  const scoreColor  = vendor.risk_score >= 70 ? 'text-red-400'
     : vendor.risk_score >= 35 ? 'text-yellow-400' : 'text-green-400'
-
   const displayedEvents = events.slice(0, EVENTS_SHOWN)
-  const hiddenCount     = Math.max(0, events.length - EVENTS_SHOWN)
+  const hiddenCount     = events.length - EVENTS_SHOWN
   const apiBase         = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
 
   return (
     <div className="min-h-screen bg-[#0f1117] p-8">
       <div className="max-w-5xl mx-auto">
+
+        {/* Back */}
         <button onClick={() => nav('/')} className="text-slate-400 hover:text-white text-sm mb-6 transition">
           ← Back to Dashboard
         </button>
 
+        {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div>
             <h1 className="text-3xl font-bold text-white">{vendor.name}</h1>
@@ -125,10 +128,23 @@ export default function VendorDetail() {
           </div>
         </div>
 
+        {/* Score Drift Chart */}
         <div className="mb-8">
           <ScoreChart history={history} />
         </div>
 
+        {/* Compliance Posture */}
+        <div className="bg-[#1a1d27] rounded-xl border border-slate-700 p-6 mb-8">
+          <h3 className="text-white font-semibold mb-4">
+            Compliance Posture
+            <span className="text-slate-500 font-normal text-sm ml-2">
+              (auto-discovered from public sources)
+            </span>
+          </h3>
+          <CompliancePanel compliance={vendor.compliance} />
+        </div>
+
+        {/* Risk Events */}
         <div className="bg-[#1a1d27] rounded-xl border border-slate-700 p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-white font-semibold">
@@ -145,6 +161,7 @@ export default function VendorDetail() {
           </div>
           <EventFeed events={displayedEvents} />
         </div>
+
       </div>
     </div>
   )
