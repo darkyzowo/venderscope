@@ -1,5 +1,10 @@
 import { useEffect, useState } from "react";
-import api from "../api/client";
+import axios from "axios";
+
+const api = axios.create({
+  baseURL:
+    import.meta.env.VITE_API_URL || "https://venderscope-api.onrender.com/api",
+});
 
 export default function QuotaBanner() {
   const [quota, setQuota] = useState(null);

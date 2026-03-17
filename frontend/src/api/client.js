@@ -17,3 +17,4 @@ export const scanVendor = (id) => api.post(`/intelligence/scan/${id}?force=true`
 export const scanAll    = ()   => api.post('/intelligence/scan-all?force=false')
 
 export const exportPDF  = (id) => api.get(`/export/${id}/pdf`, { responseType: 'blob' })
+export default api
