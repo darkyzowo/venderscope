@@ -135,13 +135,17 @@ export default function CompliancePanel({ compliance }) {
           </div>
         )}
 
-        {verifiedContact && (
+        {verifiedContact ? (
           <div className="mt-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-4 py-3">
             <p className="text-indigo-300 text-xs">
               📧 <strong>Security contact</strong>{" "}
               <span className="text-indigo-400/60 font-normal">
-                (verified via security.txt):
-              </span>{" "}
+                (verified via{" "}
+                {security_contact?.source === "security.txt"
+                  ? "security.txt"
+                  : "vendor site"}
+                ):{" "}
+              </span>
               <a
                 href={`mailto:${verifiedContact}?subject=Trust Centre Access Request - [Your Company]`}
                 className="underline hover:text-indigo-200"
@@ -149,6 +153,17 @@ export default function CompliancePanel({ compliance }) {
                 {verifiedContact}
               </a>{" "}
               — click to draft a trust centre access request email.
+            </p>
+          </div>
+        ) : (
+          <div className="mt-3 bg-slate-700/30 border border-slate-600/30 rounded-lg px-4 py-3">
+            <p className="text-slate-500 text-xs">
+              📧{" "}
+              <strong className="text-slate-400">
+                No verified security contact found
+              </strong>{" "}
+              — no security.txt and no recognised contact email detected on
+              vendor's site.
             </p>
           </div>
         )}

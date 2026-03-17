@@ -45,7 +45,7 @@ CERT_SEARCH_QUERIES = {
     "gdpr":             ["{name} GDPR compliant", "{domain} GDPR compliance"],
     "cyber_essentials": ["{name} Cyber Essentials certified", "{domain} Cyber Essentials"],
     "pci_dss":          ["{name} PCI DSS compliant", "{domain} PCI DSS"],
-    "dpa":              ["{name} data processing agreement", "{domain} DPA GDPR"],
+    "dpa":              ["{name} data processing agreement", "{domain} DPA GDPR", "{name} DPA download", "{name} data processing addendum filetype:pdf"],
 }
 
 # ── Credibility signals in search results ─────────────────────────────────────
@@ -192,15 +192,33 @@ def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict) -> di
     return enriched
 
 
-def _find_security_contact(domain: str) -> dict | None:
-    """Verified security contact from security.txt only — never fabricated."""
+def _find_security_contact(domain: str, scraped_pages: list[str]) -> dict | None:
+    """
+    1. Check security.txt (RFC 9116) — most authoritative source.
+    2. Scrape already-fetched pages for email addresses matching known prefixes.
+       Only returns an email if it actually appears on the vendor's own site.
+       Never fabricates or guesses.
+    """
     base = domain.replace("https://", "").replace("http://", "").rstrip("/")
+
+    # Stage 1 — security.txt
     for path in ["/.well-known/security.txt", "/security.txt"]:
         content = _fetch_page(f"https://{base}{path}")
         if content:
             match = re.search(r"Contact:\s*(mailto:)?([^\s]+@[^\s]+)", content, re.IGNORECASE)
             if match:
                 return {"email": match.group(2).strip(), "verified": True, "source": "security.txt"}
+
+    # Stage 2 — scrape pages we already fetched for matching email addresses
+    combined = " ".join(filter(None, scraped_pages)).lower()
+    for prefix in SECURITY_EMAIL_PREFIXES:
+        # Look for prefix@domain (with or without www)
+        pattern = rf"{prefix}@(?:www\.)?{re.escape(base)}"
+        match = re.search(pattern, combined, re.IGNORECASE)
+        if match:
+            email = f"{prefix}@{base}"
+            return {"email": email, "verified": True, "source": "site"}
+
     return None
 
 
