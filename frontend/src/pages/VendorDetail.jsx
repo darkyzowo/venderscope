@@ -62,7 +62,7 @@ export default function VendorDetail() {
     load();
     // Check quota on mount so scan button reflects current state
     api
-      .get("/api/quota")
+      .get("/quota")
       .then((r) => setQuotaEx(r.data.exhausted))
       .catch(() => {});
   }, [id]);
@@ -74,7 +74,7 @@ export default function VendorDetail() {
       await fetchData();
       // Refresh quota state after scan
       api
-        .get("/api/quota")
+        .get("/quota")
         .then((r) => setQuotaEx(r.data.exhausted))
         .catch(() => {});
     } catch (e) {

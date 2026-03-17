@@ -11,7 +11,7 @@ export default function QuotaBanner() {
 
   useEffect(() => {
     api
-      .get("/api/quota")
+      .get("/quota")
       .then((r) => setQuota(r.data))
       .catch(() => setQuota(null));
   }, []);
