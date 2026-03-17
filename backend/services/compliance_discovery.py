@@ -19,13 +19,12 @@ HEADERS = {
     "User-Agent": "VenderScope/1.0 Compliance Discovery Bot (security research)"
 }
 
-# Document types to look for
+# Document types to look for (DPA removed — now evidence-checked like certs)
 DOC_PATTERNS = {
-    "privacy_policy":  ["/privacy", "/privacy-policy", "/privacy_policy", "privacy"],
-    "terms":           ["/terms", "/terms-of-service", "/terms-of-use", "/tos", "terms"],
-    "security":        ["/security", "/security-policy", "/security.txt", "security"],
-    "dpa":             ["/dpa", "/data-processing", "/data-processing-agreement", "dpa"],
-    "cookie_policy":   ["/cookies", "/cookie-policy", "/cookie_policy", "cookies"],
+    "privacy_policy": ["/privacy", "/privacy-policy", "/privacy_policy", "privacy"],
+    "terms":          ["/terms", "/terms-of-service", "/terms-of-use", "/tos", "terms"],
+    "security":       ["/security", "/security-policy", "/security.txt", "security"],
+    "cookie_policy":  ["/cookies", "/cookie-policy", "/cookie_policy", "cookies"],
 }
 
 # Trust centre patterns
@@ -35,11 +34,12 @@ TRUST_PATTERNS = [
     "compliance.{domain}",
     "{domain}/trust",
     "{domain}/trust-center",
+    "{domain}/trust-centre",
     "{domain}/security",
     "{domain}/compliance",
 ]
 
-# Certification keywords to search for
+# Certification + compliance doc keywords to evidence-check
 CERT_KEYWORDS = {
     "iso_27001": [
         "iso 27001", "iso27001", "iso/iec 27001",
@@ -59,10 +59,13 @@ CERT_KEYWORDS = {
     "pci_dss": [
         "pci dss", "pci-dss", "payment card industry"
     ],
+    # DPA moved here — evidence-checked against page content
+    "dpa": [
+        "data processing agreement", "data processing addendum",
+        "dpa", "controller to processor", "sub-processor agreement",
+        "article 28", "gdpr article 28"
+    ],
 }
-
-# Security contact email prefixes to check
-SECURITY_EMAIL_PREFIXES = ["security", "privacy", "dpo", "dpa", "compliance", "legal"]
 
 
 def _is_safe_domain(domain: str) -> bool:
@@ -91,9 +94,9 @@ def _find_doc_links(html: str, base_url: str) -> dict:
     Scrapes a page's HTML to find links to compliance documents.
     Returns a dict of {doc_type: url}.
     """
-    soup   = BeautifulSoup(html, "html.parser")
-    found  = {}
-    links  = soup.find_all("a", href=True)
+    soup  = BeautifulSoup(html, "html.parser")
+    found = {}
+    links = soup.find_all("a", href=True)
 
     for link in links:
         href = link["href"].lower()
@@ -130,7 +133,6 @@ def _check_trust_centre(domain: str) -> dict:
             resp = requests.head(url, headers=HEADERS, timeout=6,
                                  allow_redirects=True)
             if resp.status_code in (200, 301, 302):
-                # Check if publicly accessible or behind login
                 body = _fetch_page(url, timeout=6)
                 accessible = body is not None and len(body) > 500
                 return {"url": url, "accessible": accessible}
@@ -142,10 +144,9 @@ def _check_trust_centre(domain: str) -> dict:
 
 def _check_certifications(html: str, extra_pages: list[str]) -> dict:
     """
-    Searches page content for certification mentions.
+    Searches page content for certification and compliance document mentions.
     Returns {cert_name: 'found' | 'not_found'}.
     """
-    # Combine all page text
     full_text = html.lower()
     for page_html in extra_pages:
         if page_html:
@@ -159,26 +160,27 @@ def _check_certifications(html: str, extra_pages: list[str]) -> dict:
     return results
 
 
-def _find_security_contact(domain: str) -> str | None:
+def _find_security_contact(domain: str) -> dict | None:
     """
-    Returns the most likely security contact email for a domain.
-    Checks security.txt first (RFC 9116), then falls back to common prefixes.
+    Returns a verified security contact from security.txt only (RFC 9116).
+    Never fabricates an email — returns None if nothing is confirmed.
     """
     base = domain.replace("https://", "").replace("http://", "").rstrip("/")
 
-    # Check security.txt (RFC 9116 standard)
     for path in ["/.well-known/security.txt", "/security.txt"]:
         content = _fetch_page(f"https://{base}{path}")
         if content:
-            match = re.search(r"Contact:\s*(mailto:)?([^\s]+@[^\s]+)", content, re.IGNORECASE)
+            match = re.search(
+                r"Contact:\s*(mailto:)?([^\s]+@[^\s]+)",
+                content,
+                re.IGNORECASE
+            )
             if match:
-                return match.group(2).strip()
+                email = match.group(2).strip()
+                return {"email": email, "verified": True, "source": "security.txt"}
 
-    # Fall back to common prefixes
-    for prefix in SECURITY_EMAIL_PREFIXES:
-        return f"{prefix}@{base}"  # Return the most likely one
-
-    return f"security@{base}"
+    # No confirmed contact found — return nothing rather than guess
+    return None
 
 
 def run_compliance_discovery(domain: str) -> dict:
@@ -198,7 +200,6 @@ def run_compliance_discovery(domain: str) -> dict:
     # 1. Fetch homepage
     home_html = _fetch_page(home_url)
     if not home_html:
-        # Try www prefix
         home_html = _fetch_page(f"https://www.{base}")
         if home_html:
             home_url = f"https://www.{base}"
@@ -207,7 +208,7 @@ def run_compliance_discovery(domain: str) -> dict:
     if home_html:
         doc_links = _find_doc_links(home_html, home_url)
 
-    # 2. Also check security page for certification mentions
+    # 2. Fetch security + privacy pages for richer cert evidence
     security_html = None
     if "security" in doc_links:
         security_html = _fetch_page(doc_links["security"])
@@ -216,7 +217,7 @@ def run_compliance_discovery(domain: str) -> dict:
     if "privacy_policy" in doc_links:
         privacy_html = _fetch_page(doc_links["privacy_policy"])
 
-    # 3. Certifications
+    # 3. Certifications + DPA evidence check
     certifications = _check_certifications(
         home_html or "",
         [security_html, privacy_html]
@@ -225,18 +226,19 @@ def run_compliance_discovery(domain: str) -> dict:
     # 4. Trust centre
     trust = _check_trust_centre(base)
 
-    # 5. Security contact
+    # 5. Security contact — verified only, never fabricated
     contact = _find_security_contact(base)
 
     result = {
-        "documents":      doc_links,
-        "trust_centre":   trust,
-        "certifications": certifications,
-        "security_contact": contact,
+        "documents":        doc_links,
+        "trust_centre":     trust,
+        "certifications":   certifications,   # now includes 'dpa' key
+        "security_contact": contact,          # None or {email, verified, source}
     }
 
     print(f"[Compliance] {base} → {len(doc_links)} docs, "
           f"trust centre: {'yes' if trust else 'no'}, "
-          f"certs found: {sum(1 for v in certifications.values() if v == 'found')}")
+          f"certs found: {sum(1 for v in certifications.values() if v == 'found')}, "
+          f"contact: {'verified' if contact else 'none'}")
 
     return result
