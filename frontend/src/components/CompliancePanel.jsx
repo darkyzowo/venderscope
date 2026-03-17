@@ -21,7 +21,6 @@ const NoEvidence = () => (
 
 const CertBadge = ({ cert }) => {
   if (!cert || cert.status === "not_found") return <NoEvidence />;
-
   if (cert.source === "external") {
     return cert.url ? (
       <a
@@ -39,11 +38,15 @@ const CertBadge = ({ cert }) => {
       </span>
     );
   }
-
-  // source === "site"
   return (
     <span className="text-green-400 font-semibold">✅ Evidence found</span>
   );
+};
+
+const sourceLabel = (source) => {
+  if (source === "security.txt") return "security.txt";
+  if (source === "web_search") return "web search";
+  return "vendor site";
 };
 
 export default function CompliancePanel({ compliance }) {
@@ -65,7 +68,6 @@ export default function CompliancePanel({ compliance }) {
     ? security_contact.email
     : null;
 
-  // Support both old format (string) and new format ({status, source})
   const normaliseCert = (val) => {
     if (!val) return { status: "not_found" };
     if (typeof val === "string")
@@ -135,17 +137,14 @@ export default function CompliancePanel({ compliance }) {
           </div>
         )}
 
+        {/* Security contact — always shown, fallback hint if not found */}
         {verifiedContact ? (
           <div className="mt-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-4 py-3">
             <p className="text-indigo-300 text-xs">
               📧 <strong>Security contact</strong>{" "}
               <span className="text-indigo-400/60 font-normal">
-                (verified via{" "}
-                {security_contact?.source === "security.txt"
-                  ? "security.txt"
-                  : "vendor site"}
-                ):{" "}
-              </span>
+                (verified via {sourceLabel(security_contact?.source)}):
+              </span>{" "}
               <a
                 href={`mailto:${verifiedContact}?subject=Trust Centre Access Request - [Your Company]`}
                 className="underline hover:text-indigo-200"

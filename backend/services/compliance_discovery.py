@@ -45,7 +45,12 @@ CERT_SEARCH_QUERIES = {
     "gdpr":             ["{name} GDPR compliant", "{domain} GDPR compliance"],
     "cyber_essentials": ["{name} Cyber Essentials certified", "{domain} Cyber Essentials"],
     "pci_dss":          ["{name} PCI DSS compliant", "{domain} PCI DSS"],
-    "dpa":              ["{name} data processing agreement", "{domain} DPA GDPR", "{name} DPA download", "{name} data processing addendum filetype:pdf"],
+    "dpa": [
+        '"{name}" "data processing agreement"',
+        '"{name}" "DPA" site:{domain}',
+        "{name} data processing agreement GDPR",
+        "{domain} data processing addendum",
+    ],
 }
 
 # ── Credibility signals in search results ─────────────────────────────────────
@@ -196,8 +201,8 @@ def _find_security_contact(domain: str, scraped_pages: list[str]) -> dict | None
     """
     1. Check security.txt (RFC 9116) — most authoritative source.
     2. Scrape already-fetched pages for email addresses matching known prefixes.
-       Only returns an email if it actually appears on the vendor's own site.
-       Never fabricates or guesses.
+    3. Fall back to Google CSE search for a contact email on the vendor's site.
+       Never fabricates or guesses — only returns confirmed findings.
     """
     base = domain.replace("https://", "").replace("http://", "").rstrip("/")
 
@@ -209,15 +214,21 @@ def _find_security_contact(domain: str, scraped_pages: list[str]) -> dict | None
             if match:
                 return {"email": match.group(2).strip(), "verified": True, "source": "security.txt"}
 
-    # Stage 2 — scrape pages we already fetched for matching email addresses
+    # Stage 2 — search pages we already fetched for matching email addresses
     combined = " ".join(filter(None, scraped_pages)).lower()
     for prefix in SECURITY_EMAIL_PREFIXES:
-        # Look for prefix@domain (with or without www)
         pattern = rf"{prefix}@(?:www\.)?{re.escape(base)}"
-        match = re.search(pattern, combined, re.IGNORECASE)
-        if match:
-            email = f"{prefix}@{base}"
-            return {"email": email, "verified": True, "source": "site"}
+        if re.search(pattern, combined, re.IGNORECASE):
+            return {"email": f"{prefix}@{base}", "verified": True, "source": "site"}
+
+    # Stage 3 — Google CSE fallback: search for a real contact email for this domain
+    for prefix in SECURITY_EMAIL_PREFIXES:
+        query = f'"{prefix}@{base}"'
+        items = _google_search(query)
+        for item in items:
+            text = (item.get("title", "") + " " + item.get("snippet", "")).lower()
+            if f"{prefix}@{base}" in text:
+                return {"email": f"{prefix}@{base}", "verified": True, "source": "web_search"}
 
     return None
 
