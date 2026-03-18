@@ -14,33 +14,57 @@ const CERT_LABELS = {
   dpa: "Data Processing Agreement (DPA)",
 };
 
-const Missing = () => <span className="text-slate-500">❌ Not found</span>;
-const NoEvidence = () => (
-  <span className="text-yellow-500">⚠️ No public evidence</span>
+const SectionHeading = ({ children }) => (
+  <h4 className="text-slate-400 font-medium text-xs uppercase tracking-widest mb-3">
+    {children}
+  </h4>
+);
+
+const Row = ({ label, children }) => (
+  <div className="flex items-center justify-between py-2.5 border-b border-slate-700/40 last:border-0">
+    <span className="text-slate-300 text-sm">{label}</span>
+    {children}
+  </div>
+);
+
+const Badge = ({ variant = "muted", children }) => {
+  const styles = {
+    muted:    "bg-slate-700/40 border-slate-600/30 text-slate-500",
+    found:    "bg-green-500/10 border-green-500/20 text-green-400",
+    external: "bg-sky-500/10 border-sky-500/20 text-sky-400",
+    warning:  "bg-slate-700/40 border-slate-600/30 text-slate-400",
+  };
+  return (
+    <span className={`inline-flex items-center text-xs px-2.5 py-0.5 rounded-full border ${styles[variant]}`}>
+      {children}
+    </span>
+  );
+};
+
+const ViewLink = ({ href, label = "View" }) => (
+  <a
+    href={href}
+    target="_blank"
+    rel="noreferrer"
+    className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full border border-indigo-500/20 bg-indigo-500/10 text-indigo-400 hover:bg-indigo-500/20 hover:text-indigo-300 transition-colors"
+  >
+    {label}
+    <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+      <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  </a>
 );
 
 const CertBadge = ({ cert }) => {
-  if (!cert || cert.status === "not_found") return <NoEvidence />;
+  if (!cert || cert.status === "not_found") return <Badge variant="muted">No evidence</Badge>;
   if (cert.source === "external") {
     return cert.url ? (
-      <a
-        href={cert.url}
-        target="_blank"
-        rel="noreferrer"
-        title={cert.title || "External source"}
-        className="text-blue-400 hover:text-blue-300 font-semibold text-sm underline"
-      >
-        🌐 Evidence found (external) →
-      </a>
+      <ViewLink href={cert.url} label="External source" />
     ) : (
-      <span className="text-blue-400 font-semibold">
-        🌐 Evidence found (external)
-      </span>
+      <Badge variant="external">External evidence</Badge>
     );
   }
-  return (
-    <span className="text-green-400 font-semibold">✅ Evidence found</span>
-  );
+  return <Badge variant="found">Verified</Badge>;
 };
 
 const sourceLabel = (source) => {
@@ -53,8 +77,7 @@ export default function CompliancePanel({ compliance }) {
   if (!compliance || Object.keys(compliance).length === 0)
     return (
       <p className="text-slate-500 text-sm">
-        No compliance data yet — run a scan to discover this vendor's compliance
-        posture.
+        No compliance data yet — run a scan to discover this vendor's compliance posture.
       </p>
     );
 
@@ -64,17 +87,12 @@ export default function CompliancePanel({ compliance }) {
     certifications = {},
     security_contact,
   } = compliance;
-  const verifiedContact = security_contact?.verified
-    ? security_contact.email
-    : null;
+  const verifiedContact = security_contact?.verified ? security_contact.email : null;
 
   const normaliseCert = (val) => {
     if (!val) return { status: "not_found" };
     if (typeof val === "string")
-      return {
-        status: val === "found" ? "found" : "not_found",
-        source: "site",
-      };
+      return { status: val === "found" ? "found" : "not_found", source: "site" };
     return val;
   };
 
@@ -82,87 +100,59 @@ export default function CompliancePanel({ compliance }) {
     <div className="space-y-6">
       {/* Compliance Documents */}
       <div>
-        <h4 className="text-slate-300 font-semibold text-sm mb-3 uppercase tracking-wider">
-          📋 Compliance Documents
-        </h4>
-        <div className="space-y-2">
+        <SectionHeading>Compliance Documents</SectionHeading>
+        <div>
           {Object.entries(DOC_LABELS).map(([key, label]) => (
-            <div
-              key={key}
-              className="flex items-center justify-between py-2 border-b border-slate-700/50"
-            >
-              <span className="text-slate-300 text-sm">{label}</span>
+            <Row key={key} label={label}>
               {documents[key] ? (
-                <a
-                  href={documents[key]}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-indigo-400 hover:text-indigo-300 text-sm underline"
-                >
-                  ✅ View →
-                </a>
+                <ViewLink href={documents[key]} />
               ) : (
-                <Missing />
+                <span className="text-slate-600 text-xs">—</span>
               )}
-            </div>
+            </Row>
           ))}
         </div>
       </div>
 
       {/* Trust Centre */}
       <div>
-        <h4 className="text-slate-300 font-semibold text-sm mb-3 uppercase tracking-wider">
-          🔐 Trust Centre
-        </h4>
+        <SectionHeading>Trust Centre</SectionHeading>
         {trust_centre ? (
-          <div className="flex items-center justify-between py-2 border-b border-slate-700/50">
-            <span className="text-slate-300 text-sm">
-              {trust_centre.accessible
-                ? "Publicly Accessible"
-                : "Access Required"}
-            </span>
-            <a
-              href={trust_centre.url}
-              target="_blank"
-              rel="noreferrer"
-              className="text-indigo-400 hover:text-indigo-300 text-sm underline"
-            >
-              {trust_centre.accessible ? "✅ View →" : "🔒 Request Access →"}
-            </a>
-          </div>
+          <Row label={trust_centre.accessible ? "Publicly Accessible" : "Access Required"}>
+            {trust_centre.accessible ? (
+              <ViewLink href={trust_centre.url} />
+            ) : (
+              <ViewLink href={trust_centre.url} label="Request access" />
+            )}
+          </Row>
         ) : (
-          <div className="flex items-center justify-between py-2 border-b border-slate-700/50">
-            <span className="text-slate-300 text-sm">Trust Centre</span>
-            <Missing />
-          </div>
+          <Row label="Trust Centre">
+            <span className="text-slate-600 text-xs">—</span>
+          </Row>
         )}
 
-        {/* Security contact — always shown, fallback hint if not found */}
+        {/* Security contact */}
         {verifiedContact ? (
-          <div className="mt-3 bg-indigo-500/10 border border-indigo-500/30 rounded-lg px-4 py-3">
-            <p className="text-indigo-300 text-xs">
-              📧 <strong>Security contact</strong>{" "}
-              <span className="text-indigo-400/60 font-normal">
-                (verified via {sourceLabel(security_contact?.source)}):
-              </span>{" "}
+          <div className="mt-3 bg-indigo-500/8 border border-indigo-500/20 rounded-lg px-4 py-3">
+            <p className="text-xs text-indigo-300/80">
+              <span className="font-medium text-indigo-300">Security contact</span>
+              <span className="text-indigo-400/50 ml-1">
+                via {sourceLabel(security_contact?.source)}
+              </span>
+              <span className="text-indigo-400/40 mx-2">·</span>
               <a
                 href={`mailto:${verifiedContact}?subject=Trust Centre Access Request - [Your Company]`}
-                className="underline hover:text-indigo-200"
+                className="underline underline-offset-2 hover:text-indigo-200 transition-colors"
               >
                 {verifiedContact}
-              </a>{" "}
-              — click to draft a trust centre access request email.
+              </a>
             </p>
           </div>
         ) : (
-          <div className="mt-3 bg-slate-700/30 border border-slate-600/30 rounded-lg px-4 py-3">
-            <p className="text-slate-500 text-xs">
-              📧{" "}
-              <strong className="text-slate-400">
-                No verified security contact found
-              </strong>{" "}
-              — no security.txt and no recognised contact email detected on
-              vendor's site.
+          <div className="mt-3 bg-slate-800/40 border border-slate-700/30 rounded-lg px-4 py-3">
+            <p className="text-xs text-slate-500">
+              <span className="font-medium text-slate-400">No verified security contact</span>
+              {" "}— no security.txt or recognised contact email found on vendor's site.
             </p>
           </div>
         )}
@@ -170,22 +160,16 @@ export default function CompliancePanel({ compliance }) {
 
       {/* Certifications & Compliance */}
       <div>
-        <h4 className="text-slate-300 font-semibold text-sm mb-1 uppercase tracking-wider">
-          🏅 Certifications & Compliance
-        </h4>
+        <SectionHeading>Certifications & Compliance</SectionHeading>
         <p className="text-slate-600 text-xs mb-3">
-          Based on public evidence — not a verified certification check. 🌐
-          External = found via web search outside vendor's own site.
+          Based on public evidence only — not a verified audit.
+          External = found via web search outside the vendor's own site.
         </p>
-        <div className="space-y-2">
+        <div>
           {Object.entries(CERT_LABELS).map(([key, label]) => (
-            <div
-              key={key}
-              className="flex items-center justify-between py-2 border-b border-slate-700/50"
-            >
-              <span className="text-slate-300 text-sm">{label}</span>
+            <Row key={key} label={label}>
               <CertBadge cert={normaliseCert(certifications[key])} />
-            </div>
+            </Row>
           ))}
         </div>
       </div>

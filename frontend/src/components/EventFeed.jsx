@@ -1,16 +1,15 @@
 const severityStyle = {
-  CRITICAL: 'bg-red-500/20 text-red-400 border-red-500/40',
-  HIGH:     'bg-orange-500/20 text-orange-400 border-orange-500/40',
-  MEDIUM:   'bg-yellow-500/20 text-yellow-400 border-yellow-500/40',
-  LOW:      'bg-green-500/20 text-green-400 border-green-500/40',
+  CRITICAL: 'bg-red-500/10 text-red-400 border-red-500/30',
+  HIGH:     'bg-orange-500/10 text-orange-400 border-orange-500/30',
+  MEDIUM:   'bg-yellow-500/10 text-yellow-400 border-yellow-500/30',
+  LOW:      'bg-green-500/10 text-green-400 border-green-500/30',
 }
 
-const sourceIcon = {
-  HIBP:           '🔓',
-  NVD:            '🛡',
-  CompaniesHouse: '🏢',
-  News:           '📰',
-  Shodan:         '🌐',
+const severityDot = {
+  CRITICAL: 'bg-red-500',
+  HIGH:     'bg-orange-500',
+  MEDIUM:   'bg-yellow-500',
+  LOW:      'bg-green-500',
 }
 
 const getCVELink = (title) => {
@@ -24,29 +23,37 @@ export default function EventFeed({ events }) {
   )
 
   return (
-    <div className="space-y-3">
+    <div className="space-y-2.5">
       {events.map(evt => {
-        // Only show clickable NVD links for CRITICAL events
         const cveLink = evt.severity === 'CRITICAL' ? getCVELink(evt.title) : null
+        const style = severityStyle[evt.severity] || severityStyle.LOW
+        const dot = severityDot[evt.severity] || severityDot.LOW
         return (
-          <div key={evt.id} className={`rounded-lg border p-4 ${severityStyle[evt.severity] || severityStyle.LOW}`}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-sm">
-                {sourceIcon[evt.source] || '⚠️'}{' '}
+          <div key={evt.id} className={`rounded-lg border p-4 ${style}`}>
+            <div className="flex items-start justify-between gap-3 mb-1.5">
+              <span className="font-semibold text-sm leading-snug">
                 {cveLink ? (
-                  <a href={cveLink} target="_blank" rel="noreferrer" className="hover:underline">
-                    {evt.title} ↗
+                  <a href={cveLink} target="_blank" rel="noreferrer" className="hover:underline underline-offset-2">
+                    {evt.title}
+                    <svg className="inline ml-1 mb-0.5" width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+                      <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
                   </a>
                 ) : evt.title}
               </span>
-              <span className={`text-xs font-bold tracking-wider px-2 py-0.5 rounded-full border ${severityStyle[evt.severity]}`}>
-                {evt.severity}
-              </span>
+              <div className="flex items-center gap-1.5 shrink-0">
+                <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                <span className={`text-xs font-bold tracking-wider px-2 py-0.5 rounded-full border ${style}`}>
+                  {evt.severity}
+                </span>
+              </div>
             </div>
-            <p className="text-xs opacity-80 mb-2">{evt.description}</p>
-            <p className="text-xs opacity-50">
-              {new Date(evt.detected_at).toLocaleString()} · {evt.source}
-            </p>
+            <p className="text-xs opacity-75 mb-2 leading-relaxed">{evt.description}</p>
+            <div className="flex items-center gap-2 text-xs opacity-40">
+              <span className="font-medium">{evt.source}</span>
+              <span>·</span>
+              <span>{new Date(evt.detected_at).toLocaleString()}</span>
+            </div>
           </div>
         )
       })}
