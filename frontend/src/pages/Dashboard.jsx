@@ -66,28 +66,28 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#0f1117] p-8">
-      {/* Demo banner */}
-      <div className="mb-4 bg-yellow-500/10 border border-yellow-500/30 rounded-lg px-4 py-3 text-yellow-400 text-sm">
-        ⚠️ <strong>Demo instance</strong> — this is a shared database for
-        portfolio demonstration. Vendors added here are visible to all visitors.
-        To use VenderScope privately,{" "}
-        <a
-          href="https://github.com/darkyzowo/venderscope"
-          target="_blank"
-          rel="noreferrer"
-          className="underline hover:text-yellow-300"
-        >
-          self-host your own instance
-        </a>
-        .
-      </div>
-
-      {/* Quota banner */}
-      <div className="mb-6">
-        <QuotaBanner />
-      </div>
-
       <div className="max-w-7xl mx-auto">
+        {/* Demo notice */}
+        <div className="flex items-center gap-2.5 mb-3 text-xs">
+          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-0.5 text-amber-400/90 font-semibold tracking-wide">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
+            DEMO
+          </span>
+          <span className="text-slate-500">Shared database — vendors are visible to all visitors.</span>
+          <a
+            href="https://github.com/darkyzowo/venderscope"
+            target="_blank"
+            rel="noreferrer"
+            className="text-slate-400 hover:text-white transition-colors ml-auto shrink-0"
+          >
+            Self-host →
+          </a>
+        </div>
+
+        {/* Quota banner */}
+        <div className="mb-6">
+          <QuotaBanner />
+        </div>
         {/* Header */}
         <div className="flex items-start justify-between mb-10">
           <div>
@@ -108,10 +108,9 @@ export default function Dashboard() {
                 disabled={scanningAll || vendors.length === 0}
                 className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm disabled:opacity-50 transition"
               >
-                {scanningAll ? "Scanning all..." : "⚡ Scan All"}
+                {scanningAll ? "Scanning all..." : "Scan All"}
               </button>
               <div className="absolute right-0 top-10 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
-                ⚠️{" "}
                 <span className="text-yellow-400 font-semibold">Heads up:</span>{" "}
                 Scan All works best with 1–2 vendors on the free tier. Each scan
                 hits multiple external APIs sequentially. On Render's free tier,

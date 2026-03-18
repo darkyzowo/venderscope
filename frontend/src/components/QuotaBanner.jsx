@@ -29,9 +29,9 @@ export default function QuotaBanner() {
   if (exhausted)
     return (
       <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-1.5 text-xs text-red-400">
-        <span>🚫</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-red-500 shrink-0" />
         <span className="font-medium">Full scans exhausted</span>
-        <span className="text-red-400/50">·</span>
+        <span className="text-red-400/40">·</span>
         <span className="text-red-400/70">Resets at {resetTime} UTC · Standard scans still available</span>
       </div>
     );
@@ -52,7 +52,7 @@ export default function QuotaBanner() {
 
   return (
     <div className="flex items-center gap-3 bg-slate-800/40 border border-slate-700/40 rounded-md px-3 py-1.5 text-xs">
-      <span className="text-slate-400">🔍</span>
+      <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${barColor}`} />
       <span className="text-slate-400 font-medium whitespace-nowrap">Full scans</span>
       <div className="flex-1 bg-slate-700/50 rounded-full h-1">
         <div className={`h-1 rounded-full transition-all ${barColor}`} style={{ width: `${usedPct}%` }} />
@@ -65,7 +65,7 @@ export default function QuotaBanner() {
       {full_scans_remaining <= 2 && (
         <>
           <span className="text-slate-600">·</span>
-          <span className="text-yellow-500/80 whitespace-nowrap">⚠️ running low</span>
+          <span className="text-yellow-500/80 whitespace-nowrap font-medium">running low</span>
         </>
       )}
     </div>

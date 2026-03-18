@@ -136,7 +136,7 @@ export default function VendorDetail() {
             <div className="text-slate-400 text-sm mt-1">Risk Score</div>
             <div className="group relative mt-1">
               <span className="text-xs text-slate-500 cursor-help border-b border-dotted border-slate-600">
-                ℹ️ How is this calculated?
+                How is this calculated?
               </span>
               <div className="absolute right-0 top-5 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
                 This score is estimated from the{" "}
@@ -170,8 +170,8 @@ export default function VendorDetail() {
               {scanning
                 ? "Scanning..."
                 : quotaExhausted
-                  ? "🚫 Quota Exhausted"
-                  : "⚡ Scan Now"}
+                  ? "Quota Exhausted"
+                  : "Scan Now"}
             </button>
 
             <a
@@ -180,7 +180,7 @@ export default function VendorDetail() {
               rel="noreferrer"
               className="mt-2 block px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm text-center transition"
             >
-              📄 Export PDF Report
+              Export PDF Report
             </a>
             {hiddenCount > 0 && (
               <p className="text-xs text-slate-500 mt-2">

@@ -24,7 +24,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
 
   return (
     <div
-      className={`rounded-xl border p-5 cursor-pointer transition hover:scale-[1.02] ${scoreBg(vendor.risk_score)} ${scoreColor(vendor.risk_score)}`}
+      className={`rounded-xl border p-5 cursor-pointer transition hover:brightness-110 hover:shadow-lg ${scoreBg(vendor.risk_score)} ${scoreColor(vendor.risk_score)}`}
       onClick={() => nav(`/vendor/${vendor.id}`)}
     >
       <div className="flex justify-between items-start mb-3">
@@ -54,13 +54,16 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
           disabled={scanning}
           className="flex-1 text-xs py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white disabled:opacity-50 transition"
         >
-          {scanning ? 'Scanning...' : '⚡ Scan Now'}
+          {scanning ? 'Scanning...' : 'Scan Now'}
         </button>
         <button
           onClick={() => onDelete(vendor.id)}
-          className="text-xs py-1.5 px-3 rounded-lg bg-slate-700 hover:bg-red-600 text-slate-300 hover:text-white transition"
+          className="text-xs py-1.5 px-3 rounded-lg bg-slate-700 hover:bg-red-600 text-slate-400 hover:text-white transition"
+          aria-label="Remove vendor"
         >
-          🗑
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="3 6 5 6 21 6" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6" /><path d="M14 11v6" /><path d="M9 6V4h6v2" />
+          </svg>
         </button>
       </div>
     </div>
