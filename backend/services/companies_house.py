@@ -6,12 +6,28 @@ from dotenv import load_dotenv
 load_dotenv()
 
 CH_API_KEY = os.getenv("COMPANIES_HOUSE_API_KEY")
-CH_BASE = "https://api.company-information.service.gov.uk"
+CH_BASE    = "https://api.company-information.service.gov.uk"
+
+# All status strings the Companies House API considers healthy/active
+ACTIVE_STATUSES = {
+    "active",
+    "active-proposal-to-strike-off",  # common for dormant but still trading
+    "registered",                      # used for LLPs
+    "open",                            # used for some entity types
+}
+
+CRITICAL_STATUSES = {
+    "liquidation",
+    "dissolved",
+    "removed",
+    "converted-closed",
+    "insolvency-proceedings",
+}
 
 def check_company_health(company_number: str) -> list[dict]:
     """
     Checks Companies House for financial/governance risk signals:
-    - Company status (active, dissolved, liquidation)
+    - Company status (active, dissolved, liquidation, etc.)
     - Recent filing gaps (overdue accounts)
     - Director changes
     """
@@ -28,24 +44,25 @@ def check_company_health(company_number: str) -> list[dict]:
             timeout=10
         ).json()
 
-        status = profile.get("company_status", "unknown")
+        status = profile.get("company_status", "unknown").lower().strip()
         name   = profile.get("company_name", "Unknown")
 
-        if status != "active":
+        if status not in ACTIVE_STATUSES:
+            severity = "CRITICAL" if status in CRITICAL_STATUSES else "HIGH"
             events.append({
-                "title": f"{name} — Status: {status.upper()}",
-                "description": f"Companies House reports this company is '{status}'. Assess continuity risk immediately.",
-                "severity": "CRITICAL" if status in ["liquidation", "dissolved"] else "HIGH"
+                "title":       f"{name} — Status: {status.upper()}",
+                "description": f"Companies House reports this company status as '{status}'. "
+                               f"{'Assess continuity risk immediately.' if severity == 'CRITICAL' else 'Monitor for further changes.'}",
+                "severity":    severity,
             })
 
         # 2. Overdue filing check
         accounts = profile.get("accounts", {})
-        overdue  = accounts.get("overdue", False)
-        if overdue:
+        if accounts.get("overdue", False):
             events.append({
-                "title": f"{name} — Overdue Accounts Filing",
+                "title":       f"{name} — Overdue Accounts Filing",
                 "description": "Company has overdue accounts at Companies House. Possible financial distress signal.",
-                "severity": "HIGH"
+                "severity":    "HIGH",
             })
 
         # 3. Recent officer changes (director turnover)
@@ -63,9 +80,9 @@ def check_company_health(company_number: str) -> list[dict]:
 
         if len(recent_resignations) >= 2:
             events.append({
-                "title": f"{name} — {len(recent_resignations)} Director Resignation(s) on Record",
+                "title":       f"{name} — {len(recent_resignations)} Director Resignation(s) on Record",
                 "description": "Multiple director resignations detected. This may signal governance instability.",
-                "severity": "MEDIUM"
+                "severity":    "MEDIUM",
             })
 
     except Exception as e:
