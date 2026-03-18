@@ -28,17 +28,11 @@ export default function QuotaBanner() {
 
   if (exhausted)
     return (
-      <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 rounded-lg px-4 py-3 text-sm">
-        <span className="text-red-400 text-base mt-0.5">🚫</span>
-        <div>
-          <p className="text-red-400 font-semibold">
-            Full Intelligence Scans exhausted for today
-          </p>
-          <p className="text-red-400/70 text-xs mt-0.5">
-            All 100 daily Google search quota units have been used. Scans are
-            blocked until quota resets at <strong>{resetTime} UTC</strong>.
-          </p>
-        </div>
+      <div className="flex items-center gap-2 bg-red-500/10 border border-red-500/20 rounded-md px-3 py-1.5 text-xs text-red-400">
+        <span>🚫</span>
+        <span className="font-medium">Full scans exhausted</span>
+        <span className="text-red-400/50">·</span>
+        <span className="text-red-400/70">Resets at {resetTime} UTC · Standard scans still available</span>
       </div>
     );
 
@@ -49,50 +43,30 @@ export default function QuotaBanner() {
         ? "bg-yellow-500"
         : "bg-indigo-500";
 
+  const countColor =
+    full_scans_remaining <= 1
+      ? "text-red-400"
+      : full_scans_remaining <= 3
+        ? "text-yellow-400"
+        : "text-indigo-400";
+
   return (
-    <div className="bg-slate-800/50 border border-slate-700/50 rounded-lg px-4 py-3 text-sm">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span>🔍</span>
-          <span className="text-slate-300 font-medium">
-            Full Intelligence Scans
-          </span>
-          <span className="text-xs text-slate-500">
-            (includes compliance web search)
-          </span>
-        </div>
-        <div className="text-right">
-          <span
-            className={`font-bold ${full_scans_remaining <= 1 ? "text-red-400" : full_scans_remaining <= 3 ? "text-yellow-400" : "text-indigo-400"}`}
-          >
-            {full_scans_remaining}
-          </span>
-          <span className="text-slate-500 text-xs"> remaining today</span>
-        </div>
+    <div className="flex items-center gap-3 bg-slate-800/40 border border-slate-700/40 rounded-md px-3 py-1.5 text-xs">
+      <span className="text-slate-400">🔍</span>
+      <span className="text-slate-400 font-medium whitespace-nowrap">Full scans</span>
+      <div className="flex-1 bg-slate-700/50 rounded-full h-1">
+        <div className={`h-1 rounded-full transition-all ${barColor}`} style={{ width: `${usedPct}%` }} />
       </div>
-
-      {/* Progress bar */}
-      <div className="w-full bg-slate-700/50 rounded-full h-1.5">
-        <div
-          className={`h-1.5 rounded-full transition-all ${barColor}`}
-          style={{ width: `${usedPct}%` }}
-        />
-      </div>
-
-      <div className="flex justify-between mt-1.5">
-        <span className="text-slate-600 text-xs">
-          {limit - remaining} of {limit} quota units used
-        </span>
-        <span className="text-slate-600 text-xs">
-          Resets at {resetTime} UTC
-        </span>
-      </div>
-
+      <span className="text-slate-500 whitespace-nowrap">{limit - remaining}/{limit} units</span>
+      <span className="text-slate-600">·</span>
+      <span className={`font-semibold whitespace-nowrap ${countColor}`}>{full_scans_remaining} left</span>
+      <span className="text-slate-600">·</span>
+      <span className="text-slate-500 whitespace-nowrap">resets {resetTime} UTC</span>
       {full_scans_remaining <= 2 && (
-        <p className="text-yellow-500/80 text-xs mt-2">
-          ⚠️ Running low — Standard Scans (no web search) still available after
-          quota is exhausted.
-        </p>
+        <>
+          <span className="text-slate-600">·</span>
+          <span className="text-yellow-500/80 whitespace-nowrap">⚠️ running low</span>
+        </>
       )}
     </div>
   );
