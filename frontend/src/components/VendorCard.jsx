@@ -30,7 +30,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
       <div className="flex justify-between items-start mb-3">
         <div>
           <h3 className="text-white font-semibold text-lg">{vendor.name}</h3>
-          <p className="text-slate-400 text-sm">{vendor.domain}</p>
+          <p className="text-slate-400 text-sm">{vendor.domain.split('?')[0].split('/')[0]}</p>
         </div>
         <div className="text-right">
           <div className={`text-3xl font-bold ${scoreColor(vendor.risk_score)}`}>
