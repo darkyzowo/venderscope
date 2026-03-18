@@ -43,6 +43,7 @@ def check_company_health(company_number: str) -> list[dict]:
             auth=(CH_API_KEY, ""),
             timeout=10
         ).json()
+        print(f"[CompaniesHouse] Raw response for {company_number}: {profile}")
 
         status = profile.get("company_status", "unknown").lower().strip()
         name   = profile.get("company_name", "Unknown")
