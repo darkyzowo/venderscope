@@ -58,8 +58,8 @@ CERT_SEARCH_QUERIES = {
 # suppliers rather than the vendor itself.  Used to detect "our data centres
 # are ISO 27001 certified" vs "we hold ISO 27001 certification".
 THIRD_PARTY_PATTERNS = [
-    # "third-party / third parties ... certified / cert keyword"
-    r"third[- ]?part(?:y|ies)\b.{0,200}\b(iso.?27001|soc\s*2|pci|cyber\s*essentials|certified)",
+    # "third-party / third parties ... certified / cert keyword" (100-char clause limit)
+    r"third[- ]?part(?:y|ies)\b.{0,100}\b(iso.?27001|soc\s*2|pci|cyber\s*essentials|certified)",
     # "infrastructure / data centre / cloud provider ... certified"
     r"\b(infrastructure|data[- ]?cent(?:er|re)|hosting\s+provider|cloud\s+provider)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci)",
     # "partners / providers / vendors are certified"
@@ -68,8 +68,8 @@ THIRD_PARTY_PATTERNS = [
     r"\b(iso.?27001|soc\s*2|pci\s*dss|cyber\s*essentials)\b.{0,150}\b(infrastructure|data[- ]?cent(?:er|re)|hosting|cloud\s+provider|partner|vendor)\b",
     # "relies on / hosted by / powered by ... certified"
     r"\b(relies?\s+on|built\s+on|powered\s+by|operated\s+by|hosted\s+by|runs?\s+on)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci)\b",
-    # "all of the third parties providing our core infrastructure"
-    r"\ball\s+of\s+(the\s+)?(our\s+)?third[- ]?part(?:y|ies)\b",
+    # "all of the third parties ... [cert]" — cert keyword required in same clause
+    r"\ball\s+of\s+(the\s+)?(our\s+)?third[- ]?part(?:y|ies)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci|cyber\s*essentials)",
     # "core infrastructure" near cert keyword
     r"\bcore\s+infrastructure\b.{0,100}\b(iso.?27001|soc\s*2|certified)\b",
 ]
@@ -149,7 +149,7 @@ def _is_third_party_attribution(full_text: str, keyword: str) -> bool:
     has_third_party = False
 
     for pos in positions:
-        ctx = full_text[max(0, pos - 400): min(len(full_text), pos + 400)]
+        ctx = full_text[max(0, pos - 200): min(len(full_text), pos + 200)]
         if any(re.search(p, ctx, re.IGNORECASE) for p in THIRD_PARTY_PATTERNS):
             has_third_party = True
         else:
