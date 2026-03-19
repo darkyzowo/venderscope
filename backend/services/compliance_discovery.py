@@ -131,26 +131,30 @@ def _check_trust_centre(domain: str) -> dict | None:
 
 def _is_third_party_attribution(full_text: str, keyword: str) -> bool:
     """
-    Returns True when every occurrence of `keyword` in `full_text` appears in a
-    context that attributes the cert to the vendor's infrastructure / suppliers
-    rather than the vendor itself.
+    Returns True when every text segment containing `keyword` attributes the cert
+    to the vendor's infrastructure/suppliers rather than the vendor itself.
 
-    Logic: scan a ±400-char window around each match.
-      - If any window contains a third-party pattern → mark as third-party evidence.
-      - If any window contains NO third-party pattern  → treat as direct evidence.
-    Only returns True when third-party evidence exists and direct evidence does not,
-    so "we hold ISO 27001 AND our data centres are ISO 27001" still comes back False.
+    Splits on HTML tags AND sentence-ending punctuation so adjacent list items /
+    paragraphs never bleed into each other's pattern check.  A ±N char window
+    was unreliable when two cert mentions sat in adjacent <li> elements.
+
+    Only returns True when third-party evidence exists and NO direct evidence does,
+    so "we are ISO 27001 certified AND our data centres are ISO 27001 certified"
+    still resolves to found (direct evidence wins).
     """
-    positions = [m.start() for m in re.finditer(re.escape(keyword), full_text)]
-    if not positions:
+    # Split raw HTML into isolated text segments on tags and sentence boundaries
+    segments = [
+        s.strip() for s in re.split(r'<[^>]+>|[.!?\n]', full_text)
+        if keyword in s and len(s.strip()) > 15
+    ]
+    if not segments:
         return False
 
     has_direct = False
     has_third_party = False
 
-    for pos in positions:
-        ctx = full_text[max(0, pos - 200): min(len(full_text), pos + 200)]
-        if any(re.search(p, ctx, re.IGNORECASE) for p in THIRD_PARTY_PATTERNS):
+    for seg in segments:
+        if any(re.search(p, seg, re.IGNORECASE) for p in THIRD_PARTY_PATTERNS):
             has_third_party = True
         else:
             has_direct = True
