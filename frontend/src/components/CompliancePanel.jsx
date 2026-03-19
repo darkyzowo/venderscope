@@ -27,15 +27,19 @@ const Row = ({ label, children }) => (
   </div>
 );
 
-const Badge = ({ variant = "muted", children }) => {
+const Badge = ({ variant = "muted", children, title }) => {
   const styles = {
-    muted:    "bg-slate-700/40 border-slate-600/30 text-slate-500",
-    found:    "bg-green-500/10 border-green-500/20 text-green-400",
-    external: "bg-sky-500/10 border-sky-500/20 text-sky-400",
-    warning:  "bg-slate-700/40 border-slate-600/30 text-slate-400",
+    muted:       "bg-slate-700/40 border-slate-600/30 text-slate-500",
+    found:       "bg-green-500/10 border-green-500/20 text-green-400",
+    external:    "bg-sky-500/10 border-sky-500/20 text-sky-400",
+    third_party: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+    warning:     "bg-slate-700/40 border-slate-600/30 text-slate-400",
   };
   return (
-    <span className={`inline-flex items-center text-xs px-2.5 py-0.5 rounded-full border ${styles[variant]}`}>
+    <span
+      title={title}
+      className={`inline-flex items-center text-xs px-2.5 py-0.5 rounded-full border ${styles[variant]} ${title ? "cursor-help" : ""}`}
+    >
       {children}
     </span>
   );
@@ -57,6 +61,27 @@ const ViewLink = ({ href, label = "View" }) => (
 
 const CertBadge = ({ cert }) => {
   if (!cert || cert.status === "not_found") return <Badge variant="muted">No evidence</Badge>;
+
+  if (cert.status === "third_party") {
+    const tip = "Vendor's infrastructure providers hold this cert — not the vendor directly.";
+    return cert.url ? (
+      <a
+        href={cert.url}
+        target="_blank"
+        rel="noreferrer"
+        title={tip}
+        className="inline-flex items-center gap-1 text-xs px-2.5 py-0.5 rounded-full border border-amber-500/20 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20 hover:text-amber-300 transition-colors cursor-help"
+      >
+        Via infra partners
+        <svg width="10" height="10" viewBox="0 0 10 10" fill="none" aria-hidden="true">
+          <path d="M2 8L8 2M8 2H4M8 2V6" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+        </svg>
+      </a>
+    ) : (
+      <Badge variant="third_party" title={tip}>Via infra partners</Badge>
+    );
+  }
+
   if (cert.source === "external") {
     return cert.url ? (
       <ViewLink href={cert.url} label="External source" />
@@ -64,6 +89,7 @@ const CertBadge = ({ cert }) => {
       <Badge variant="external">External evidence</Badge>
     );
   }
+
   return <Badge variant="found">Verified</Badge>;
 };
 

@@ -53,6 +53,27 @@ CERT_SEARCH_QUERIES = {
     ],
 }
 
+# ── Third-party attribution patterns ─────────────────────────────────────────
+# Matches sentences where a cert keyword is attributed to the vendor's infra/
+# suppliers rather than the vendor itself.  Used to detect "our data centres
+# are ISO 27001 certified" vs "we hold ISO 27001 certification".
+THIRD_PARTY_PATTERNS = [
+    # "third-party / third parties ... certified / cert keyword"
+    r"third[- ]?part(?:y|ies)\b.{0,200}\b(iso.?27001|soc\s*2|pci|cyber\s*essentials|certified)",
+    # "infrastructure / data centre / cloud provider ... certified"
+    r"\b(infrastructure|data[- ]?cent(?:er|re)|hosting\s+provider|cloud\s+provider)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci)",
+    # "partners / providers / vendors are certified"
+    r"\b(partners?|providers?|vendors?|suppliers?)\s+(are|is|that\s+are|which\s+are|who\s+are)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci)",
+    # cert keyword then "infrastructure / partner / provider" in same window
+    r"\b(iso.?27001|soc\s*2|pci\s*dss|cyber\s*essentials)\b.{0,150}\b(infrastructure|data[- ]?cent(?:er|re)|hosting|cloud\s+provider|partner|vendor)\b",
+    # "relies on / hosted by / powered by ... certified"
+    r"\b(relies?\s+on|built\s+on|powered\s+by|operated\s+by|hosted\s+by|runs?\s+on)\b.{0,150}\b(certified|iso.?27001|soc\s*2|pci)\b",
+    # "all of the third parties providing our core infrastructure"
+    r"\ball\s+of\s+(the\s+)?(our\s+)?third[- ]?part(?:y|ies)\b",
+    # "core infrastructure" near cert keyword
+    r"\bcore\s+infrastructure\b.{0,100}\b(iso.?27001|soc\s*2|certified)\b",
+]
+
 # ── Credible certification body domains ───────────────────────────────────────
 CREDIBLE_DOMAINS = [
     "bsigroup.com", "schellman.com", "aicpa.org", "ukas.com",
@@ -108,11 +129,46 @@ def _check_trust_centre(domain: str) -> dict | None:
     return None
 
 
+def _is_third_party_attribution(full_text: str, keyword: str) -> bool:
+    """
+    Returns True when every occurrence of `keyword` in `full_text` appears in a
+    context that attributes the cert to the vendor's infrastructure / suppliers
+    rather than the vendor itself.
+
+    Logic: scan a ±400-char window around each match.
+      - If any window contains a third-party pattern → mark as third-party evidence.
+      - If any window contains NO third-party pattern  → treat as direct evidence.
+    Only returns True when third-party evidence exists and direct evidence does not,
+    so "we hold ISO 27001 AND our data centres are ISO 27001" still comes back False.
+    """
+    positions = [m.start() for m in re.finditer(re.escape(keyword), full_text)]
+    if not positions:
+        return False
+
+    has_direct = False
+    has_third_party = False
+
+    for pos in positions:
+        ctx = full_text[max(0, pos - 400): min(len(full_text), pos + 400)]
+        if any(re.search(p, ctx, re.IGNORECASE) for p in THIRD_PARTY_PATTERNS):
+            has_third_party = True
+        else:
+            has_direct = True
+
+    return has_third_party and not has_direct
+
+
 def _scrape_stage(full_text: str) -> dict:
     """Stage 1 — keyword search across all fetched page content."""
     results = {}
     for cert, keywords in CERT_KEYWORDS.items():
-        results[cert] = "found" if any(kw in full_text for kw in keywords) else "not_found"
+        matched_kw = next((kw for kw in keywords if kw in full_text), None)
+        if matched_kw is None:
+            results[cert] = "not_found"
+        elif _is_third_party_attribution(full_text, matched_kw):
+            results[cert] = "third_party"
+        else:
+            results[cert] = "found"
     return results
 
 
@@ -151,7 +207,13 @@ def _result_is_credible(items: list[dict], cert_keywords: list[str]) -> dict | N
 
 
 def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict) -> dict:
-    """Stage 2 — Google search fallback only for certs not found in scrape."""
+    """
+    Stage 2 — Google search fallback.
+    - "found"       → already confirmed on-site, skip search.
+    - "third_party" → run search to try to find direct cert evidence; if search
+                      also only surfaces third-party attribution, preserve that status.
+    - "not_found"   → run search as before; apply attribution check to snippets.
+    """
     base     = domain.replace("https://", "").replace("http://", "").rstrip("/")
     enriched = {}
 
@@ -171,14 +233,25 @@ def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict) -> di
                 break
 
         if match:
+            # Attribution-check the snippet before calling it "found"
+            snippet    = (match.get("title", "") + " " + match.get("snippet", "")).lower()
+            kw_in_snip = next((kw for kw in CERT_KEYWORDS[cert] if kw in snippet), None)
+            is_tp      = (
+                kw_in_snip is not None
+                and any(re.search(p, snippet, re.IGNORECASE) for p in THIRD_PARTY_PATTERNS)
+            )
             enriched[cert] = {
-                "status": "found",
+                "status": "third_party" if is_tp else "found",
                 "source": "external",
                 "url":    match.get("link", ""),
                 "title":  match.get("title", ""),
             }
         else:
-            enriched[cert] = {"status": "not_found", "source": None}
+            # No web evidence found — preserve third_party from scrape if that's what we had
+            enriched[cert] = {
+                "status": status if status == "third_party" else "not_found",
+                "source": "site" if status == "third_party" else None,
+            }
 
     return enriched
 
@@ -257,7 +330,7 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
     else:
         print(f"[Compliance] Standard Scan — skipping web search for {base}")
         certifications = {
-            k: {"status": v, "source": "site" if v == "found" else None}
+            k: {"status": v, "source": "site" if v in ("found", "third_party") else None}
             for k, v in scrape_results.items()
         }
 
@@ -266,9 +339,11 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
     contact       = _find_security_contact(base, scraped_pages, use_web_search)
 
     found_count = sum(1 for v in certifications.values() if v["status"] == "found")
+    tp_count    = sum(1 for v in certifications.values() if v["status"] == "third_party")
     ext_count   = sum(1 for v in certifications.values() if v.get("source") == "external")
     print(f"[Compliance] Done — {len(doc_links)} docs, "
-          f"{found_count} certs ({ext_count} via web search), "
+          f"{found_count} certs direct, {tp_count} via infra partners "
+          f"({ext_count} via web search), "
           f"trust centre: {'yes' if trust else 'no'}, "
           f"contact: {'verified' if contact else 'none'}")
 
