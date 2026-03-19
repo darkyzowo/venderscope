@@ -10,6 +10,7 @@ from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
 from services.alerts import send_alert_email
 from services.compliance_discovery import run_compliance_discovery
+from services.vendor_profile import discover_vendor_profile
 from services.quota import check_and_consume
 
 # Severity weights for scoring
@@ -50,9 +51,10 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
 
     # Run all intelligence sources concurrently
     tasks = {
-        "hibp":   (check_domain_breaches, vendor.domain),
-        "nvd":    (check_vendor_cves,     vendor.name),
-        "shodan": (check_shodan_exposure, vendor.domain),
+        "hibp":    (check_domain_breaches,   vendor.domain),
+        "nvd":     (check_vendor_cves,       vendor.name),
+        "shodan":  (check_shodan_exposure,   vendor.domain),
+        "profile": (discover_vendor_profile, vendor.domain),
     }
     if vendor.company_number:
         tasks["ch"] = (check_company_health, vendor.company_number)
@@ -100,6 +102,15 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     compliance_data = raw.get("compliance", {})
     if compliance_data:
         vendor.compliance = json.dumps(compliance_data)
+
+    # Save vendor profile fields — only overwrite if new value was discovered
+    profile_data = raw.get("profile", {})
+    if profile_data.get("description"):
+        vendor.description = profile_data["description"]
+    if profile_data.get("auth_method"):
+        vendor.auth_method = profile_data["auth_method"]
+    if profile_data.get("two_factor"):
+        vendor.two_factor = profile_data["two_factor"]
 
     score               = _compute_score(all_events)
     vendor.risk_score   = score

@@ -196,6 +196,49 @@ export default function VendorDetail() {
           <ScoreChart history={history} />
         </div>
 
+        {/* Vendor Profile */}
+        {(vendor.description || vendor.auth_method || vendor.two_factor) && (
+          <div className="bg-[#1a1d27] rounded-xl border border-slate-700 p-6 mb-8">
+            <h3 className="text-white font-semibold mb-4">
+              Vendor Profile
+              <span className="text-slate-500 font-normal text-sm ml-2">
+                (auto-discovered)
+              </span>
+            </h3>
+
+            {vendor.description && (
+              <p className="text-slate-300 text-sm leading-relaxed mb-5">
+                {vendor.description}
+              </p>
+            )}
+
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <p className="text-slate-500 text-xs uppercase tracking-widest mb-1.5">
+                  Auth Method
+                </p>
+                <p className="text-slate-200 text-sm">
+                  {vendor.auth_method || (
+                    <span className="text-slate-600">Not detected</span>
+                  )}
+                </p>
+              </div>
+              <div>
+                <p className="text-slate-500 text-xs uppercase tracking-widest mb-1.5">
+                  2FA Support
+                </p>
+                {vendor.two_factor === "Yes" ? (
+                  <span className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full border bg-green-500/10 border-green-500/20 text-green-400">
+                    Yes
+                  </span>
+                ) : (
+                  <span className="text-slate-600 text-sm">Not detected</span>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Compliance Posture */}
         <div className="bg-[#1a1d27] rounded-xl border border-slate-700 p-6 mb-8">
           <h3 className="text-white font-semibold mb-4">
@@ -219,7 +262,7 @@ export default function VendorDetail() {
             </h3>
             {hiddenCount > 0 && (
               <span className="text-xs text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 px-3 py-1 rounded-full">
-                📄 +{hiddenCount} more in PDF
+                +{hiddenCount} more in PDF
               </span>
             )}
           </div>

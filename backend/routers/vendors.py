@@ -42,6 +42,9 @@ class VendorOut(BaseModel):
     risk_score:     float
     last_scanned:   Optional[datetime] = None
     compliance:     Optional[dict]     = None
+    description:    Optional[str]      = None
+    auth_method:    Optional[str]      = None
+    two_factor:     Optional[str]      = None
 
     class Config:
         from_attributes = True

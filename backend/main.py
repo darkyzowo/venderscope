@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
+from sqlalchemy import text
 from database import engine, Base
 import models
 from routers import vendors, intelligence, export, quota
@@ -14,6 +15,19 @@ print(">>> CWD:", os.getcwd())
 print(">>> DATABASE_URL:", os.getenv("DATABASE_URL"))
 
 Base.metadata.create_all(bind=engine)
+
+# Column-level migration — adds new fields to existing DBs without data loss
+with engine.connect() as _conn:
+    _cols = {row[1] for row in _conn.execute(text("PRAGMA table_info(vendors)")).fetchall()}
+    for _col, _ddl in [
+        ("description", "ALTER TABLE vendors ADD COLUMN description TEXT"),
+        ("auth_method",  "ALTER TABLE vendors ADD COLUMN auth_method VARCHAR"),
+        ("two_factor",   "ALTER TABLE vendors ADD COLUMN two_factor VARCHAR"),
+    ]:
+        if _col not in _cols:
+            _conn.execute(text(_ddl))
+            print(f"[Migration] Added column: {_col}")
+    _conn.commit()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):

@@ -14,6 +14,9 @@ class Vendor(Base):
     added_at       = Column(DateTime, default=datetime.utcnow)
     last_scanned   = Column(DateTime, nullable=True)
     compliance     = Column(Text, nullable=True)  # JSON stored as string
+    description    = Column(Text,   nullable=True)
+    auth_method    = Column(String, nullable=True)
+    two_factor     = Column(String, nullable=True)
 
     events  = relationship("RiskEvent",        back_populates="vendor", cascade="all, delete")
     scores  = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
