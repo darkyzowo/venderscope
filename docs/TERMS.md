@@ -41,7 +41,7 @@ You must be at least 18 years old and have the authority to enter into these Ter
 You are responsible for:
 - Keeping your password secure and confidential
 - All activity that occurs under your account
-- Notifying us immediately at [your-email@domain.com] if you suspect unauthorised access
+- Notifying us immediately at syedzrk1000@gmail.com if you suspect unauthorised access
 
 ### 4.2 Accurate Information
 You agree to provide accurate, current, and complete information when creating your account and to keep it updated.
@@ -177,5 +177,5 @@ We will notify registered users by email at least **14 days** before material ch
 
 ## 17. Contact
 
-**Email:** [your-email@domain.com]
+**Email:** syedzrk1000@gmail.com
 **GitHub:** https://github.com/darkyzowo/venderscope

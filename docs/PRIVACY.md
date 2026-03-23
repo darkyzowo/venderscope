@@ -14,7 +14,7 @@ We are committed to full compliance with the UK General Data Protection Regulati
 VenderScope is a vendor risk intelligence platform that aggregates publicly available security signals (breach data, CVEs, infrastructure exposure, compliance documentation) to generate risk scores for third-party vendors.
 
 **Data Controller:** VenderScope
-**Contact:** [your-email@domain.com]
+**Contact:** syedzrk1000@gmail.com
 
 ---
 
@@ -134,7 +134,7 @@ When an account is deleted, all associated vendor data, risk events, score histo
 
 ## 7. Your Rights Under UK/EU GDPR
 
-You have the following rights. To exercise any of them, email us at [your-email@domain.com].
+You have the following rights. To exercise any of them, email us at syedzrk1000@gmail.com.
 
 ### 7.1 Right of Access (Article 15)
 You have the right to request a copy of all personal data we hold about you. We will respond within **30 days**. You can also export your data directly from the platform (see Settings → Export My Data).
@@ -222,5 +222,5 @@ Continued use of VenderScope after a policy change constitutes acceptance of the
 
 For any privacy-related questions, requests, or concerns:
 
-**Email:** [your-email@domain.com]
+**Email:** syedzrk1000@gmail.com
 **Response time:** Within 5 business days

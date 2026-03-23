@@ -15,7 +15,7 @@
 
 If you discover a security vulnerability in VenderScope, please report it responsibly:
 
-**Email:** [your-security-email@domain.com]
+**Email:** syedzrk1000@gmail.com
 **Subject line:** `[SECURITY] VenderScope Vulnerability Report`
 **PGP:** Available on request
 
