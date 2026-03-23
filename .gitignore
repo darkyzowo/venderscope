@@ -21,3 +21,7 @@ frontend/dist/
 
 # VS Code
 .vscode/
+
+# Claude context files
+CLAUDE.md
+tasks/
