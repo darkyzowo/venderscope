@@ -1,174 +1,251 @@
-import { useEffect, useState } from "react";
-import { getVendors, addVendor, deleteVendor, scanVendor } from "../api/client";
-import VendorCard from "../components/VendorCard";
-import AddVendorModal from "../components/AddVendorModal";
-import QuotaBanner from "../components/QuotaBanner";
+import { useEffect, useState } from 'react'
+import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
+import VendorCard from '../components/VendorCard'
+import AddVendorModal from '../components/AddVendorModal'
+import QuotaBanner from '../components/QuotaBanner'
+
+// Hexagon logo mark — hex outline with inner target
+const Logo = () => (
+  <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <path
+      d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z"
+      stroke="#8b5cf6" strokeWidth="1.5"
+      fill="rgba(139,92,246,0.08)"
+    />
+    <circle cx="16" cy="16" r="5.5" stroke="#8b5cf6" strokeWidth="1.2" fill="rgba(139,92,246,0.12)" />
+    <circle cx="16" cy="16" r="1.8" fill="#8b5cf6" />
+    <line x1="16" y1="10.5" x2="16" y2="12.2" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
+    <line x1="16" y1="19.8" x2="16" y2="21.5" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
+    <line x1="10.5" y1="16" x2="12.2" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
+    <line x1="19.8" y1="16" x2="21.5" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
+  </svg>
+)
+
+const StatPill = ({ value, label, color }) => (
+  <div
+    className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+    style={{
+      background: 'rgba(255,255,255,0.03)',
+      border: '1px solid rgba(255,255,255,0.06)',
+    }}
+  >
+    <span className="text-xl font-bold tabular-nums" style={{ color }}>{value}</span>
+    <span className="text-sm" style={{ color: '#44445a' }}>{label}</span>
+  </div>
+)
+
+const EmptyState = ({ onAdd }) => (
+  <div className="text-center py-32">
+    <div className="flex justify-center mb-4 opacity-15">
+      <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
+        <path d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z" stroke="#8b5cf6" strokeWidth="1.5" fill="none"/>
+        <circle cx="16" cy="16" r="5.5" stroke="#8b5cf6" strokeWidth="1.2"/>
+        <circle cx="16" cy="16" r="1.8" fill="#8b5cf6"/>
+      </svg>
+    </div>
+    <p className="font-medium" style={{ color: '#44445a' }}>No vendors monitored yet</p>
+    <p className="text-sm mt-1" style={{ color: '#2a2a4a' }}>
+      Add your first vendor to start continuous monitoring.
+    </p>
+    <button
+      onClick={onAdd}
+      className="mt-6 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
+      style={{ background: '#8b5cf6', color: '#fff' }}
+      onMouseEnter={(e) => e.currentTarget.style.background = '#7c3aed'}
+      onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
+    >
+      + Add Vendor
+    </button>
+  </div>
+)
 
 export default function Dashboard() {
-  const [vendors, setVendors] = useState([]);
-  const [showModal, setShowModal] = useState(false);
-  const [scanning, setScanning] = useState({});
-  const [scanningAll, setScanAll] = useState(false);
+  const [vendors, setVendors] = useState([])
+  const [showModal, setShowModal] = useState(false)
+  const [scanning, setScanning] = useState({})
+  const [scanningAll, setScanAll] = useState(false)
+  const [cardsVisible, setCardsVisible] = useState(false)
 
-  const load = () => getVendors().then((r) => setVendors(r.data));
+  const load = () => getVendors().then((r) => setVendors(r.data))
 
   useEffect(() => {
-    load();
-  }, []);
+    load()
+    // Tiny delay before triggering card entry animation
+    const t = setTimeout(() => setCardsVisible(true), 80)
+    return () => clearTimeout(t)
+  }, [])
 
-  const handleAdd = async (data) => {
-    await addVendor(data);
-    await load();
-  };
+  const handleAdd = async (data) => { await addVendor(data); await load() }
 
   const handleDelete = async (id) => {
-    if (!confirm("Remove this vendor?")) return;
-    await deleteVendor(id);
-    await load();
-  };
+    if (!confirm('Remove this vendor?')) return
+    await deleteVendor(id)
+    await load()
+  }
 
   const handleScan = async (id) => {
-    setScanning((s) => ({ ...s, [id]: true }));
-    try {
-      await scanVendor(id);
-      await load();
-    } catch (e) {
-      console.error("Scan failed:", e);
-    } finally {
-      setScanning((s) => ({ ...s, [id]: false }));
-    }
-  };
+    setScanning((s) => ({ ...s, [id]: true }))
+    try { await scanVendor(id); await load() }
+    catch (e) { console.error('Scan failed:', e) }
+    finally { setScanning((s) => ({ ...s, [id]: false })) }
+  }
 
   const handleScanAll = async () => {
-    setScanAll(true);
+    setScanAll(true)
     try {
-      const current = await getVendors();
+      const current = await getVendors()
       for (const v of current.data) {
-        try {
-          await scanVendor(v.id);
-        } catch (e) {
-          console.error(`Scan failed for ${v.name}:`, e);
-        }
+        try { await scanVendor(v.id) }
+        catch (e) { console.error(`Scan failed for ${v.name}:`, e) }
       }
-    } catch (e) {
-      console.error("Scan all failed:", e);
-    } finally {
-      setScanAll(false);
-      window.location.reload();
-    }
-  };
+    } catch (e) { console.error('Scan all failed:', e) }
+    finally { setScanAll(false); window.location.reload() }
+  }
 
-  const high = vendors.filter((v) => v.risk_score >= 70).length;
-  const medium = vendors.filter(
-    (v) => v.risk_score >= 35 && v.risk_score < 70,
-  ).length;
-  const low = vendors.filter((v) => v.risk_score < 35).length;
+  const high = vendors.filter((v) => v.risk_score >= 70).length
+  const medium = vendors.filter((v) => v.risk_score >= 35 && v.risk_score < 70).length
+  const low = vendors.filter((v) => v.risk_score < 35).length
 
   return (
-    <div className="min-h-screen bg-[#0f1117] p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen" style={{ background: '#090911' }}>
+      <div className="max-w-7xl mx-auto px-6 py-8">
+
         {/* Demo notice */}
-        <div className="flex items-center gap-2.5 mb-3 text-xs">
-          <span className="inline-flex items-center gap-1.5 bg-amber-500/10 border border-amber-500/20 rounded-full px-2.5 py-0.5 text-amber-400/90 font-semibold tracking-wide">
+        <div className="flex items-center gap-2.5 mb-5 text-xs">
+          <span
+            className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-semibold tracking-wide"
+            style={{
+              background: 'rgba(251,191,36,0.07)',
+              border: '1px solid rgba(251,191,36,0.15)',
+              color: '#fbbf24',
+            }}
+          >
             <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
             DEMO
           </span>
-          <span className="text-slate-500">Shared database — vendors are visible to all visitors.</span>
+          <span style={{ color: '#44445a' }}>
+            Shared database — vendors are visible to all visitors.
+          </span>
           <a
             href="https://github.com/darkyzowo/venderscope"
             target="_blank"
             rel="noreferrer"
-            className="text-slate-400 hover:text-white transition-colors ml-auto shrink-0"
+            className="ml-auto shrink-0 transition-colors duration-150"
+            style={{ color: '#44445a' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
           >
             Self-host →
           </a>
         </div>
 
-        {/* Quota banner */}
-        <div className="mb-6">
-          <QuotaBanner />
-        </div>
+        {/* Quota */}
+        <div className="mb-6"><QuotaBanner /></div>
+
         {/* Header */}
-        <div className="flex items-start justify-between mb-10">
-          <div>
-            <h1 className="text-3xl font-bold text-white tracking-tight">
-              Vender<span className="text-indigo-400">Scope</span>
-            </h1>
-            <p className="text-slate-400 mt-1">
-              Still running annual vendor audits?{" "}
-              <span className="text-indigo-400">
-                Your next breach won't wait 12 months.
-              </span>
-            </p>
+        <div className="flex items-start justify-between mb-8">
+          <div className="flex items-center gap-3">
+            <Logo />
+            <div>
+              <h1 className="text-2xl font-bold tracking-tight leading-none" style={{ color: '#f0f0ff' }}>
+                Vender<span style={{ color: '#8b5cf6' }}>Scope</span>
+              </h1>
+              <p className="text-xs mt-1.5" style={{ color: '#44445a' }}>
+                Vendor risk intelligence · continuous monitoring
+              </p>
+            </div>
           </div>
-          <div className="flex gap-3">
+
+          <div className="flex items-center gap-2">
+            {/* Scan All with tooltip */}
             <div className="relative group">
               <button
                 onClick={handleScanAll}
                 disabled={scanningAll || vendors.length === 0}
-                className="px-4 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm disabled:opacity-50 transition"
+                className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
+                style={{
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: '#8888aa',
+                }}
+                onMouseEnter={(e) => {
+                  if (!scanningAll && vendors.length > 0) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                    e.currentTarget.style.color = '#f0f0ff'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                  e.currentTarget.style.color = '#8888aa'
+                }}
               >
-                {scanningAll ? "Scanning all..." : "Scan All"}
+                {scanningAll ? (
+                  <span className="inline-flex items-center gap-1.5">
+                    <svg className="animate-spin" width="11" height="11" viewBox="0 0 24 24" fill="none">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round"/>
+                    </svg>
+                    Scanning…
+                  </span>
+                ) : 'Scan All'}
               </button>
-              <div className="absolute right-0 top-10 w-72 bg-slate-800 border border-slate-600 text-slate-300 text-xs rounded-lg p-3 shadow-lg hidden group-hover:block z-50">
-                <span className="text-yellow-400 font-semibold">Heads up:</span>{" "}
-                Scan All works best with 1–2 vendors on the free tier. Each scan
-                hits multiple external APIs sequentially. On Render's free tier,
-                scanning 3+ vendors can take 3–5 minutes or time out.{" "}
-                <span className="text-indigo-400">
-                  Use individual Scan Now buttons for reliable results.
-                </span>
+              <div
+                className="absolute right-0 top-11 w-72 rounded-xl p-3.5 text-xs hidden group-hover:block z-50"
+                style={{
+                  background: '#141425',
+                  border: '1px solid #2a2a4a',
+                  color: '#8888aa',
+                  boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
+                }}
+              >
+                <span style={{ color: '#fbbf24', fontWeight: 600 }}>Heads up:</span>{' '}
+                Works best with 1–2 vendors on the free tier. Scanning 3+ can take 3–5 min or time out.{' '}
+                <span style={{ color: '#a78bfa' }}>Use Scan Now on individual cards for reliable results.</span>
               </div>
             </div>
+
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold transition"
+              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150"
+              style={{ background: '#8b5cf6', color: '#fff' }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#7c3aed'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
             >
               + Add Vendor
             </button>
           </div>
         </div>
 
-        {/* Stats bar */}
-        <div className="grid grid-cols-4 gap-4 mb-10">
-          {[
-            {
-              label: "Total Vendors",
-              value: vendors.length,
-              color: "text-white",
-            },
-            { label: "High Risk", value: high, color: "text-red-400" },
-            { label: "Medium Risk", value: medium, color: "text-yellow-400" },
-            { label: "Low Risk", value: low, color: "text-green-400" },
-          ].map((s) => (
-            <div
-              key={s.label}
-              className="bg-[#1a1d27] rounded-xl border border-slate-700 p-5"
-            >
-              <div className={`text-3xl font-bold ${s.color}`}>{s.value}</div>
-              <div className="text-slate-400 text-sm mt-1">{s.label}</div>
-            </div>
-          ))}
-        </div>
+        {/* Stats row */}
+        {vendors.length > 0 && (
+          <div className="flex flex-wrap items-center gap-3 mb-8">
+            <StatPill value={vendors.length} label="Total" color="#f0f0ff" />
+            <StatPill value={high}           label="High Risk" color="#f97316" />
+            <StatPill value={medium}         label="Medium" color="#eab308" />
+            <StatPill value={low}            label="Low Risk" color="#22c55e" />
+          </div>
+        )}
 
         {/* Vendor grid */}
         {vendors.length === 0 ? (
-          <div className="text-center py-24">
-            <p className="text-slate-500 text-lg">No vendors yet.</p>
-            <p className="text-slate-600 text-sm mt-2">
-              Add your first vendor to start monitoring.
-            </p>
-          </div>
+          <EmptyState onAdd={() => setShowModal(true)} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-            {vendors.map((v) => (
-              <VendorCard
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {vendors.map((v, i) => (
+              <div
                 key={v.id}
-                vendor={v}
-                onDelete={handleDelete}
-                onScan={handleScan}
-                scanning={!!scanning[v.id]}
-              />
+                style={{
+                  opacity: cardsVisible ? 1 : 0,
+                  transform: cardsVisible ? 'translateY(0)' : 'translateY(10px)',
+                  transition: `opacity 300ms ease ${i * 45}ms, transform 300ms ease ${i * 45}ms`,
+                }}
+              >
+                <VendorCard
+                  vendor={v}
+                  onDelete={handleDelete}
+                  onScan={handleScan}
+                  scanning={!!scanning[v.id]}
+                />
+              </div>
             ))}
           </div>
         )}
@@ -178,5 +255,5 @@ export default function Dashboard() {
         <AddVendorModal onAdd={handleAdd} onClose={() => setShowModal(false)} />
       )}
     </div>
-  );
+  )
 }

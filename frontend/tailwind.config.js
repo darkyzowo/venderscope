@@ -3,8 +3,8 @@ export default {
   content: ["./index.html", "./src/**/*.{js,jsx}"],
   theme: {
     extend: {
-      colors: {
-        brand: "#6366f1",
+      fontFamily: {
+        sans: ['"Geist"', 'system-ui', '-apple-system', 'sans-serif'],
       },
     },
   },
