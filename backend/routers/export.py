@@ -1,15 +1,29 @@
+import re
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Vendor, RiskEvent, RiskScoreHistory
+from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.pdf_export import generate_vendor_pdf
+from services.auth_service import get_current_user
 
 router = APIRouter()
 
+# Allowed characters for PDF filenames — prevents header injection (CRIT-03)
+_SAFE_FILENAME = re.compile(r'[^a-z0-9_\-]')
+
+
 @router.get("/{vendor_id}/pdf")
-def export_vendor_pdf(vendor_id: int, db: Session = Depends(get_db)):
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+def export_vendor_pdf(
+    vendor_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # Ownership check — always 404 to prevent existence enumeration
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
 
@@ -20,9 +34,11 @@ def export_vendor_pdf(vendor_id: int, db: Session = Depends(get_db)):
 
     pdf = generate_vendor_pdf(vendor, events, history)
 
-    filename = f"vendorscope_{vendor.name.lower().replace(' ', '_')}_report.pdf"
+    # Sanitise vendor name for use in Content-Disposition header — prevents CRIT-03
+    safe_name = _SAFE_FILENAME.sub('_', vendor.name.lower().replace(' ', '_'))
+    filename = f"vendorscope_{safe_name}_report.pdf"
     return Response(
         content=pdf,
         media_type="application/pdf",
-        headers={"Content-Disposition": f"attachment; filename={filename}"}
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

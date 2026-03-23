@@ -1,38 +1,53 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Vendor
+from models import Vendor, User
 from services.scanner import run_full_scan
-
+from services.auth_service import get_current_user
 
 router = APIRouter()
 
+
 @router.post("/scan/{vendor_id}")
-def trigger_scan(vendor_id: int, force: bool = True, db: Session = Depends(get_db)):
+def trigger_scan(
+    vendor_id: int,
+    force: bool = True,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
     Scan a single vendor.
     force=True (default) always fetches fresh data from external APIs.
     force=False uses cached data if scanned within 24hrs.
     """
-    vendor = db.query(Vendor).filter(Vendor.id == vendor_id).first()
+    # Ownership check — always 404 to prevent existence enumeration
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     result = run_full_scan(vendor, db, force=force)
     return {"message": f"Scan complete for {vendor.name}", "new_score": result}
 
+
 @router.post("/scan-all")
-def scan_all_vendors(force: bool = False, db: Session = Depends(get_db)):
+def scan_all_vendors(
+    force: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     """
-    Scan all vendors.
+    Scan all vendors belonging to the authenticated user.
     force=False (default) uses cache — makes Scan All fast for recently scanned vendors.
-    force=True fetches fresh data for everything.
     """
-    vendors = db.query(Vendor).all()
+    vendors = db.query(Vendor).filter(Vendor.user_id == current_user.id).all()
     results = {}
     for v in vendors:
         try:
             score = run_full_scan(v, db, force=force)
             results[v.name] = score
-        except Exception as e:
-            results[v.name] = f"error: {str(e)}"
+        except Exception:
+            # Don't expose internal error details to the client
+            results[v.name] = "scan_failed"
     return {"scanned": len(vendors), "scores": results}

@@ -3,6 +3,7 @@ import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
 import QuotaBanner from '../components/QuotaBanner'
+import { useAuth } from '../auth/AuthContext'
 
 // Hexagon logo mark — hex outline with inner target
 const Logo = () => (
@@ -60,6 +61,7 @@ const EmptyState = ({ onAdd }) => (
 )
 
 export default function Dashboard() {
+  const { logout } = useAuth()
   const [vendors, setVendors] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [scanning, setScanning] = useState({})
@@ -110,21 +112,21 @@ export default function Dashboard() {
     <div className="min-h-screen" style={{ background: '#090911' }}>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
-        {/* Demo notice */}
+        {/* Beta notice */}
         <div className="flex items-center gap-2.5 mb-5 text-xs">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-semibold tracking-wide"
             style={{
-              background: 'rgba(251,191,36,0.07)',
-              border: '1px solid rgba(251,191,36,0.15)',
-              color: '#fbbf24',
+              background: 'rgba(139,92,246,0.07)',
+              border: '1px solid rgba(139,92,246,0.15)',
+              color: '#a78bfa',
             }}
           >
-            <span className="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse" />
-            DEMO
+            <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#8b5cf6' }} />
+            BETA
           </span>
           <span style={{ color: '#44445a' }}>
-            Shared database — vendors are visible to all visitors.
+            Vendor data is private to your account.
           </span>
           <a
             href="https://github.com/darkyzowo/venderscope"
@@ -135,7 +137,7 @@ export default function Dashboard() {
             onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
           >
-            Self-host →
+            GitHub →
           </a>
         </div>
 
@@ -211,6 +213,32 @@ export default function Dashboard() {
               onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
             >
               + Add Vendor
+            </button>
+
+            {/* Logout */}
+            <button
+              onClick={logout}
+              className="px-3 py-2 rounded-xl text-sm transition-all duration-150"
+              title="Sign out"
+              style={{
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.07)',
+                color: '#44445a',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.color = '#ff4444'
+                e.currentTarget.style.borderColor = 'rgba(255,68,68,0.2)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.color = '#44445a'
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
+              }}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                <polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                <line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+              </svg>
             </button>
           </div>
         </div>

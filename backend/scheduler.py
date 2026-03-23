@@ -33,4 +33,4 @@ def start_scheduler():
     scheduler.add_job(scheduled_scan, "interval", hours=24,  id="daily_scan")
     scheduler.add_job(keep_alive,     "interval", minutes=10, id="keep_alive")
     scheduler.start()
-    print("[Scheduler] Daily scan + keep-alive jobs started ✅")
+    print("[Scheduler] Daily scan + keep-alive jobs started")

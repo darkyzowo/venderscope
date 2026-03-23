@@ -6,8 +6,12 @@ apscheduler
 sqlalchemy
 aiohttp
 pydantic
+pydantic[email]
 shodan
 reportlab
 httpx
 slowapi
 beautifulsoup4
+python-jose[cryptography]
+bcrypt
+email-validator
