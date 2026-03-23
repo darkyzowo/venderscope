@@ -1,6 +1,10 @@
+import os
+import traceback
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
@@ -9,10 +13,8 @@ import models
 from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
 from scheduler import start_scheduler
-import os
 
-print(">>> CWD:", os.getcwd())
-print(">>> DATABASE_URL:", os.getenv("DATABASE_URL"))
+# Debug prints removed — CRIT-02: DATABASE_URL may contain credentials
 
 Base.metadata.create_all(bind=engine)
 
@@ -30,6 +32,23 @@ with engine.connect() as _conn:
             print(f"[Migration] Added column: {_col}")
     _conn.commit()
 
+# ── Security headers middleware ─────────────────────────────────────────────
+_IS_PROD = bool(os.getenv("RENDER"))
+
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        if _IS_PROD:
+            response.headers["Strict-Transport-Security"] = (
+                "max-age=31536000; includeSubDomains"
+            )
+        return response
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     start_scheduler()
@@ -45,6 +64,8 @@ app = FastAPI(
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
+app.add_middleware(SecurityHeadersMiddleware)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -54,8 +75,8 @@ app.add_middleware(
         "https://venderscope-3466b3jpg-darkyzowos-projects.vercel.app",
     ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=["Authorization", "Content-Type"],
 )
 
 # Auth routes — rate limits applied inline with @limiter.limit
@@ -69,3 +90,13 @@ app.include_router(quota.router,       prefix="/api/quota",       tags=["Quota"]
 @app.get("/")
 def root():
     return {"status": "VenderScope is running 🚀"}
+
+
+# ── Generic exception handler — prevents stack traces leaking to clients ────
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    traceback.print_exc()  # Still logged server-side for debugging
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )

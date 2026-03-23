@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getVendors, getVendorEvents, getScoreHistory, scanVendor } from '../api/client'
+import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF } from '../api/client'
 import api from '../api/client'
 import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
@@ -53,6 +53,7 @@ export default function VendorDetail() {
   const [events, setEvents] = useState([])
   const [history, setHistory] = useState([])
   const [scanning, setScan] = useState(false)
+  const [exporting, setExporting] = useState(false)
   const [quotaExhausted, setQuotaEx] = useState(false)
 
   const fetchData = async () => {
@@ -87,6 +88,21 @@ export default function VendorDetail() {
     finally { setScan(false) }
   }
 
+  const handleExportPDF = async () => {
+    setExporting(true)
+    try {
+      const res = await exportPDF(vendor.id)
+      const blob = new Blob([res.data], { type: 'application/pdf' })
+      const url = URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `vendorscope_${vendor.name.replace(/\s+/g, '_').toLowerCase()}_report.pdf`
+      a.click()
+      URL.revokeObjectURL(url)
+    } catch (e) { console.error('PDF export failed:', e) }
+    finally { setExporting(false) }
+  }
+
   // Loading state
   if (!vendor)
     return (
@@ -102,7 +118,6 @@ export default function VendorDetail() {
 
   const displayedEvents = events.slice(0, EVENTS_SHOWN)
   const hiddenCount = events.length - EVENTS_SHOWN
-  const apiBase = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
@@ -160,27 +175,30 @@ export default function VendorDetail() {
               ) : quotaExhausted ? 'Quota Exhausted' : 'Scan Now'}
             </button>
 
-            <a
-              href={`${apiBase}/export/${id}/pdf`}
-              target="_blank"
-              rel="noreferrer"
+            <button
+              onClick={handleExportPDF}
+              disabled={exporting}
               className="px-4 py-2 rounded-xl text-sm transition-all duration-150"
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
                 color: '#8888aa',
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                opacity: exporting ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
-                e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-                e.currentTarget.style.color = '#f0f0ff'
+                if (!exporting) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.color = '#f0f0ff'
+                }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
                 e.currentTarget.style.color = '#8888aa'
               }}
             >
-              Export PDF
-            </a>
+              {exporting ? 'Exporting…' : 'Export PDF'}
+            </button>
           </div>
         </div>
 
@@ -289,21 +307,21 @@ export default function VendorDetail() {
               </span>
             </h3>
             {hiddenCount > 0 && (
-              <a
-                href={`${apiBase}/export/${id}/pdf`}
-                target="_blank"
-                rel="noreferrer"
+              <button
+                onClick={handleExportPDF}
+                disabled={exporting}
                 className="text-xs rounded-full px-3 py-1 transition-colors duration-150"
                 style={{
                   background: 'rgba(139,92,246,0.1)',
                   border: '1px solid rgba(139,92,246,0.2)',
                   color: '#a78bfa',
+                  cursor: exporting ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139,92,246,0.18)'}
                 onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(139,92,246,0.1)'}
               >
                 +{hiddenCount} more in PDF
-              </a>
+              </button>
             )}
           </div>
           <EventFeed events={displayedEvents} />

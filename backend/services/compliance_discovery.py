@@ -1,5 +1,6 @@
 import re
 import os
+import socket
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin
@@ -86,8 +87,17 @@ SECURITY_EMAIL_PREFIXES = ["security", "privacy", "dpo", "compliance", "legal", 
 
 
 def _is_safe_domain(domain: str) -> bool:
-    clean = domain.replace("https://", "").replace("http://", "").split("/")[0]
-    return not any(re.match(p, clean) for p in BLOCKED_PATTERNS)
+    clean = domain.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+    if any(re.match(p, clean) for p in BLOCKED_PATTERNS):
+        return False
+    # Resolve DNS and check the resolved IP too — prevents DNS rebinding attacks
+    try:
+        ip = socket.gethostbyname(clean)
+        if any(re.match(p, ip) for p in BLOCKED_PATTERNS):
+            return False
+    except socket.gaierror:
+        return False
+    return True
 
 
 def _fetch_page(url: str, timeout: int = 8) -> str | None:

@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator
 from typing import Optional
@@ -7,6 +7,7 @@ from datetime import datetime
 from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.auth_service import get_current_user
+from limiter import limiter
 
 router = APIRouter()
 
@@ -71,7 +72,9 @@ def list_vendors(
 
 
 @router.post("/", response_model=VendorOut)
+@limiter.limit("10/minute")
 def add_vendor(
+    request: Request,
     payload: VendorCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -90,7 +93,9 @@ def add_vendor(
 
 
 @router.delete("/{vendor_id}")
+@limiter.limit("10/minute")
 def delete_vendor(
+    request: Request,
     vendor_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

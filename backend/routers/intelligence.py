@@ -1,15 +1,18 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Vendor, User
 from services.scanner import run_full_scan
 from services.auth_service import get_current_user
+from limiter import limiter
 
 router = APIRouter()
 
 
 @router.post("/scan/{vendor_id}")
+@limiter.limit("5/minute")
 def trigger_scan(
+    request: Request,
     vendor_id: int,
     force: bool = True,
     db: Session = Depends(get_db),
@@ -32,7 +35,9 @@ def trigger_scan(
 
 
 @router.post("/scan-all")
+@limiter.limit("2/minute")
 def scan_all_vendors(
+    request: Request,
     force: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

@@ -1,11 +1,12 @@
 import re
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.pdf_export import generate_vendor_pdf
 from services.auth_service import get_current_user
+from limiter import limiter
 
 router = APIRouter()
 
@@ -14,7 +15,9 @@ _SAFE_FILENAME = re.compile(r'[^a-z0-9_\-]')
 
 
 @router.get("/{vendor_id}/pdf")
+@limiter.limit("10/minute")
 def export_vendor_pdf(
+    request: Request,
     vendor_id: int,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

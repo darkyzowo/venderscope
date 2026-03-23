@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from services.compliance_discovery import _is_safe_domain
 
 HEADERS = {"User-Agent": "VenderScope/1.0 Vendor Profile Bot (security research)"}
 
@@ -86,6 +87,9 @@ def discover_vendor_profile(domain: str) -> dict:
     base   = domain.replace("https://", "").replace("http://", "").rstrip("/")
     result = {"description": None, "auth_method": None, "two_factor": None}
 
+    if not _is_safe_domain(base):
+        print(f"[Profile] Blocked unsafe domain: {base}")
+        return result
     try:
         home_html = _fetch(f"https://{base}") or _fetch(f"https://www.{base}")
         if not home_html:

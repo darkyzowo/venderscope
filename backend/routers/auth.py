@@ -32,12 +32,21 @@ class RegisterRequest(BaseModel):
     def password_strength(cls, v):
         if len(v) < 8:
             raise ValueError("Password must be at least 8 characters")
+        if len(v) > 128:
+            raise ValueError("Password must be under 128 characters")
         return v
 
 
 class LoginRequest(BaseModel):
     email: EmailStr
     password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_max_length(cls, v):
+        if len(v) > 128:
+            raise ValueError("Password too long")
+        return v
 
 
 def _set_refresh_cookie(response: Response, token: str) -> None:
@@ -87,10 +96,11 @@ def login(
     db: Session = Depends(get_db),
 ):
     user = db.query(User).filter(User.email == payload.email.lower()).first()
-    # Always run verify_password to prevent timing attacks even if user doesn't exist
-    dummy_hash = "$2b$12$dummy.hash.to.prevent.timing.attack.leaking.user.existence"
-    valid = user is not None and verify_password(payload.password, user.password_hash)
-    if not valid:
+    # Always run bcrypt to prevent timing-based user enumeration (CRIT-01)
+    dummy_hash = "$2b$12$LJ3m4ys3Lk0TDBGfGgsZKeDUxPlvMNnbBOHJbEHYsV3eIEfpyQ1SK"
+    pw_hash = user.password_hash if user else dummy_hash
+    password_ok = verify_password(payload.password, pw_hash)
+    if not (user is not None and password_ok):
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     access_token = create_access_token(user.id)
@@ -100,6 +110,7 @@ def login(
 
 
 @router.post("/refresh")
+@limiter.limit("10/minute")
 def refresh_token_endpoint(
     response: Response,
     vs_refresh: str = Cookie(default=None),
