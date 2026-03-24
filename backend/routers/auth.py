@@ -170,6 +170,7 @@ def refresh_token_endpoint(
 
 @router.post("/logout")
 def logout(
+    request: Request,
     response: Response,
     vs_refresh: str = Cookie(default=None),
     db: Session = Depends(get_db),
