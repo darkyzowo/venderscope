@@ -51,6 +51,15 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    # T-FE-03 — Validate critical env vars at startup so misconfig is caught immediately
+    _frontend_url = os.getenv("FRONTEND_URL", "")
+    if not _frontend_url:
+        raise RuntimeError("FRONTEND_URL environment variable is required — set it in .env")
+    if _IS_PROD and "localhost" in _frontend_url:
+        raise RuntimeError(
+            f"FRONTEND_URL is set to '{_frontend_url}' but this is a production deployment. "
+            "Set FRONTEND_URL to your Vercel URL in Render environment variables."
+        )
     start_scheduler()
     yield
 
