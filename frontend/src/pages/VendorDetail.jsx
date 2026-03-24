@@ -220,7 +220,7 @@ export default function VendorDetail() {
               <div className="group relative inline-block mt-1">
                 <span
                   className="text-[11px] cursor-help"
-                  style={{ color: '#2a2a4a', borderBottom: '1px dotted #2a2a4a' }}
+                  style={{ color: '#44445a', borderBottom: '1px dotted #44445a' }}
                 >
                   How is this calculated?
                 </span>
