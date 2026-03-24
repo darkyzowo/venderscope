@@ -7,7 +7,9 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from dotenv import load_dotenv
 
-load_dotenv()
+# Explicitly load backend/.env regardless of CWD, and override any existing env vars
+_env_path = os.path.join(os.path.dirname(__file__), ".env")
+load_dotenv(dotenv_path=_env_path, override=True)
 
 _default_db_path = os.path.join(os.path.dirname(__file__), "vendorscope.db")
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_default_db_path}")
