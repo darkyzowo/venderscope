@@ -10,9 +10,14 @@ load_dotenv()
 _default_db_path = os.path.join(os.path.dirname(__file__), "vendorscope.db")
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_default_db_path}")
 
-# Neon and Render emit postgres:// — SQLAlchemy requires postgresql://
+# Normalise URL dialect:
+#   postgres://        → postgresql+pg8000://   (Neon/Render shorthand)
+#   postgresql://      → postgresql+pg8000://   (standard, but no driver specified)
+# pg8000 is pure-Python so it works on any Python version including 3.14+
 if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+pg8000://", 1)
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+pg8000://", 1)
 
 _is_sqlite = DATABASE_URL.startswith("sqlite")
 
