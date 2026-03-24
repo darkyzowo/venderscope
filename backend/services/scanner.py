@@ -123,7 +123,7 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id, recipient_email=owner_email)
 
     scan_type = "Full Intelligence" if quota_ok else "Standard"
-    elapsed   = (datetime.utcnow() - start).seconds
+    elapsed   = (datetime.now(timezone.utc) - start).seconds
     print(f"[Scanner] {vendor.name} → {score} ({scan_type} Scan) | "
           f"+{len(new_events)} new events | {elapsed}s")
     return score

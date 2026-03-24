@@ -4,6 +4,7 @@ from database import get_db
 from models import Vendor, User
 from services.scanner import run_full_scan
 from services.auth_service import get_current_user
+from services.audit import audit
 from limiter import limiter
 
 router = APIRouter()
@@ -31,6 +32,7 @@ def trigger_scan(
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
     result = run_full_scan(vendor, db, force=force)
+    audit(db, "vendor.scanned", request, user_id=str(current_user.id), detail=f"{vendor.domain}:{result}")
     return {"message": f"Scan complete for {vendor.name}", "new_score": result}
 
 

@@ -7,6 +7,7 @@ from datetime import datetime
 from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.auth_service import get_current_user
+from services.audit import audit
 from limiter import limiter
 
 router = APIRouter()
@@ -88,6 +89,7 @@ def add_vendor(
     db.add(vendor)
     db.commit()
     db.refresh(vendor)
+    audit(db, "vendor.added", request, user_id=str(current_user.id), detail=vendor.domain)
     return vendor
 
 
@@ -106,9 +108,11 @@ def delete_vendor(
     ).first()
     if not vendor:
         raise HTTPException(status_code=404, detail="Vendor not found")
+    name = vendor.name
     db.delete(vendor)
     db.commit()
-    return {"message": f"Vendor '{vendor.name}' deleted"}
+    audit(db, "vendor.deleted", request, user_id=str(current_user.id), detail=vendor_id)
+    return {"message": f"Vendor '{name}' deleted"}
 
 
 @router.get("/{vendor_id}/events")

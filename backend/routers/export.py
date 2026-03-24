@@ -6,6 +6,7 @@ from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.pdf_export import generate_vendor_pdf
 from services.auth_service import get_current_user
+from services.audit import audit
 from limiter import limiter
 
 router = APIRouter()
@@ -36,6 +37,7 @@ def export_vendor_pdf(
                 .order_by(RiskScoreHistory.recorded_at.asc()).all()
 
     pdf = generate_vendor_pdf(vendor, events, history)
+    audit(db, "export.pdf", request, user_id=str(current_user.id), detail=vendor_id)
 
     # Sanitise vendor name for use in Content-Disposition header — prevents CRIT-03
     safe_name = _SAFE_FILENAME.sub('_', vendor.name.lower().replace(' ', '_'))
