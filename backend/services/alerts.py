@@ -1,23 +1,72 @@
 import smtplib
 import os
+import httpx
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
 
 load_dotenv()
 
-GMAIL_ADDRESS    = os.getenv("GMAIL_ADDRESS")
-GMAIL_APP_PASS   = os.getenv("GMAIL_APP_PASSWORD")
-ALERT_THRESHOLD  = float(os.getenv("ALERT_THRESHOLD", 70))
-FRONTEND_URL     = os.getenv("FRONTEND_URL", "http://localhost:5173")
+GMAIL_ADDRESS   = os.getenv("GMAIL_ADDRESS")
+GMAIL_APP_PASS  = os.getenv("GMAIL_APP_PASSWORD")
+ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70))
+FRONTEND_URL    = os.getenv("FRONTEND_URL", "http://localhost:5173")
+RESEND_API_KEY  = os.getenv("RESEND_API_KEY")
+RESEND_FROM     = os.getenv("RESEND_FROM_EMAIL", "VenderScope <alerts@venderscope.app>")
 
+
+# ── Transport layer ──────────────────────────────────────────────────────────
+
+def _send_email(to: str, subject: str, html: str) -> None:
+    """Dispatch via Resend (production) or Gmail SMTP (local dev fallback)."""
+    if RESEND_API_KEY:
+        _send_via_resend(to, subject, html)
+    elif GMAIL_ADDRESS and GMAIL_APP_PASS:
+        _send_via_gmail(to, subject, html)
+    else:
+        print("[Alerts] No email provider configured (set RESEND_API_KEY or GMAIL_* vars).")
+
+
+def _send_via_resend(to: str, subject: str, html: str) -> None:
+    try:
+        resp = httpx.post(
+            "https://api.resend.com/emails",
+            headers={"Authorization": f"Bearer {RESEND_API_KEY}"},
+            json={"from": RESEND_FROM, "to": [to], "subject": subject, "html": html},
+            timeout=15,
+        )
+        resp.raise_for_status()
+        print(f"[Alerts] Resend delivered to {to}")
+    except httpx.HTTPStatusError as e:
+        print(f"[Alerts] Resend HTTP error {e.response.status_code}: {e.response.text}")
+    except Exception as e:
+        print(f"[Alerts] Resend error: {e}")
+
+
+def _send_via_gmail(to: str, subject: str, html: str) -> None:
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = subject
+        msg["From"]    = GMAIL_ADDRESS
+        msg["To"]      = to
+        msg.attach(MIMEText(html, "html"))
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
+            server.sendmail(GMAIL_ADDRESS, to, msg.as_string())
+        print(f"[Alerts] Gmail delivered to {to}")
+    except smtplib.SMTPAuthenticationError:
+        print("[Alerts] Gmail auth failed — check GMAIL_APP_PASSWORD in .env")
+    except Exception as e:
+        print(f"[Alerts] Gmail error: {e}")
+
+
+# ── Email templates ──────────────────────────────────────────────────────────
 
 def send_welcome_email(recipient_email: str) -> None:
     """Send a confirmation email after successful registration."""
-    if not GMAIL_ADDRESS or not GMAIL_APP_PASS:
-        print("[Alerts] Missing GMAIL credentials — skipping welcome email.")
-        return
-
     html = f"""
     <html>
     <body style="margin:0;padding:0;background:#0f1117;font-family:Arial,sans-serif;">
@@ -52,27 +101,7 @@ def send_welcome_email(recipient_email: str) -> None:
     </body>
     </html>
     """
-
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = "Welcome to VenderScope"
-        msg["From"]    = GMAIL_ADDRESS
-        msg["To"]      = recipient_email
-        msg.attach(MIMEText(html, "html"))
-
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
-            server.sendmail(GMAIL_ADDRESS, recipient_email, msg.as_string())
-
-        print(f"[Alerts] Welcome email sent to {recipient_email}")
-
-    except smtplib.SMTPAuthenticationError:
-        print("[Alerts] Auth failed — check GMAIL_APP_PASSWORD in .env")
-    except Exception as e:
-        print(f"[Alerts] Error sending welcome email: {e}")
+    _send_email(recipient_email, "Welcome to VenderScope", html)
 
 
 def send_alert_email(
@@ -82,20 +111,18 @@ def send_alert_email(
     events: list,
     vendor_id: int = None,
     recipient_email: str = None,
-):
-    """
-    Sends a risk alert email to the vendor owner's registered email address.
-    Falls back to GMAIL_ADDRESS if recipient_email is not provided.
-    """
-    if not GMAIL_ADDRESS or not GMAIL_APP_PASS:
-        print("[Alerts] Missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD — skipping.")
-        return
-
+) -> None:
+    """Send a risk alert to the vendor owner when their score exceeds the threshold."""
     if score < ALERT_THRESHOLD:
         return
 
-    print(f"[Alerts] Sending alert for {vendor_name} (score: {score})...")
-    subject = f"🚨 VenderScope Alert — {vendor_name} Risk Score: {score}/100"
+    to = recipient_email or GMAIL_ADDRESS
+    if not to:
+        print("[Alerts] No recipient — skipping alert email.")
+        return
+
+    print(f"[Alerts] Sending alert for {vendor_name} (score: {score}) → {to}")
+    subject = f"VenderScope Alert — {vendor_name} Risk Score: {score}/100"
 
     sev_order  = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     top_events = sorted(events, key=lambda e: sev_order.get(e.severity, 4))[:10]
@@ -172,26 +199,4 @@ def send_alert_email(
     </body>
     </html>
     """
-
-    to_address = recipient_email or GMAIL_ADDRESS
-
-    try:
-        msg = MIMEMultipart("alternative")
-        msg["Subject"] = subject
-        msg["From"]    = GMAIL_ADDRESS
-        msg["To"]      = to_address
-        msg.attach(MIMEText(html, "html"))
-
-        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-            server.ehlo()
-            server.starttls()
-            server.ehlo()
-            server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
-            server.sendmail(GMAIL_ADDRESS, to_address, msg.as_string())
-
-        print(f"[Alerts] Alert email sent to {to_address} for {vendor_name} (score: {score})")
-
-    except smtplib.SMTPAuthenticationError:
-        print("[Alerts] ❌ Auth failed — check GMAIL_APP_PASSWORD in .env")
-    except Exception as e:
-        print(f"[Alerts] ❌ Error: {e}")
+    _send_email(to, subject, html)

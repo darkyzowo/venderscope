@@ -1,4 +1,5 @@
 import os
+import uuid
 import bcrypt
 from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
@@ -46,7 +47,7 @@ def create_access_token(user_id: str) -> str:
 def create_refresh_token(user_id: str) -> str:
     expire = datetime.now(timezone.utc) + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
     return jwt.encode(
-        {"sub": user_id, "exp": expire, "type": "refresh"},
+        {"sub": user_id, "exp": expire, "type": "refresh", "jti": str(uuid.uuid4())},
         JWT_SECRET,
         algorithm=ALGORITHM,
     )

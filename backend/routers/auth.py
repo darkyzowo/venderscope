@@ -5,7 +5,8 @@ from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
 from jose import JWTError, jwt
 from database import get_db
-from models import User
+from datetime import datetime, timezone
+from models import User, RevokedToken
 from limiter import limiter
 from services.alerts import send_welcome_email
 from services.auth_service import (
@@ -131,24 +132,54 @@ def refresh_token_endpoint(
         if payload.get("type") != "refresh":
             raise HTTPException(status_code=401, detail="Invalid token")
         user_id: str = payload.get("sub")
-        if not user_id:
+        jti: str     = payload.get("jti")
+        if not user_id or not jti:
             raise HTTPException(status_code=401, detail="Invalid token")
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
+
+    # Reject if this token was already revoked (logout or prior rotation)
+    if db.query(RevokedToken).filter(RevokedToken.jti == jti).first():
+        raise HTTPException(status_code=401, detail="Token has been revoked")
 
     user = db.query(User).filter(User.id == user_id).first()
     if not user:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-    new_access_token = create_access_token(user.id)
-    # Rotate refresh token on each use — limits stolen token window
+    # Revoke the old JTI immediately — each refresh token is single-use
+    exp = payload.get("exp")
+    if exp:
+        db.add(RevokedToken(
+            jti=jti,
+            expires_at=datetime.fromtimestamp(exp, tz=timezone.utc),
+        ))
+        db.commit()
+
+    new_access_token  = create_access_token(user.id)
     new_refresh_token = create_refresh_token(user.id)
     _set_refresh_cookie(response, new_refresh_token)
     return {"access_token": new_access_token}
 
 
 @router.post("/logout")
-def logout(response: Response):
+def logout(
+    response: Response,
+    vs_refresh: str = Cookie(default=None),
+    db: Session = Depends(get_db),
+):
+    # Blacklist the refresh token's JTI so it can't be reused after logout
+    if vs_refresh:
+        try:
+            payload = jwt.decode(vs_refresh, JWT_SECRET, algorithms=[ALGORITHM])
+            jti = payload.get("jti")
+            exp = payload.get("exp")
+            if jti and exp:
+                expires_at = datetime.fromtimestamp(exp, tz=timezone.utc)
+                if expires_at > datetime.now(timezone.utc):
+                    db.add(RevokedToken(jti=jti, expires_at=expires_at))
+                    db.commit()
+        except JWTError:
+            pass  # Malformed or already-expired token — nothing to revoke
     _clear_refresh_cookie(response)
     return {"message": "Logged out"}
 

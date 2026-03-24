@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey, Index
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database import Base
@@ -63,3 +63,11 @@ class RiskScoreHistory(Base):
     recorded_at = Column(DateTime, default=_utcnow)
 
     vendor = relationship("Vendor", back_populates="scores")
+
+
+class RevokedToken(Base):
+    """JTI blacklist — refresh tokens added here on logout or rotation."""
+    __tablename__ = "revoked_tokens"
+
+    jti        = Column(String(36), primary_key=True)   # UUID from JWT jti claim
+    expires_at = Column(DateTime, nullable=False, index=True)  # used for cleanup
