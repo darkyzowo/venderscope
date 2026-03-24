@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from models import User, RevokedToken
 from limiter import limiter
 from services.alerts import send_welcome_email
+from services.audit import audit
 from services.auth_service import (
     hash_password,
     verify_password,
@@ -33,10 +34,14 @@ class RegisterRequest(BaseModel):
     @field_validator("password")
     @classmethod
     def password_strength(cls, v):
-        if len(v) < 8:
-            raise ValueError("Password must be at least 8 characters")
+        if len(v) < 12:
+            raise ValueError("Password must be at least 12 characters")
         if len(v) > 128:
             raise ValueError("Password must be under 128 characters")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one number")
         return v
 
 
@@ -87,7 +92,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     )
     db.add(user)
     db.commit()
-    # Fire-and-forget — don't block registration if email delivery fails
+    audit(db, "register.success", request, user_id=user.id)
     try:
         send_welcome_email(user.email)
     except Exception as e:
@@ -109,8 +114,10 @@ def login(
     pw_hash = user.password_hash if user else dummy_hash
     password_ok = verify_password(payload.password, pw_hash)
     if not (user is not None and password_ok):
+        audit(db, "login.failed", request, detail=f"email={payload.email.lower()}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
+    audit(db, "login.success", request, user_id=user.id)
     access_token = create_access_token(user.id)
     refresh_token = create_refresh_token(user.id)
     _set_refresh_cookie(response, refresh_token)
@@ -180,6 +187,14 @@ def logout(
                     db.commit()
         except JWTError:
             pass  # Malformed or already-expired token — nothing to revoke
+    # Determine user_id for the audit log (best-effort — token may already be expired)
+    _uid = None
+    if vs_refresh:
+        try:
+            _uid = jwt.decode(vs_refresh, JWT_SECRET, algorithms=[ALGORITHM]).get("sub")
+        except JWTError:
+            pass
+    audit(db, "logout", request, user_id=_uid)
     _clear_refresh_cookie(response)
     return {"message": "Logged out"}
 
@@ -198,7 +213,9 @@ def delete_account(
     current_user: User = Depends(get_current_user),
 ):
     """Permanently delete the authenticated user's account and all associated data."""
+    user_id = current_user.id
     db.delete(current_user)
     db.commit()
+    audit(db, "account.deleted", request, user_id=user_id)
     _clear_refresh_cookie(response)
     return {"message": "Account deleted"}

@@ -71,3 +71,15 @@ class RevokedToken(Base):
 
     jti        = Column(String(36), primary_key=True)   # UUID from JWT jti claim
     expires_at = Column(DateTime, nullable=False, index=True)  # used for cleanup
+
+
+class AuditLog(Base):
+    """Immutable security event log — never updated, only appended."""
+    __tablename__ = "audit_log"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    user_id    = Column(String(36), nullable=True, index=True)  # None for failed logins
+    event      = Column(String(64), nullable=False)             # e.g. "login.success"
+    ip         = Column(String(45), nullable=True)              # IPv4 or IPv6
+    detail     = Column(String(255), nullable=True)             # optional context
+    created_at = Column(DateTime, default=_utcnow, index=True)

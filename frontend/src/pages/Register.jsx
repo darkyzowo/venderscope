@@ -32,8 +32,16 @@ export default function Register() {
       setError('Passwords do not match.')
       return
     }
-    if (password.length < 8) {
-      setError('Password must be at least 8 characters.')
+    if (password.length < 12) {
+      setError('Password must be at least 12 characters.')
+      return
+    }
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter.')
+      return
+    }
+    if (!/[0-9]/.test(password)) {
+      setError('Password must contain at least one number.')
       return
     }
 
@@ -79,7 +87,7 @@ export default function Register() {
             placeholder="you@company.com" autoComplete="email" inputRef={emailRef} />
 
           <AuthField label="Password" type="password" value={password} onChange={setPassword}
-            placeholder="Min. 8 characters" autoComplete="new-password" />
+            placeholder="Min. 12 chars, 1 uppercase, 1 number" autoComplete="new-password" />
 
           <AuthField label="Confirm password" type="password" value={confirm} onChange={setConfirm}
             placeholder="••••••••" autoComplete="new-password" />
