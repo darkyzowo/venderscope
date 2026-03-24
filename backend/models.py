@@ -16,7 +16,7 @@ def _new_uuid():
 class User(Base):
     __tablename__ = "users"
 
-    id            = Column(String(36), primary_key=True, index=True)  # UUID
+    id            = Column(String(36), primary_key=True, default=_new_uuid, index=True)
     email         = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
     created_at    = Column(DateTime, default=_utcnow)
