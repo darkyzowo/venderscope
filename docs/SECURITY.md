@@ -4,7 +4,8 @@
 
 | Version | Supported |
 |---------|-----------|
-| v2.x (current) | ✅ |
+| v3.x (current) | ✅ |
+| v2.x | ❌ No longer maintained |
 | v1.x | ❌ No longer maintained |
 
 ---

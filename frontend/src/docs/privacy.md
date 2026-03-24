@@ -99,7 +99,8 @@ We share data only in the following limited circumstances:
 ### 5.1 Third-Party Services We Use
 | Service | Purpose | Data Shared | Location |
 |---------|---------|-------------|----------|
-| Render | Hosting (API + database) | All platform data | USA (EU-equivalent safeguards) |
+| Render | API hosting | All platform data (except database) | USA (EU-equivalent safeguards) |
+| Neon | Database hosting (PostgreSQL) | All stored vendor and account data | USA (EU-equivalent safeguards) |
 | Vercel | Hosting (frontend) | No personal data | USA (EU-equivalent safeguards) |
 | HaveIBeenPwned | Breach lookups | Vendor domain (not user data) | USA |
 | NIST NVD | CVE lookups | Vendor name (not user data) | USA |
@@ -184,7 +185,7 @@ We do not use advertising cookies, tracking cookies, or third-party analytics co
 
 We protect your data through:
 - **Encryption in transit:** All data transmitted over HTTPS (TLS 1.2+)
-- **Encryption at rest:** Database encrypted at rest on Render
+- **Encryption at rest:** Database encrypted at rest on Neon (PostgreSQL)
 - **Password security:** bcrypt hashing with minimum 12 rounds — we cannot recover your password
 - **Access control:** Authentication required for all data access; data scoped to your account only
 - **Token security:** Authentication tokens stored in httpOnly cookies inaccessible to JavaScript
