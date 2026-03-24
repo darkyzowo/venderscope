@@ -2,10 +2,15 @@ from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKe
 from sqlalchemy.orm import relationship
 from datetime import datetime, timezone
 from database import Base
+import uuid as _uuid
 
 
 def _utcnow():
     return datetime.now(timezone.utc)
+
+
+def _new_uuid():
+    return str(_uuid.uuid4())
 
 
 class User(Base):
@@ -22,7 +27,7 @@ class User(Base):
 class Vendor(Base):
     __tablename__ = "vendors"
 
-    id             = Column(Integer, primary_key=True, index=True)
+    id             = Column(String(36), primary_key=True, default=_new_uuid)
     user_id        = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
     name           = Column(String, nullable=False)
     domain         = Column(String, nullable=False)  # unique per user, not globally
@@ -44,7 +49,7 @@ class RiskEvent(Base):
     __tablename__ = "risk_events"
 
     id          = Column(Integer, primary_key=True, index=True)
-    vendor_id   = Column(Integer, ForeignKey("vendors.id"))
+    vendor_id   = Column(String(36), ForeignKey("vendors.id"))
     source      = Column(String)        # e.g. "HIBP", "NVD", "CompaniesHouse", "News"
     severity    = Column(String)        # "LOW", "MEDIUM", "HIGH", "CRITICAL"
     title       = Column(String)
@@ -58,7 +63,7 @@ class RiskScoreHistory(Base):
     __tablename__ = "risk_score_history"
 
     id          = Column(Integer, primary_key=True, index=True)
-    vendor_id   = Column(Integer, ForeignKey("vendors.id"))
+    vendor_id   = Column(String(36), ForeignKey("vendors.id"))
     score       = Column(Float)
     recorded_at = Column(DateTime, default=_utcnow)
 

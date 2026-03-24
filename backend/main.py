@@ -8,7 +8,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
-from database import engine, Base
+from database import engine, Base, DATABASE_URL, _is_sqlite
 import models
 from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
@@ -18,19 +18,20 @@ from scheduler import start_scheduler
 
 Base.metadata.create_all(bind=engine)
 
-# Column-level migrations — adds new fields to existing DBs without data loss
-with engine.connect() as _conn:
-    _vendor_cols = {row[1] for row in _conn.execute(text("PRAGMA table_info(vendors)")).fetchall()}
-    for _col, _ddl in [
-        ("description", "ALTER TABLE vendors ADD COLUMN description TEXT"),
-        ("auth_method",  "ALTER TABLE vendors ADD COLUMN auth_method VARCHAR"),
-        ("two_factor",   "ALTER TABLE vendors ADD COLUMN two_factor VARCHAR"),
-        ("user_id",      "ALTER TABLE vendors ADD COLUMN user_id VARCHAR(36)"),
-    ]:
-        if _col not in _vendor_cols:
-            _conn.execute(text(_ddl))
-            print(f"[Migration] Added column: {_col}")
-    _conn.commit()
+# Column-level migrations — SQLite only (PostgreSQL uses create_all on a fresh DB)
+if _is_sqlite:
+    with engine.connect() as _conn:
+        _vendor_cols = {row[1] for row in _conn.execute(text("PRAGMA table_info(vendors)")).fetchall()}
+        for _col, _ddl in [
+            ("description", "ALTER TABLE vendors ADD COLUMN description TEXT"),
+            ("auth_method",  "ALTER TABLE vendors ADD COLUMN auth_method VARCHAR"),
+            ("two_factor",   "ALTER TABLE vendors ADD COLUMN two_factor VARCHAR"),
+            ("user_id",      "ALTER TABLE vendors ADD COLUMN user_id VARCHAR(36)"),
+        ]:
+            if _col not in _vendor_cols:
+                _conn.execute(text(_ddl))
+                print(f"[Migration] Added column: {_col}")
+        _conn.commit()
 
 # ── Security headers middleware ─────────────────────────────────────────────
 _IS_PROD = bool(os.getenv("RENDER"))

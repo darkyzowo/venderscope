@@ -13,7 +13,7 @@ router = APIRouter()
 @limiter.limit("5/minute")
 def trigger_scan(
     request: Request,
-    vendor_id: int,
+    vendor_id: str,
     force: bool = True,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),

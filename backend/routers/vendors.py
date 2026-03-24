@@ -39,7 +39,7 @@ class VendorCreate(BaseModel):
 
 
 class VendorOut(BaseModel):
-    id:             int
+    id:             str
     name:           str
     domain:         str
     company_number: Optional[str]
@@ -95,7 +95,7 @@ def add_vendor(
 @limiter.limit("10/minute")
 def delete_vendor(
     request: Request,
-    vendor_id: int,
+    vendor_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -113,7 +113,7 @@ def delete_vendor(
 
 @router.get("/{vendor_id}/events")
 def get_vendor_events(
-    vendor_id: int,
+    vendor_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -130,7 +130,7 @@ def get_vendor_events(
 
 @router.get("/{vendor_id}/history")
 def get_score_history(
-    vendor_id: int,
+    vendor_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):

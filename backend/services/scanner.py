@@ -1,6 +1,6 @@
 import re
 import json
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from sqlalchemy.orm import Session
 from models import Vendor, RiskEvent, RiskScoreHistory
@@ -20,7 +20,7 @@ CACHE_TTL_HOURS  = 24
 def _is_cached(vendor: Vendor) -> bool:
     if not vendor.last_scanned:
         return False
-    return (datetime.utcnow() - vendor.last_scanned) < timedelta(hours=CACHE_TTL_HOURS)
+    return (datetime.now(timezone.utc) - vendor.last_scanned) < timedelta(hours=CACHE_TTL_HOURS)
 
 def _compute_score(events: list) -> float:
     """
@@ -42,7 +42,7 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
         return vendor.risk_score
 
     print(f"[Scanner] Scanning {vendor.name}...")
-    start = datetime.utcnow()
+    start = datetime.now(timezone.utc)
 
     # Check quota before firing compliance web searches
     quota_ok = check_and_consume()
@@ -114,7 +114,7 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
 
     score               = _compute_score(all_events)
     vendor.risk_score   = score
-    vendor.last_scanned = datetime.utcnow()
+    vendor.last_scanned = datetime.now(timezone.utc)
     db.add(RiskScoreHistory(vendor_id=vendor.id, score=score))
     db.commit()
 

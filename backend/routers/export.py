@@ -18,7 +18,7 @@ _SAFE_FILENAME = re.compile(r'[^a-z0-9_\-]')
 @limiter.limit("10/minute")
 def export_vendor_pdf(
     request: Request,
-    vendor_id: int,
+    vendor_id: str,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
