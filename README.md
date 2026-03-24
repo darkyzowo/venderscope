@@ -2,7 +2,7 @@
 
 > **Still running annual vendor audits? Your next breach won't wait 12 months.**
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
+[![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
 [![Version](https://img.shields.io/badge/version-v3.0-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
