@@ -112,6 +112,7 @@ def login(
 @router.post("/refresh")
 @limiter.limit("10/minute")
 def refresh_token_endpoint(
+    request: Request,
     response: Response,
     vs_refresh: str = Cookie(default=None),
     db: Session = Depends(get_db),

@@ -1,7 +1,11 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, timezone
 from database import Base
+
+
+def _utcnow():
+    return datetime.now(timezone.utc)
 
 
 class User(Base):
@@ -10,7 +14,7 @@ class User(Base):
     id            = Column(String(36), primary_key=True, index=True)  # UUID
     email         = Column(String, unique=True, nullable=False, index=True)
     password_hash = Column(String, nullable=False)
-    created_at    = Column(DateTime, default=datetime.utcnow)
+    created_at    = Column(DateTime, default=_utcnow)
 
     vendors = relationship("Vendor", back_populates="owner", cascade="all, delete")
 
@@ -24,7 +28,7 @@ class Vendor(Base):
     domain         = Column(String, nullable=False)  # unique per user, not globally
     company_number = Column(String, nullable=True)
     risk_score     = Column(Float, default=0.0)
-    added_at       = Column(DateTime, default=datetime.utcnow)
+    added_at       = Column(DateTime, default=_utcnow)
     last_scanned   = Column(DateTime, nullable=True)
     compliance     = Column(Text, nullable=True)  # JSON stored as string
     description    = Column(Text,   nullable=True)
@@ -45,7 +49,7 @@ class RiskEvent(Base):
     severity    = Column(String)        # "LOW", "MEDIUM", "HIGH", "CRITICAL"
     title       = Column(String)
     description = Column(Text)
-    detected_at = Column(DateTime, default=datetime.utcnow)
+    detected_at = Column(DateTime, default=_utcnow)
 
     vendor = relationship("Vendor", back_populates="events")
 
@@ -56,6 +60,6 @@ class RiskScoreHistory(Base):
     id          = Column(Integer, primary_key=True, index=True)
     vendor_id   = Column(Integer, ForeignKey("vendors.id"))
     score       = Column(Float)
-    recorded_at = Column(DateTime, default=datetime.utcnow)
+    recorded_at = Column(DateTime, default=_utcnow)
 
     vendor = relationship("Vendor", back_populates="scores")

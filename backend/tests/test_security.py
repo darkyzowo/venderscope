@@ -10,10 +10,11 @@ from fastapi.testclient import TestClient
 from jose import jwt
 
 # ── Bootstrap ────────────────────────────────────────────────────────────────
-# We need to set JWT_SECRET before importing main so auth_service doesn't crash
+# Set env vars BEFORE importing main — auth_service and limiter read them at import time
 import os
 os.environ.setdefault("JWT_SECRET", "test-secret-for-security-tests-only-not-production")
 os.environ.setdefault("DATABASE_URL", "sqlite:///./test_security.db")
+os.environ["RATE_LIMIT_ENABLED"] = "0"  # Disable rate limiting — tests share one IP
 
 from main import app
 from database import engine, Base
