@@ -60,7 +60,7 @@ export default function VendorDetail() {
     const [vRes, eRes, hRes] = await Promise.all([
       getVendors(), getVendorEvents(id), getScoreHistory(id),
     ])
-    setVendor(vRes.data.find((v) => v.id === parseInt(id)))
+    setVendor(vRes.data.find((v) => v.id === id))
     setEvents(sortEvents(eRes.data))
     setHistory(hRes.data)
   }
@@ -70,7 +70,7 @@ export default function VendorDetail() {
       const [vRes, eRes, hRes] = await Promise.all([
         getVendors(), getVendorEvents(id), getScoreHistory(id),
       ])
-      setVendor(vRes.data.find((v) => v.id === parseInt(id)))
+      setVendor(vRes.data.find((v) => v.id === id))
       setEvents(sortEvents(eRes.data))
       setHistory(hRes.data)
     }
