@@ -18,13 +18,23 @@ RESEND_FROM     = os.getenv("RESEND_FROM_EMAIL", "VenderScope <alerts@venderscop
 # ── Transport layer ──────────────────────────────────────────────────────────
 
 def _send_email(to: str, subject: str, html: str) -> None:
-    """Dispatch via Resend (production) or Gmail SMTP (local dev fallback)."""
-    if RESEND_API_KEY:
+    """Dispatch via Resend if key + domain are configured, otherwise Gmail SMTP."""
+    if RESEND_API_KEY and _resend_domain_configured():
         _send_via_resend(to, subject, html)
     elif GMAIL_ADDRESS and GMAIL_APP_PASS:
         _send_via_gmail(to, subject, html)
     else:
-        print("[Alerts] No email provider configured (set RESEND_API_KEY or GMAIL_* vars).")
+        print("[Alerts] No email provider ready — skipping. (Add verified Resend domain or Gmail creds.)")
+
+
+def _resend_domain_configured() -> bool:
+    """Returns True only if RESEND_FROM_EMAIL uses a custom domain (not the placeholder)."""
+    placeholder_domains = {"venderscope.app", "resend.dev", "example.com"}
+    try:
+        domain = RESEND_FROM.split("@")[-1].rstrip(">").strip().lower()
+        return domain not in placeholder_domains
+    except Exception:
+        return False
 
 
 def _send_via_resend(to: str, subject: str, html: str) -> None:
