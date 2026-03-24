@@ -153,7 +153,7 @@ You agree to indemnify and hold harmless VenderScope from any claims, damages, o
 ## 14. Termination
 
 ### 14.1 By You
-You may close your account at any time via Settings → Delete Account. Upon closure, your data is permanently deleted within 30 days per our Privacy Policy.
+You may close your account at any time via Settings → Delete Account. Upon closure, your data is permanently and immediately deleted per our Privacy Policy.
 
 ### 14.2 By Us
 We may suspend or terminate your account immediately if you violate these Terms, engage in abusive behaviour, or for any other reason with reasonable notice.

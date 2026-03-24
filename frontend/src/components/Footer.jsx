@@ -43,9 +43,6 @@ export default function Footer() {
               <FooterLink to="/privacy">Privacy Policy</FooterLink>
               <FooterLink to="/terms">Terms of Service</FooterLink>
               <FooterLink to="/security">Security</FooterLink>
-              <FooterLink to="https://github.com/darkyzowo/venderscope" external>
-                GitHub
-              </FooterLink>
             </nav>
           </div>
 

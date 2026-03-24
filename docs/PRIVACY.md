@@ -122,14 +122,14 @@ In the event of a merger, acquisition, or asset sale, your data may be transferr
 
 | Data Type | Retention Period |
 |-----------|-----------------|
-| Account data | Until account deletion + 30 days |
+| Account data | Deleted immediately on account deletion |
 | Vendor data & risk events | Until vendor deletion or account deletion |
 | Score history | Until vendor deletion or account deletion |
 | Server logs | 30 days rolling |
 | Audit logs | 12 months |
 | Revoked tokens | Until token expiry date |
 
-When an account is deleted, all associated vendor data, risk events, score history, and compliance data is permanently deleted within **30 days**.
+When an account is deleted, all associated vendor data, risk events, score history, and compliance data is permanently and immediately deleted.
 
 ---
 
@@ -150,7 +150,7 @@ You can delete your account at any time via Settings → Delete Account. This pe
 - All associated risk events, score history, and compliance data
 - Your alert configuration
 
-Deletion is permanent and irreversible. We will complete erasure within **30 days**.
+Deletion is permanent and irreversible. All data is erased immediately upon account deletion.
 
 ### 7.4 Right to Restriction of Processing (Article 18)
 You can ask us to pause processing of your data while a dispute is resolved.

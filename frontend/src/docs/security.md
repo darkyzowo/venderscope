@@ -94,7 +94,6 @@ We ask that you:
 
 ## Known Limitations
 
-- **Demo instance:** The public demo at venderscope.vercel.app uses a shared database. Do not store sensitive vendor information there.
 - **Email alerts:** Currently use SMTP in development. Production deployments should configure Resend (HTTP API) via the `RESEND_API_KEY` environment variable.
 - **Self-hosted deployments:** Security of self-hosted instances is the responsibility of the operator.
 

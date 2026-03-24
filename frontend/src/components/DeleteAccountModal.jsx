@@ -69,7 +69,7 @@ export default function DeleteAccountModal({ onClose }) {
             </div>
 
             <p className="text-sm mb-5" style={{ color: '#6b7280' }}>
-              Your data will be fully erased within 30 days, in accordance with our{' '}
+              Your account and all associated data will be permanently and immediately deleted, in accordance with our{' '}
               <a href="/privacy" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>Privacy Policy</a>.
             </p>
 
