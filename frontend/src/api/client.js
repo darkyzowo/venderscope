@@ -94,9 +94,11 @@ export const scanAll    = ()   => api.post('/intelligence/scan-all?force=false')
 
 export const exportPDF  = (id) => api.get(`/export/${id}/pdf`, { responseType: 'blob' })
 
-export const login    = (data) => api.post('/auth/login', data)
-export const register = (data) => api.post('/auth/register', data)
-export const logout   = ()     => api.post('/auth/logout')
-export const refresh  = ()     => api.post('/auth/refresh')
+export const login          = (data) => api.post('/auth/login', data)
+export const register       = (data) => api.post('/auth/register', data)
+export const logout         = ()     => api.post('/auth/logout')
+export const refresh        = ()     => api.post('/auth/refresh')
+export const getMe          = ()     => api.get('/auth/me')
+export const deleteAccount  = ()     => api.delete('/auth/account')
 
 export default api

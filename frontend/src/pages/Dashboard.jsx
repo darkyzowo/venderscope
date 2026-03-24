@@ -3,6 +3,7 @@ import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
 import QuotaBanner from '../components/QuotaBanner'
+import Footer from '../components/Footer'
 import { useAuth } from '../auth/AuthContext'
 
 // Hexagon logo mark — hex outline with inner target
@@ -282,6 +283,8 @@ export default function Dashboard() {
       {showModal && (
         <AddVendorModal onAdd={handleAdd} onClose={() => setShowModal(false)} />
       )}
+
+      <Footer />
     </div>
   )
 }

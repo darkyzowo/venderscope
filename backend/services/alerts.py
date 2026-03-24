@@ -12,10 +12,80 @@ ALERT_THRESHOLD  = float(os.getenv("ALERT_THRESHOLD", 70))
 FRONTEND_URL     = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
-def send_alert_email(vendor_name: str, domain: str, score: float, events: list, vendor_id: int = None):
+def send_welcome_email(recipient_email: str) -> None:
+    """Send a confirmation email after successful registration."""
+    if not GMAIL_ADDRESS or not GMAIL_APP_PASS:
+        print("[Alerts] Missing GMAIL credentials — skipping welcome email.")
+        return
+
+    html = f"""
+    <html>
+    <body style="margin:0;padding:0;background:#0f1117;font-family:Arial,sans-serif;">
+      <div style="max-width:560px;margin:32px auto;background:#1a1d27;border-radius:12px;
+                  border:1px solid #374151;overflow:hidden;">
+        <div style="padding:28px 32px;border-bottom:1px solid #374151;">
+          <h1 style="margin:0;color:#6366f1;font-size:22px;">
+            Vender<span style="color:#e2e8f0">Scope</span>
+          </h1>
+        </div>
+        <div style="padding:28px 32px;">
+          <h2 style="color:#e2e8f0;margin-top:0;">Welcome to VenderScope</h2>
+          <p style="color:#94a3b8;">
+            Your account has been created successfully. You can now add vendors and
+            start monitoring their risk scores across breach data, CVEs, infrastructure
+            exposure, and compliance signals.
+          </p>
+          <div style="margin-top:24px;text-align:center;">
+            <a href="{FRONTEND_URL}"
+               style="display:inline-block;background:#6366f1;color:white;padding:12px 28px;
+                      border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
+              Go to Dashboard →
+            </a>
+          </div>
+        </div>
+        <div style="padding:20px 32px;border-top:1px solid #374151;">
+          <p style="margin:0;color:#6b7280;font-size:11px;">
+            VenderScope · Continuous Passive Vendor Risk Intelligence
+          </p>
+        </div>
+      </div>
+    </body>
+    </html>
     """
-    Sends a risk alert email via SendGrid HTTP API.
-    Works on Render free tier — no SMTP ports needed.
+
+    try:
+        msg = MIMEMultipart("alternative")
+        msg["Subject"] = "Welcome to VenderScope"
+        msg["From"]    = GMAIL_ADDRESS
+        msg["To"]      = recipient_email
+        msg.attach(MIMEText(html, "html"))
+
+        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+            server.ehlo()
+            server.starttls()
+            server.ehlo()
+            server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
+            server.sendmail(GMAIL_ADDRESS, recipient_email, msg.as_string())
+
+        print(f"[Alerts] Welcome email sent to {recipient_email}")
+
+    except smtplib.SMTPAuthenticationError:
+        print("[Alerts] Auth failed — check GMAIL_APP_PASSWORD in .env")
+    except Exception as e:
+        print(f"[Alerts] Error sending welcome email: {e}")
+
+
+def send_alert_email(
+    vendor_name: str,
+    domain: str,
+    score: float,
+    events: list,
+    vendor_id: int = None,
+    recipient_email: str = None,
+):
+    """
+    Sends a risk alert email to the vendor owner's registered email address.
+    Falls back to GMAIL_ADDRESS if recipient_email is not provided.
     """
     if not GMAIL_ADDRESS or not GMAIL_APP_PASS:
         print("[Alerts] Missing GMAIL_ADDRESS or GMAIL_APP_PASSWORD — skipping.")
@@ -103,11 +173,13 @@ def send_alert_email(vendor_name: str, domain: str, score: float, events: list, 
     </html>
     """
 
+    to_address = recipient_email or GMAIL_ADDRESS
+
     try:
         msg = MIMEMultipart("alternative")
         msg["Subject"] = subject
         msg["From"]    = GMAIL_ADDRESS
-        msg["To"]      = GMAIL_ADDRESS
+        msg["To"]      = to_address
         msg.attach(MIMEText(html, "html"))
 
         with smtplib.SMTP("smtp.gmail.com", 587) as server:
@@ -115,9 +187,9 @@ def send_alert_email(vendor_name: str, domain: str, score: float, events: list, 
             server.starttls()
             server.ehlo()
             server.login(GMAIL_ADDRESS, GMAIL_APP_PASS)
-            server.sendmail(GMAIL_ADDRESS, GMAIL_ADDRESS, msg.as_string())
+            server.sendmail(GMAIL_ADDRESS, to_address, msg.as_string())
 
-        print(f"[Alerts] ✅ Email sent for {vendor_name} (score: {score})")
+        print(f"[Alerts] Alert email sent to {to_address} for {vendor_name} (score: {score})")
 
     except smtplib.SMTPAuthenticationError:
         print("[Alerts] ❌ Auth failed — check GMAIL_APP_PASSWORD in .env")

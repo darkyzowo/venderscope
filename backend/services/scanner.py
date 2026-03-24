@@ -119,7 +119,8 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     db.commit()
 
     all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
-    send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id)
+    owner_email = vendor.owner.email if vendor.owner else None
+    send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id, recipient_email=owner_email)
 
     scan_type = "Full Intelligence" if quota_ok else "Standard"
     elapsed   = (datetime.utcnow() - start).seconds

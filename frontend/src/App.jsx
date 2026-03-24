@@ -4,6 +4,10 @@ import Dashboard from './pages/Dashboard'
 import VendorDetail from './pages/VendorDetail'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import DocPage from './pages/DocPage'
+import privacyMd from './docs/privacy.md?raw'
+import termsMd from './docs/terms.md?raw'
+import securityMd from './docs/security.md?raw'
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -35,6 +39,10 @@ export default function App() {
           <Route path="/vendor/:id" element={
             <ProtectedRoute><VendorDetail /></ProtectedRoute>
           } />
+          {/* Public doc pages — no auth required */}
+          <Route path="/privacy"  element={<DocPage title="Privacy Policy"  markdown={privacyMd} />} />
+          <Route path="/terms"    element={<DocPage title="Terms of Service" markdown={termsMd} />} />
+          <Route path="/security" element={<DocPage title="Security Policy" markdown={securityMd} />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>

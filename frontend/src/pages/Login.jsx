@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 
 export default function Login() {
   const { login, user } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const accountDeleted = searchParams.get('deleted') === '1'
 
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
@@ -54,6 +56,14 @@ export default function Login() {
           </span>
           <p className="text-sm" style={{ color: 'var(--mid)' }}>Sign in to your workspace</p>
         </div>
+
+        {/* Account deleted notice */}
+        {accountDeleted && (
+          <div className="mb-4 px-4 py-3 rounded-xl text-sm text-center"
+               style={{ background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#4ade80' }}>
+            Your account has been permanently deleted.
+          </div>
+        )}
 
         {/* Form card */}
         <form

@@ -7,11 +7,13 @@ from jose import JWTError, jwt
 from database import get_db
 from models import User
 from limiter import limiter
+from services.alerts import send_welcome_email
 from services.auth_service import (
     hash_password,
     verify_password,
     create_access_token,
     create_refresh_token,
+    get_current_user,
     REFRESH_TOKEN_EXPIRE_DAYS,
     JWT_SECRET,
     ALGORITHM,
@@ -84,6 +86,11 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     )
     db.add(user)
     db.commit()
+    # Fire-and-forget — don't block registration if email delivery fails
+    try:
+        send_welcome_email(user.email)
+    except Exception as e:
+        print(f"[Auth] Welcome email failed: {e}")
     return {"message": "Account created successfully"}
 
 
@@ -144,3 +151,23 @@ def refresh_token_endpoint(
 def logout(response: Response):
     _clear_refresh_cookie(response)
     return {"message": "Logged out"}
+
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {"email": current_user.email}
+
+
+@router.delete("/account")
+@limiter.limit("3/hour")
+def delete_account(
+    request: Request,
+    response: Response,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Permanently delete the authenticated user's account and all associated data."""
+    db.delete(current_user)
+    db.commit()
+    _clear_refresh_cookie(response)
+    return {"message": "Account deleted"}
