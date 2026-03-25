@@ -25,3 +25,7 @@ frontend/dist/
 # Claude context files
 CLAUDE.md
 tasks/
+.claude/
+
+# Runtime state
+backend/quota.json
