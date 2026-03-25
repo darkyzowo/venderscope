@@ -32,16 +32,16 @@ def _persist():
 def _ensure_loaded():
     """Populate _state from disk on first call; auto-reset if it's a new UTC day."""
     global _state
-    if not _state:
-        if QUOTA_FILE.exists():
-            try:
-                with _quota_lock:
+    with _quota_lock:
+        if not _state:
+            if QUOTA_FILE.exists():
+                try:
                     _state = json.loads(QUOTA_FILE.read_text())
-            except Exception:
-                _state = {}
-        if _state.get("date") != _today():
-            _state = {"used": 0, "date": _today()}
-            _persist()
+                except Exception:
+                    _state = {}
+            if _state.get("date") != _today():
+                _state = {"used": 0, "date": _today()}
+                _persist()
 
 
 def get_quota_status() -> dict:

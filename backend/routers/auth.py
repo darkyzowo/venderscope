@@ -1,5 +1,6 @@
 import os
 import uuid
+from urllib.parse import urlparse
 from fastapi import APIRouter, Depends, HTTPException, Cookie, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
@@ -104,7 +105,12 @@ def _verify_origin(request: Request) -> None:
     if not allowed:
         return
     origin = request.headers.get("origin") or request.headers.get("referer", "")
-    if origin and not origin.startswith(allowed):
+    if not origin:
+        return
+    parsed_allowed = urlparse(allowed)
+    parsed_origin  = urlparse(origin)
+    if not (parsed_origin.scheme == parsed_allowed.scheme and
+            parsed_origin.netloc == parsed_allowed.netloc):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
 

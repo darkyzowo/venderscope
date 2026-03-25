@@ -25,10 +25,39 @@ HEADERS = {"User-Agent": "VenderScope/1.0 Compliance Discovery Bot (security res
 
 # ── Document link patterns ─────────────────────────────────────────────────────
 DOC_PATTERNS = {
-    "privacy_policy": ["/privacy", "/privacy-policy", "/privacy_policy", "privacy"],
-    "terms":          ["/terms", "/terms-of-service", "/terms-of-use", "/tos", "terms"],
-    "security":       ["/security", "/security-policy", "/security.txt", "security"],
-    "cookie_policy":  ["/cookies", "/cookie-policy", "/cookie_policy", "cookies"],
+    "privacy_policy": [
+        "/privacy", "/privacy-policy", "/privacy_policy", "/legal/privacy",
+        "/legal/privacy-policy", "/en/privacy", "/data-protection", "/gdpr",
+        "/privacy-notice", "privacy",
+    ],
+    "terms": [
+        "/terms", "/terms-of-service", "/terms-of-use", "/tos",
+        "/legal/terms", "/legal/terms-of-service", "/en/terms", "terms",
+    ],
+    "security": [
+        "/security", "/security-policy", "/security.txt", "/legal/security",
+        "/vulnerability-disclosure", "security",
+    ],
+    "cookie_policy": ["/cookies", "/cookie-policy", "/cookie_policy", "cookies"],
+}
+
+# Paths probed directly when link extraction finds nothing for a doc type.
+# HEAD request only — no body fetched until a 200 is confirmed.
+DOC_PROBE_PATHS = {
+    "privacy_policy": [
+        "/privacy", "/privacy-policy", "/privacy_policy", "/legal/privacy",
+        "/legal/privacy-policy", "/en/privacy", "/data-protection", "/gdpr",
+        "/privacy-notice", "/legal",
+    ],
+    "terms": [
+        "/terms", "/terms-of-service", "/terms-of-use", "/tos",
+        "/legal/terms", "/legal/terms-of-service", "/en/terms",
+    ],
+    "security": [
+        "/security", "/security-policy", "/legal/security",
+        "/vulnerability-disclosure",
+    ],
+    "cookie_policy": ["/cookies", "/cookie-policy", "/cookie_policy"],
 }
 
 # ── Trust centre URL patterns ──────────────────────────────────────────────────
@@ -40,12 +69,26 @@ TRUST_PATTERNS = [
 
 # ── Certification keyword sets (page scrape stage) ────────────────────────────
 CERT_KEYWORDS = {
-    "iso_27001":        ["iso 27001", "iso27001", "iso/iec 27001", "information security management", "isms certified"],
-    "soc2":             ["soc 2", "soc2", "soc type 2", "soc type ii", "aicpa soc", "service organization control"],
-    "gdpr":             ["gdpr compliant", "gdpr compliance", "general data protection", "data protection regulation"],
+    "iso_27001": [
+        "iso 27001", "iso27001", "iso/iec 27001", "information security management",
+        "isms certified", "certified to iso 27001", "iso 27001:2022", "iso/iec 27001:2022",
+    ],
+    "soc2": [
+        "soc 2", "soc2", "soc type 2", "soc type ii", "aicpa soc",
+        "service organization control", "soc 2 type 2", "soc ii",
+        "aicpa trust", "trust services criteria",
+    ],
+    "gdpr": [
+        "gdpr compliant", "gdpr compliance", "general data protection",
+        "data protection regulation", "uk gdpr", "data controller", "lawful basis",
+    ],
     "cyber_essentials": ["cyber essentials", "cyber essentials plus"],
     "pci_dss":          ["pci dss", "pci-dss", "payment card industry"],
-    "dpa":              ["data processing agreement", "data processing addendum", "dpa", "controller to processor", "sub-processor agreement", "article 28", "gdpr article 28"],
+    "dpa": [
+        "data processing agreement", "data processing addendum", "dpa",
+        "controller to processor", "sub-processor agreement",
+        "article 28", "gdpr article 28",
+    ],
 }
 
 # ── Google search query templates (web fallback stage) ────────────────────────
@@ -172,6 +215,50 @@ def _find_doc_links(html: str, base_url: str) -> dict:
             if any(p in href or p in text for p in patterns):
                 found[doc_type] = full
     return found
+
+
+def _probe_doc_paths(base: str, found: dict) -> dict:
+    """
+    Direct-path fallback: for any doc type not found by link extraction,
+    probe known paths with a HEAD request and take the first 200 response.
+    """
+    result = dict(found)
+    for doc_type, paths in DOC_PROBE_PATHS.items():
+        if doc_type in result:
+            continue
+        for path in paths:
+            url = f"https://{base}{path}"
+            try:
+                r = requests.head(url, headers=HEADERS, timeout=5, allow_redirects=True)
+                if r.status_code == 200:
+                    result[doc_type] = url
+                    break
+            except Exception:
+                continue
+    return result
+
+
+def _find_docs_in_sitemap(base: str, found: dict) -> dict:
+    """
+    Parse sitemap.xml / sitemap_index.xml for missing doc type URLs.
+    Only fills gaps — does not overwrite already-found entries.
+    """
+    result = dict(found)
+    for path in ["/sitemap.xml", "/sitemap_index.xml"]:
+        if len(result) == len(DOC_PATTERNS):
+            break
+        content = _fetch_page(f"https://{base}{path}", timeout=8)
+        if not content:
+            continue
+        urls = re.findall(r"<loc>(https?://[^<]+)</loc>", content)
+        for u in urls:
+            u_lower = u.lower()
+            for doc_type, patterns in DOC_PATTERNS.items():
+                if doc_type in result:
+                    continue
+                if any(p.lstrip("/") in u_lower for p in patterns if p.startswith("/")):
+                    result[doc_type] = u
+    return result
 
 
 def _check_trust_centre(domain: str) -> dict | None:
@@ -378,6 +465,15 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
     # ── Fetch pages ──────────────────────────────────────────────────────────
     home_html    = _fetch_page(home_url) or _fetch_page(f"https://www.{base}")
     doc_links    = _find_doc_links(home_html, home_url) if home_html else {}
+
+    # Fallback 1: probe known paths directly for any missing doc types
+    if len(doc_links) < len(DOC_PATTERNS):
+        doc_links = _probe_doc_paths(base, doc_links)
+
+    # Fallback 2: sitemap.xml for any still-missing doc types
+    if len(doc_links) < len(DOC_PATTERNS):
+        doc_links = _find_docs_in_sitemap(base, doc_links)
+
     security_html = _fetch_page(doc_links["security"])        if "security"       in doc_links else None
     privacy_html  = _fetch_page(doc_links["privacy_policy"])  if "privacy_policy" in doc_links else None
 

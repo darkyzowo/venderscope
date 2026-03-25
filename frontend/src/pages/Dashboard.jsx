@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
@@ -61,13 +62,21 @@ const EmptyState = ({ onAdd }) => (
   </div>
 )
 
+const SORT_OPTIONS = [
+  { key: 'risk',    label: 'Risk Score' },
+  { key: 'delta',   label: 'Biggest Movers' },
+  { key: 'scanned', label: 'Recently Scanned' },
+]
+
 export default function Dashboard() {
   const { logout } = useAuth()
+  const nav = useNavigate()
   const [vendors, setVendors] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [scanning, setScanning] = useState({})
   const [scanningAll, setScanAll] = useState(false)
   const [cardsVisible, setCardsVisible] = useState(false)
+  const [sortBy, setSortBy] = useState('risk')
 
   const load = () => getVendors().then((r) => setVendors(r.data))
 
@@ -105,9 +114,21 @@ export default function Dashboard() {
     finally { setScanAll(false); window.location.reload() }
   }
 
-  const high = vendors.filter((v) => v.risk_score >= 70).length
-  const medium = vendors.filter((v) => v.risk_score >= 35 && v.risk_score < 70).length
-  const low = vendors.filter((v) => v.risk_score < 35).length
+  const high    = vendors.filter((v) => v.risk_score >= 70).length
+  const medium  = vendors.filter((v) => v.risk_score >= 35 && v.risk_score < 70).length
+  const low     = vendors.filter((v) => v.risk_score < 35).length
+  const rising  = vendors.filter((v) => v.score_delta > 0).sort((a, b) => b.score_delta - a.score_delta)
+
+  const sortedVendors = [...vendors].sort((a, b) => {
+    if (sortBy === 'risk')    return b.risk_score - a.risk_score
+    if (sortBy === 'delta')   return (b.score_delta ?? -Infinity) - (a.score_delta ?? -Infinity)
+    if (sortBy === 'scanned') {
+      const ta = a.last_scanned ? new Date(a.last_scanned).getTime() : 0
+      const tb = b.last_scanned ? new Date(b.last_scanned).getTime() : 0
+      return tb - ta
+    }
+    return 0
+  })
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
@@ -251,6 +272,47 @@ export default function Dashboard() {
             <StatPill value={high}           label="High Risk" color="#f97316" />
             <StatPill value={medium}         label="Medium" color="#eab308" />
             <StatPill value={low}            label="Low Risk" color="#22c55e" />
+            {rising.length > 0 && (
+              <StatPill value={rising.length} label="Rising ↑" color="#ef4444" />
+            )}
+          </div>
+        )}
+
+        {/* Needs Attention */}
+        {rising.length > 0 && (
+          <div className="mb-8 rounded-xl p-4" style={{
+            background: 'rgba(239,68,68,0.04)',
+            border: '1px solid rgba(239,68,68,0.15)',
+          }}>
+            <div className="flex items-center gap-2 mb-3">
+              <span className="text-xs font-bold tracking-widest" style={{ color: '#ef4444' }}>
+                NEEDS ATTENTION
+              </span>
+              <span className="text-xs" style={{ color: '#44445a' }}>
+                — scores rose since last scan
+              </span>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {rising.map((v) => (
+                <div
+                  key={v.id}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors duration-150"
+                  style={{
+                    background: 'rgba(239,68,68,0.08)',
+                    border: '1px solid rgba(239,68,68,0.2)',
+                    color: '#f0f0ff',
+                  }}
+                  onClick={() => nav(`/vendor/${v.id}`)}
+                  onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.14)'}
+                  onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
+                >
+                  <span className="font-medium truncate max-w-[120px]">{v.name}</span>
+                  <span className="font-bold shrink-0" style={{ color: '#ef4444' }}>
+                    +{v.score_delta} ↑
+                  </span>
+                </div>
+              ))}
+            </div>
           </div>
         )}
 
@@ -258,25 +320,46 @@ export default function Dashboard() {
         {vendors.length === 0 ? (
           <EmptyState onAdd={() => setShowModal(true)} />
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {vendors.map((v, i) => (
-              <div
-                key={v.id}
-                style={{
-                  opacity: cardsVisible ? 1 : 0,
-                  transform: cardsVisible ? 'translateY(0)' : 'translateY(10px)',
-                  transition: `opacity 300ms ease ${i * 45}ms, transform 300ms ease ${i * 45}ms`,
-                }}
-              >
-                <VendorCard
-                  vendor={v}
-                  onDelete={handleDelete}
-                  onScan={handleScan}
-                  scanning={!!scanning[v.id]}
-                />
-              </div>
-            ))}
-          </div>
+          <>
+            {/* Sort controls */}
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-xs" style={{ color: '#44445a' }}>Sort:</span>
+              {SORT_OPTIONS.map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setSortBy(key)}
+                  className="px-3 py-1 rounded-lg text-xs font-medium transition-all duration-150"
+                  style={{
+                    background: sortBy === key ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
+                    border: sortBy === key ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.06)',
+                    color: sortBy === key ? '#a78bfa' : '#44445a',
+                  }}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedVendors.map((v, i) => (
+                <div
+                  key={v.id}
+                  style={{
+                    opacity: cardsVisible ? 1 : 0,
+                    transform: cardsVisible ? 'translateY(0)' : 'translateY(10px)',
+                    transition: `opacity 300ms ease ${i * 45}ms, transform 300ms ease ${i * 45}ms`,
+                  }}
+                >
+                  <VendorCard
+                    vendor={v}
+                    onDelete={handleDelete}
+                    onScan={handleScan}
+                    scanning={!!scanning[v.id]}
+                  />
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </div>
 

@@ -1,11 +1,13 @@
 # backend/services/hibp.py
 import requests
 import time as _time
+import threading as _threading
 
 HIBP_URL = "https://haveibeenpwned.com/api/v3/breaches"
 
 _HIBP_CACHE: dict = {"data": None, "fetched_at": 0.0}
 _HIBP_CACHE_TTL = 3600  # 1 hour — HIBP breach list changes infrequently
+_hibp_lock = _threading.Lock()
 
 
 def _domain_matches(breach_domain: str, vendor_domain: str) -> bool:
@@ -16,18 +18,19 @@ def _domain_matches(breach_domain: str, vendor_domain: str) -> bool:
 
 
 def _get_all_breaches() -> list:
-    if _HIBP_CACHE["data"] is not None and _time.time() - _HIBP_CACHE["fetched_at"] < _HIBP_CACHE_TTL:
-        return _HIBP_CACHE["data"]
-    try:
-        resp = requests.get(HIBP_URL, headers={"User-Agent": "VenderScope/1.0"}, timeout=10)
-        resp.raise_for_status()
-        result = resp.json()
-        _HIBP_CACHE["data"] = result
-        _HIBP_CACHE["fetched_at"] = _time.time()
-        return result
-    except Exception as e:
-        print(f"[HIBP] Error fetching breach list: {e}")
-        return []
+    with _hibp_lock:
+        if _HIBP_CACHE["data"] is not None and _time.time() - _HIBP_CACHE["fetched_at"] < _HIBP_CACHE_TTL:
+            return _HIBP_CACHE["data"]
+        try:
+            resp = requests.get(HIBP_URL, headers={"User-Agent": "VenderScope/1.0"}, timeout=10)
+            resp.raise_for_status()
+            result = resp.json()
+            _HIBP_CACHE["data"] = result
+            _HIBP_CACHE["fetched_at"] = _time.time()
+            return result
+        except Exception as e:
+            print(f"[HIBP] Error fetching breach list: {e}")
+            return []
 
 
 def check_domain_breaches(domain: str) -> list[dict]:

@@ -85,6 +85,14 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             >
               {cfg.label}
             </div>
+            {vendor.score_delta != null && vendor.score_delta !== 0 && (
+              <div
+                className="text-[10px] font-semibold tabular-nums mt-1"
+                style={{ color: vendor.score_delta > 0 ? '#ef4444' : '#22c55e' }}
+              >
+                {vendor.score_delta > 0 ? `+${vendor.score_delta} ↑` : `${vendor.score_delta} ↓`}
+              </div>
+            )}
           </div>
         </div>
 

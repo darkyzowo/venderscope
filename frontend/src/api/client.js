@@ -92,7 +92,8 @@ export const scanVendor = (id) => api.post(`/intelligence/scan/${id}?force=true`
 // force=false — uses 24hr cache, makes Scan All fast for recently scanned vendors
 export const scanAll    = ()   => api.post('/intelligence/scan-all?force=false')
 
-export const exportPDF  = (id) => api.get(`/export/${id}/pdf`, { responseType: 'blob' })
+export const exportPDF         = (id) => api.get(`/export/${id}/pdf`, { responseType: 'blob' })
+export const getDashboardSummary = ()  => api.get('/dashboard/summary')
 
 export const login          = (data) => api.post('/auth/login', data)
 export const register       = (data) => api.post('/auth/register', data)

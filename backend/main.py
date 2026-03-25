@@ -12,6 +12,7 @@ from database import engine, Base, DATABASE_URL, _is_sqlite
 import models
 from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
+from routers.dashboard import router as dashboard_router
 from scheduler import start_scheduler
 
 # Debug prints removed — CRIT-02: DATABASE_URL may contain credentials
@@ -95,6 +96,7 @@ app.include_router(vendors.router,     prefix="/api/vendors",     tags=["Vendors
 app.include_router(intelligence.router,prefix="/api/intelligence",tags=["Intelligence"])
 app.include_router(export.router,      prefix="/api/export",      tags=["Export"])
 app.include_router(quota.router,       prefix="/api/quota",       tags=["Quota"])
+app.include_router(dashboard_router,   prefix="/api/dashboard",   tags=["dashboard"])
 
 
 @app.get("/")

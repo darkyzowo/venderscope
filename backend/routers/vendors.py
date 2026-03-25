@@ -46,6 +46,7 @@ class VendorOut(BaseModel):
     company_number: Optional[str]
     risk_score:     float
     last_scanned:   Optional[datetime] = None
+    score_delta:    Optional[float]    = None
     compliance:     Optional[dict]     = None
     description:    Optional[str]      = None
     auth_method:    Optional[str]      = None
@@ -62,13 +63,28 @@ def list_vendors(
     current_user: User = Depends(get_current_user),
 ):
     vendors = db.query(Vendor).filter(Vendor.user_id == current_user.id).all()
+    result = []
     for v in vendors:
         if isinstance(v.compliance, str):
             try:
                 v.compliance = json.loads(v.compliance)
             except Exception:
                 v.compliance = None
-    return vendors
+        # Compute score delta: current score minus the previous scan's score
+        history = (
+            db.query(RiskScoreHistory)
+            .filter(RiskScoreHistory.vendor_id == v.id)
+            .order_by(RiskScoreHistory.recorded_at.desc())
+            .limit(2)
+            .all()
+        )
+        delta = None
+        if len(history) >= 2:
+            delta = round(history[0].score - history[1].score, 1)
+        out = VendorOut.model_validate(v)
+        out.score_delta = delta
+        result.append(out)
+    return result
 
 
 @router.post("/", response_model=VendorOut)
