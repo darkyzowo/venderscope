@@ -45,8 +45,11 @@ We ask that you:
 
 ### Authentication
 - Passwords hashed with bcrypt (minimum 12 rounds)
-- JWT tokens used for session management with short expiry windows
-- Refresh tokens stored in httpOnly, Secure, SameSite=Strict cookies — inaccessible to JavaScript
+- JWT access tokens are short-lived (15 minutes) and stored in memory only — never in localStorage
+- Refresh tokens are 7-day single-use tokens stored in httpOnly, Secure, SameSite=None cookies — inaccessible to JavaScript
+- Used refresh tokens are immediately invalidated (JTI blacklist) — each token can only be used once
+- Password reconfirmation required before permanent account deletion — protects against an attacker with a briefly obtained access token
+- CSRF origin validation on all cookie-consuming endpoints (refresh, logout, account deletion)
 - Brute force protection on all authentication endpoints
 - Account enumeration prevention — login errors never reveal whether an email exists
 
@@ -58,7 +61,7 @@ We ask that you:
 
 ### Data in Transit
 - All traffic served over HTTPS (TLS 1.2+)
-- HTTP Strict Transport Security (HSTS) enforced
+- HTTP Strict Transport Security (HSTS) enforced in production
 - CORS restricted to known frontend origins only
 
 ### Data at Rest
@@ -67,12 +70,15 @@ We ask that you:
 - Secrets managed via environment variables — never committed to source code
 
 ### Server-Side Request Forgery (SSRF) Protection
-- All user-supplied URLs (webhook destinations) are validated against:
-  - HTTPS scheme enforcement
+- All outbound HTTP requests to user-supplied or externally-sourced domains are validated against:
   - RFC1918 private range blocklist (10.x, 172.16–31.x, 192.168.x)
-  - Loopback blocklist (127.x, ::1)
-  - Cloud metadata endpoint blocklist (169.254.169.254)
-- Outbound HTTP requests use strict timeouts and limited redirect following
+  - Loopback blocklist (127.x, ::1, and numeric/encoded variants)
+  - Link-local blocklist (169.254.x)
+  - Cloud metadata endpoint blocklist (GCP, Azure, Alibaba Cloud, and AWS IMDSv1)
+  - IPv6-mapped IPv4 address detection
+  - URL-encoding bypass prevention
+- Redirect chains are followed manually (max 3 hops) — each intermediate destination is independently validated before following
+- DNS resolution is performed and the resolved IP is checked, not just the hostname — prevents DNS rebinding attacks
 
 ### Dependency Security
 - Dependencies reviewed before addition
@@ -83,10 +89,10 @@ We ask that you:
 - Authentication endpoints: 5 requests per minute per IP
 - Registration: 3 requests per hour per IP
 - Scan endpoints: limited to prevent API quota abuse
-- All limits enforced at the application layer via SlowAPI
+- All limits enforced per real client IP — correctly resolved behind Render's load balancer
 
 ### Audit Logging
-- All authentication events (login, logout, failed attempts) are logged with IP and timestamp
+- All authentication events (login, logout, failed attempts, account deletion) are logged with IP and timestamp
 - All state-changing operations (vendor add/delete, scan triggers, exports) are recorded
 - Logs contain no sensitive data (no passwords, no tokens, no personal data beyond user ID and IP)
 
