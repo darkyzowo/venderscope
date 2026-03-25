@@ -5,7 +5,7 @@
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
-[![Version](https://img.shields.io/badge/version-v3.0-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
+[![Version](https://img.shields.io/badge/version-v3.1-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
@@ -16,7 +16,7 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 ## What's New in v3
 
 ### Authentication & Multi-User Support
-- **JWT authentication** — access token stored in memory (15min expiry), refresh token in `httpOnly` `SameSite=Strict` cookie (30 days)
+- **JWT authentication** — access token stored in memory (15min expiry), refresh token in `httpOnly` `SameSite=None; Secure` cookie (7 days, single-use rotation)
 - **Register / Login / Logout** — full auth flow with bcrypt password hashing (12 rounds)
 - **Per-user vendor isolation** — every database query is scoped to the authenticated user; no user can see or scan another user's vendors
 - **Silent token refresh** — `AuthContext` silently renews the access token on mount and 401, keeping sessions seamless
@@ -39,9 +39,24 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 - **Revoked token cleanup** — APScheduler purges expired JTI blacklist entries every 6 hours
 
 ### UI & Account Management
-- **Delete Account** — 2-step confirmation flow (warning → type "DELETE"); cascades to all vendor data
+- **Delete Account** — 2-step confirmation flow (warning → type "DELETE" → password reconfirmation); cascades to all vendor data
 - **Footer** — privacy policy, terms, and security documentation links; subtle delete account trigger
 - **Legal & security docs** — `/privacy`, `/terms`, `/security` pages rendered from markdown
+
+---
+
+## What's New in v3.1
+
+### Security Hardening (Secondary Audit)
+- **Real-IP rate limiting** — uvicorn now runs with `--proxy-headers`, correctly resolving per-client IPs behind Render's load balancer. Previously all users shared one rate-limit bucket.
+- **CSRF origin validation** — `logout`, `refresh`, and `delete_account` endpoints now verify the `Origin`/`Referer` header against `FRONTEND_URL` as a defence-in-depth layer on top of CORS
+- **Password reconfirmation on deletion** — account deletion now requires the user's current password, protecting against brief access-token compromise
+- **Hardened SSRF protection** — `_is_safe_domain()` now blocks URL-encoded IPs (`127%2E0%2E0%2E1`), decimal/octal notation, IPv6-mapped IPv4 addresses, and cloud metadata endpoints (GCP, Azure, Alibaba); redirect chains are followed manually (max 3 hops, each validated)
+- **HIBP exact domain matching** — replaced substring match (which produced false positives) with exact match + www-normalisation; added 1hr in-process cache to avoid re-fetching 1MB breach list on every scan
+- **Injection prevention** — `xml.sax.saxutils.escape` applied to all external data in PDF export (ReportLab); `html.escape` applied to all external data in email alert templates
+- **Quota file thread-safety** — `threading.RLock()` protecting concurrent reads/writes from `ThreadPoolExecutor` scan workers
+- **Refresh token lifetime** — reduced from 30 days to 7 days (industry standard for rotation-based tokens)
+- **Stale config removed** — SQLite `DATABASE_URL` removed from `render.yaml` (would have silently overridden the PostgreSQL secret if cleared)
 
 ### Alerts (Code Complete — Pending Production Domain)
 - **Resend HTTP API** — rebuilt alerts dispatcher; uses Resend if a verified sending domain is configured, falls back to Gmail SMTP automatically
@@ -226,7 +241,7 @@ VenderScope uses a **dual-token JWT scheme**:
 | Token | Storage | Expiry | Purpose |
 |-------|---------|--------|---------|
 | Access token | JS memory (never localStorage) | 15 minutes | Bearer auth on every API request |
-| Refresh token | `httpOnly` `SameSite=Strict` cookie | 30 days | Silently issues new access tokens |
+| Refresh token | `httpOnly` `SameSite=None; Secure` cookie | 7 days | Silently issues new access tokens (single-use) |
 
 **Token rotation:** Every refresh issues a new refresh token and immediately revokes the previous token's JWT ID (JTI) in the database. Replayed refresh tokens are rejected.
 
@@ -250,13 +265,15 @@ VenderScope has undergone a full security audit. Key controls:
 | Password policy | Min 12 chars, uppercase, digit |
 | DoS protection | Max password length at login (prevents billion-hash attack) |
 | XSS | Access token in memory only; httpOnly cookie for refresh |
-| SSRF | DNS resolution check on all outbound URL fetches |
+| SSRF | RFC1918 blocklist, cloud metadata endpoints, URL-decode bypass prevention, decimal/IPv6-mapped IP detection, 3-hop redirect chain validation with per-hop domain check |
 | SQL injection | SQLAlchemy ORM (parameterised queries throughout) |
 | Header injection | PDF Content-Disposition filename sanitised with regex |
 | Security headers | X-Content-Type-Options, X-Frame-Options, HSTS, Referrer-Policy |
 | Audit trail | Append-only AuditLog table; X-Forwarded-For aware |
 | Secrets | All credentials in environment variables; `.env` gitignored |
 | Token replay | JTI blacklist on logout + single-use refresh tokens |
+| CSRF | Origin/Referer header validation on all cookie-consuming endpoints |
+| Content injection | XML escape on all external data in PDF; HTML escape in email templates |
 | Session tokens | UUIDs (not sequential integers) for vendor IDs |
 | Input validation | Pydantic validators on all inputs; domain normalised on ingest |
 | Startup checks | FRONTEND_URL validated at startup; server refuses to start if misconfigured |
@@ -351,14 +368,23 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] UUID vendor IDs (v3)
 - [x] PostgreSQL (Neon) + pg8000 migration (v3)
 - [x] Resend HTTP API email dispatcher (v3, pending sending domain)
-- [x] Account deletion with cascade (v3)
+- [x] Account deletion with cascade + password reconfirmation (v3)
 - [x] Legal and security documentation pages (v3)
-- [ ] Email alerts in production (requires verified Resend domain)
+- [x] Real-IP rate limiting behind Render proxy (v3.1)
+- [x] CSRF origin validation on cookie endpoints (v3.1)
+- [x] SSRF redirect-chain validation + cloud metadata blocklist (v3.1)
+- [x] HIBP exact domain matching + breach list cache (v3.1)
+- [x] PDF and email content injection prevention (v3.1)
+- [ ] Risk Delta Dashboard — score drift, "needs attention" view, VendorCard delta badges
+- [ ] Vendor Comparison View — side-by-side risk posture for two vendors
+- [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
+- [ ] Bulk CSV Import — add multiple vendors at once
+- [ ] Compliance discovery improvements — broader path coverage, footer scraping, sitemap fallback
+- [ ] In-app score change alerts (no email dependency)
 - [ ] Per-user alert configuration (threshold, channel, webhook)
+- [ ] Email alerts in production (requires verified Resend domain)
+- [ ] Per-user scheduler scoping
 - [ ] Async task queue (Celery + Redis)
-- [ ] Multi-user scheduler scoping
-- [ ] News Feed — vendor reputation monitoring via RSS + HackerNews
-- [ ] EPSS exploit probability scoring integration
 
 ---
 
