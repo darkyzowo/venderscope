@@ -46,14 +46,12 @@ class TestRegistration:
         assert "created" in resp.json()["message"].lower()
 
     def test_register_duplicate_email(self):
-        """Register with duplicate email — expect 400."""
-        resp = client.post("/api/auth/register", json={
-            "email": VALID_EMAIL, "password": VALID_PASS,
-        })
-        assert resp.status_code == 400
-        # Should NOT reveal "email already exists" — generic message
-        detail = resp.json()["detail"]
-        assert "email" not in detail.lower() or "already" not in detail.lower()
+        """Register with duplicate email — expect 409 with clear message."""
+        dup_email = "duplicate@test.example"
+        client.post("/api/auth/register", json={"email": dup_email, "password": VALID_PASS})
+        resp = client.post("/api/auth/register", json={"email": dup_email, "password": VALID_PASS})
+        assert resp.status_code == 409
+        assert "already exists" in resp.json()["detail"].lower()
 
     def test_register_missing_email(self):
         """Register with missing email — expect 422 validation error."""

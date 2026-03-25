@@ -117,10 +117,9 @@ def _verify_origin(request: Request) -> None:
 @router.post("/register")
 @limiter.limit("3/hour")
 def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
-    # Don't reveal whether email already exists — prevents account enumeration
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
-        raise HTTPException(status_code=400, detail="Registration failed. Please try again.")
+        raise HTTPException(status_code=409, detail="An account with this email already exists.")
     user = User(
         id=str(uuid.uuid4()),
         email=payload.email.lower(),
