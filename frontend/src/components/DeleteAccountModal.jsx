@@ -5,21 +5,33 @@ import { clearAccessToken } from '../api/client'
 export default function DeleteAccountModal({ onClose }) {
   const [step, setStep] = useState(1)       // 1 = warning, 2 = confirm
   const [input, setInput] = useState('')
+  const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
   const confirmed = input === 'DELETE'
+
+  const handleClose = () => {
+    setInput('')
+    setPassword('')
+    setError('')
+    onClose()
+  }
 
   const handleDelete = async () => {
     if (!confirmed) return
     setLoading(true)
     setError('')
     try {
-      await deleteAccount()
+      await deleteAccount({ password })
       clearAccessToken()
       window.location.href = '/login?deleted=1'
     } catch (e) {
-      setError(e.response?.data?.detail || 'Something went wrong. Please try again.')
+      if (e.response?.status === 401) {
+        setError('Incorrect password')
+      } else {
+        setError(e.response?.data?.detail || 'Something went wrong. Please try again.')
+      }
       setLoading(false)
     }
   }
@@ -28,7 +40,7 @@ export default function DeleteAccountModal({ onClose }) {
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4"
       style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(4px)' }}
-      onClick={(e) => { if (e.target === e.currentTarget) onClose() }}
+      onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
     >
       <div
         className="w-full max-w-md rounded-2xl p-6"
@@ -75,7 +87,7 @@ export default function DeleteAccountModal({ onClose }) {
 
             <div className="flex gap-3">
               <button
-                onClick={onClose}
+                onClick={handleClose}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.04)',
@@ -113,7 +125,7 @@ export default function DeleteAccountModal({ onClose }) {
               onChange={(e) => { setInput(e.target.value); setError('') }}
               placeholder="Type DELETE to confirm"
               autoFocus
-              className="w-full px-4 py-3 rounded-xl text-sm mb-4 outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl text-sm mb-3 outline-none transition-all"
               style={{
                 background: '#141425',
                 border: `1px solid ${confirmed ? 'rgba(239,68,68,0.5)' : '#2a2a4a'}`,
@@ -123,13 +135,29 @@ export default function DeleteAccountModal({ onClose }) {
               }}
             />
 
+            <label className="block text-xs mb-1" style={{ color: '#44445a' }}>
+              Enter your password to confirm
+            </label>
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => { setPassword(e.target.value); setError('') }}
+              placeholder="Your account password"
+              className="w-full px-4 py-3 rounded-xl text-sm mb-4 outline-none transition-all"
+              style={{
+                background: '#141425',
+                border: '1px solid #2a2a4a',
+                color: '#e2e8f0',
+              }}
+            />
+
             {error && (
               <p className="text-xs mb-3" style={{ color: '#f87171' }}>{error}</p>
             )}
 
             <div className="flex gap-3">
               <button
-                onClick={() => { setStep(1); setInput(''); setError('') }}
+                onClick={() => { setStep(1); setInput(''); setPassword(''); setError('') }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
                 style={{
                   background: 'rgba(255,255,255,0.04)',

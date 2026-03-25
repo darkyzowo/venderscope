@@ -1,10 +1,20 @@
 import json
+import threading as _threading
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# NOTE: quota.json persists to Render's ephemeral filesystem. On Render free tier,
+# any redeploy, restart, or instance recycle resets the file and the daily counter.
+# This means the 100/day Google CSE quota can be bypassed by triggering a redeploy.
+# For strict enforcement, migrate quota state to the PostgreSQL database (Phase 3).
 
 QUOTA_FILE  = Path(__file__).resolve().parent.parent / "quota.json"
 DAILY_LIMIT = 100  # Google CSE free tier
 SCAN_COST   = 14   # worst-case queries per full scan (2 × 6 certs + ~2 contact searches)
+
+# RLock (reentrant) rather than Lock: _ensure_loaded() may call _persist() internally,
+# so the same thread must be able to re-acquire without deadlocking.
+_quota_lock = _threading.RLock()
 
 # In-memory state — loaded once at import, persisted to disk only on mutation
 _state: dict = {}
@@ -15,7 +25,8 @@ def _today() -> str:
 
 
 def _persist():
-    QUOTA_FILE.write_text(json.dumps(_state, indent=2))
+    with _quota_lock:
+        QUOTA_FILE.write_text(json.dumps(_state, indent=2))
 
 
 def _ensure_loaded():
@@ -24,7 +35,8 @@ def _ensure_loaded():
     if not _state:
         if QUOTA_FILE.exists():
             try:
-                _state = json.loads(QUOTA_FILE.read_text())
+                with _quota_lock:
+                    _state = json.loads(QUOTA_FILE.read_text())
             except Exception:
                 _state = {}
         if _state.get("date") != _today():

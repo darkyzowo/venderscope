@@ -42,5 +42,9 @@ def _get_ip(request: Request) -> str:
     """Extract real client IP, respecting X-Forwarded-For from Render's proxy."""
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        # The LAST entry in X-Forwarded-For is appended by Render's own load balancer
+        # and cannot be forged by the client. The first entry is entirely client-controlled.
+        # TODO: Once --proxy-headers (FIX 1) is deployed and verified, this whole function
+        # can be simplified to: return request.client.host if request.client else "unknown"
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"

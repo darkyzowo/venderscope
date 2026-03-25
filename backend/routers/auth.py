@@ -57,6 +57,17 @@ class LoginRequest(BaseModel):
         return v
 
 
+class DeleteAccountRequest(BaseModel):
+    password: str
+
+    @field_validator("password")
+    @classmethod
+    def password_max_length(cls, v: str) -> str:
+        if len(v) > 128:
+            raise ValueError("Password too long")
+        return v
+
+
 def _set_refresh_cookie(response: Response, token: str) -> None:
     response.set_cookie(
         key="vs_refresh",
@@ -76,6 +87,25 @@ def _clear_refresh_cookie(response: Response) -> None:
         samesite="none" if _IS_PROD else "lax",
         secure=_IS_PROD,
     )
+
+
+def _verify_origin(request: Request) -> None:
+    """
+    Defence-in-depth CSRF protection for endpoints that consume the httpOnly refresh cookie.
+
+    Primary protection: all JSON endpoints trigger a CORS preflight which blocks
+    cross-origin requests for unlisted origins. This is the second layer — a
+    server-side check that covers edge cases where preflight is bypassed (e.g.
+    same-origin redirects, non-standard clients, future endpoint changes).
+
+    Skipped when FRONTEND_URL is not set (local dev without env var).
+    """
+    allowed = os.getenv("FRONTEND_URL", "").rstrip("/")
+    if not allowed:
+        return
+    origin = request.headers.get("origin") or request.headers.get("referer", "")
+    if origin and not origin.startswith(allowed):
+        raise HTTPException(status_code=403, detail="Origin not allowed")
 
 
 @router.post("/register")
@@ -132,6 +162,7 @@ def refresh_token_endpoint(
     vs_refresh: str = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
+    _verify_origin(request)
     if not vs_refresh:
         raise HTTPException(status_code=401, detail="No refresh token")
     try:
@@ -175,6 +206,7 @@ def logout(
     vs_refresh: str = Cookie(default=None),
     db: Session = Depends(get_db),
 ):
+    _verify_origin(request)
     # Blacklist the refresh token's JTI so it can't be reused after logout
     if vs_refresh:
         try:
@@ -210,10 +242,17 @@ def get_me(current_user: User = Depends(get_current_user)):
 def delete_account(
     request: Request,
     response: Response,
+    payload: DeleteAccountRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Permanently delete the authenticated user's account and all associated data."""
+    _verify_origin(request)
+    # Re-verify password before permanent, irreversible account deletion.
+    # Protects against an attacker who briefly obtains a valid 15-min access token
+    # (e.g. via XSS, shared device, shoulder surf) silently wiping the account.
+    if not verify_password(payload.password, current_user.password_hash):
+        audit(db, "account.delete.failed", request, user_id=current_user.id)
+        raise HTTPException(status_code=401, detail="Invalid credentials")
     user_id = current_user.id
     db.delete(current_user)
     db.commit()

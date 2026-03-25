@@ -1,9 +1,10 @@
 import re
 import os
 import socket
+import ipaddress
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin
+from urllib.parse import urljoin, unquote, urlparse
 
 # ── SSRF protection ────────────────────────────────────────────────────────────
 BLOCKED_PATTERNS = [
@@ -11,6 +12,14 @@ BLOCKED_PATTERNS = [
     r"^172\.(1[6-9]|2[0-9]|3[01])\.",
     r"^192\.168\.", r"^169\.254\.", r"^0\.", r"^::1$",
 ]
+
+# Cloud metadata endpoints not covered by the regex blocklist above
+BLOCKED_HOSTNAMES = {
+    "metadata.google.internal",    # GCP metadata
+    "metadata.azure.com",          # Azure metadata (hostname variant)
+    "100.100.100.200",             # Alibaba Cloud metadata
+    "0.0.0.0",
+}
 
 HEADERS = {"User-Agent": "VenderScope/1.0 Compliance Discovery Bot (security research)"}
 
@@ -88,24 +97,66 @@ SECURITY_EMAIL_PREFIXES = ["security", "privacy", "dpo", "compliance", "legal", 
 
 def _is_safe_domain(domain: str) -> bool:
     clean = domain.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
+    # URL-decode to prevent bypass via 127%2E0%2E0%2E1
+    clean = unquote(clean)
+
+    # Check cloud metadata endpoints not covered by regex patterns
+    if clean.lower() in BLOCKED_HOSTNAMES:
+        return False
+
+    # Check against regex blocklist
     if any(re.match(p, clean) for p in BLOCKED_PATTERNS):
         return False
-    # Resolve DNS and check the resolved IP too — prevents DNS rebinding attacks
+
+    # Check for decimal/hex/octal IP notation (e.g. 2130706433 → 127.0.0.1)
     try:
-        ip = socket.gethostbyname(clean)
-        if any(re.match(p, ip) for p in BLOCKED_PATTERNS):
+        ip_obj = ipaddress.ip_address(int(clean))
+        if ip_obj.is_private or ip_obj.is_loopback:
             return False
+    except (ValueError, TypeError):
+        pass  # Not a numeric IP, continue to DNS resolution
+
+    # Resolve DNS and check the resolved IP — prevents DNS rebinding attacks
+    try:
+        resolved_ip = socket.gethostbyname(clean)
+        try:
+            ip_obj = ipaddress.ip_address(resolved_ip)
+            # ipaddress handles is_private, is_loopback, is_link_local natively
+            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
+                return False
+            # Block IPv4-mapped IPv6 addresses (::ffff:127.0.0.1 etc)
+            if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj.ipv4_mapped:
+                if ip_obj.ipv4_mapped.is_private or ip_obj.ipv4_mapped.is_loopback:
+                    return False
+        except ValueError:
+            return False  # Unparseable IP → block
     except socket.gaierror:
         return False
+
     return True
 
 
 def _fetch_page(url: str, timeout: int = 8) -> str | None:
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        return r.text if r.status_code == 200 else None
-    except Exception:
-        return None
+    max_hops = 3
+    current_url = url
+    for _ in range(max_hops):
+        try:
+            r = requests.get(current_url, headers=HEADERS, timeout=timeout, allow_redirects=False)
+            if r.status_code == 200:
+                return r.text
+            if r.status_code in (301, 302, 303, 307, 308):
+                location = r.headers.get("Location", "")
+                if not location:
+                    return None
+                hop_host = urlparse(location).netloc or location
+                if not _is_safe_domain(hop_host):
+                    return None
+                current_url = location
+                continue
+            return None
+        except Exception:
+            return None
+    return None
 
 
 def _find_doc_links(html: str, base_url: str) -> dict:

@@ -1,6 +1,7 @@
 import smtplib
 import os
 import httpx
+from html import escape as _html_escape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from dotenv import load_dotenv
@@ -132,7 +133,12 @@ def send_alert_email(
         return
 
     print(f"[Alerts] Sending alert for {vendor_name} (score: {score}) → {to}")
+    # Plain-text subject — do NOT HTML-escape (would show &amp; in email subject)
     subject = f"VenderScope Alert — {vendor_name} Risk Score: {score}/100"
+
+    # Escape all user-supplied and external-API data before embedding in HTML
+    safe_vendor_name = _html_escape(vendor_name)
+    safe_domain      = _html_escape(domain)
 
     sev_order  = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
     top_events = sorted(events, key=lambda e: sev_order.get(e.severity, 4))[:10]
@@ -146,9 +152,9 @@ def send_alert_email(
                  "MEDIUM": "#ca8a04", "LOW": "#16a34a"}.get(evt.severity, "#6b7280")
         event_rows += f"""
         <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#94a3b8;">{evt.source}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#e2e8f0;">{evt.title}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;font-weight:bold;color:{color};">{evt.severity}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#94a3b8;">{_html_escape(evt.source)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#e2e8f0;">{_html_escape(evt.title)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;font-weight:bold;color:{color};">{_html_escape(evt.severity)}</td>
         </tr>"""
 
     html = f"""
@@ -171,8 +177,8 @@ def send_alert_email(
             <div style="font-size:52px;font-weight:bold;color:{label_color};line-height:1;">{score}</div>
             <div style="color:{label_color};font-size:13px;font-weight:bold;letter-spacing:2px;margin-top:4px;">{risk_label}</div>
             <div style="color:#e2e8f0;font-size:16px;margin-top:8px;">
-              <strong>{vendor_name}</strong>
-              <span style="color:#6b7280;font-size:13px;margin-left:6px;">{domain}</span>
+              <strong>{safe_vendor_name}</strong>
+              <span style="color:#6b7280;font-size:13px;margin-left:6px;">{safe_domain}</span>
             </div>
           </div>
           <p style="color:#94a3b8;font-size:13px;">
@@ -195,7 +201,7 @@ def send_alert_email(
             <a href="{FRONTEND_URL}/vendor/{vendor_id if vendor_id else ''}"
                style="display:inline-block;background:#6366f1;color:white;padding:12px 28px;
                       border-radius:8px;text-decoration:none;font-weight:600;font-size:14px;">
-              View {vendor_name} Risk Report →
+              View {safe_vendor_name} Risk Report →
             </a>
           </div>
         </div>

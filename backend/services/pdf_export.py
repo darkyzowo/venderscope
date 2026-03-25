@@ -1,6 +1,7 @@
 import io
 import re
 from datetime import datetime
+from xml.sax.saxutils import escape as _xml_escape
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
@@ -71,11 +72,11 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
 
     # Vendor summary table
     story.append(Paragraph("Vendor Summary", h2_s))
-    rows = [["Vendor Name", vendor.name], ["Domain", vendor.domain],
+    rows = [["Vendor Name", _xml_escape(vendor.name)], ["Domain", _xml_escape(vendor.domain)],
             ["Last Scanned", vendor.last_scanned.strftime('%d %B %Y, %H:%M UTC')
              if vendor.last_scanned else "Never"]]
     if vendor.company_number:
-        rows.append(["Companies House", vendor.company_number])
+        rows.append(["Companies House", _xml_escape(vendor.company_number)])
 
     col_w = [45*mm, usable - 45*mm]
     t = Table(rows, colWidths=col_w)
@@ -120,9 +121,9 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
         data = [hdr]
         for evt in events:
             data.append([
-                Paragraph(evt.source, cell_s),
-                Paragraph(evt.title,  cell_s),
-                Paragraph(f"<b>{evt.severity}</b>", ParagraphStyle(
+                Paragraph(_xml_escape(evt.source), cell_s),
+                Paragraph(_xml_escape(evt.title),  cell_s),
+                Paragraph(f"<b>{_xml_escape(evt.severity)}</b>", ParagraphStyle(
                     "sev", fontSize=8, textColor=sev_color(evt.severity), fontName="Helvetica-Bold")),
                 Paragraph(evt.detected_at.strftime('%d/%m/%Y') if evt.detected_at else "N/A", cell_s),
             ])

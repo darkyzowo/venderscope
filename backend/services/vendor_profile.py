@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from urllib.parse import urlparse
 from services.compliance_discovery import _is_safe_domain
 
 HEADERS = {"User-Agent": "VenderScope/1.0 Vendor Profile Bot (security research)"}
@@ -42,11 +43,26 @@ LOGIN_PATHS = [
 
 
 def _fetch(url: str, timeout: int = 7) -> str | None:
-    try:
-        r = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True)
-        return r.text if r.status_code == 200 else None
-    except Exception:
-        return None
+    max_hops = 3
+    current_url = url
+    for _ in range(max_hops):
+        try:
+            r = requests.get(current_url, headers=HEADERS, timeout=timeout, allow_redirects=False)
+            if r.status_code == 200:
+                return r.text
+            if r.status_code in (301, 302, 303, 307, 308):
+                location = r.headers.get("Location", "")
+                if not location:
+                    return None
+                hop_host = urlparse(location).netloc or location
+                if not _is_safe_domain(hop_host):
+                    return None
+                current_url = location
+                continue
+            return None
+        except Exception:
+            return None
+    return None
 
 
 def _to_text(html: str) -> str:

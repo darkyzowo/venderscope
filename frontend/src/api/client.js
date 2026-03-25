@@ -99,6 +99,7 @@ export const register       = (data) => api.post('/auth/register', data)
 export const logout         = ()     => api.post('/auth/logout')
 export const refresh        = ()     => api.post('/auth/refresh')
 export const getMe          = ()     => api.get('/auth/me')
-export const deleteAccount  = ()     => api.delete('/auth/account')
+export const deleteAccount  = (body) => api.delete('/auth/account', { data: body })
+// Axios DELETE with a body uses the `data` key, not `body`
 
 export default api
