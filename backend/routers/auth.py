@@ -1,7 +1,7 @@
 import os
 import uuid
 from urllib.parse import urlparse
-from fastapi import APIRouter, Depends, HTTPException, Cookie, Response, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Cookie, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
 from jose import JWTError, jwt
@@ -116,7 +116,7 @@ def _verify_origin(request: Request) -> None:
 
 @router.post("/register")
 @limiter.limit("3/hour")
-def register(request: Request, payload: RegisterRequest, db: Session = Depends(get_db)):
+def register(request: Request, background_tasks: BackgroundTasks, payload: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(User).filter(User.email == payload.email.lower()).first()
     if existing:
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
@@ -128,10 +128,7 @@ def register(request: Request, payload: RegisterRequest, db: Session = Depends(g
     db.add(user)
     db.commit()
     audit(db, "register.success", request, user_id=user.id)
-    try:
-        send_welcome_email(user.email)
-    except Exception as e:
-        print(f"[Auth] Welcome email failed: {e}")
+    background_tasks.add_task(send_welcome_email, user.email)
     return {"message": "Account created successfully"}
 
 
