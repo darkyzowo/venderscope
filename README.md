@@ -36,7 +36,7 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 
 ---
 
-## What's New in v3
+## What's New in v3.1.5
 
 ### Authentication & Multi-User Support
 - **JWT authentication** — access token stored in memory (15min expiry), refresh token in `httpOnly` `SameSite=None; Secure` cookie (7 days, single-use rotation)
