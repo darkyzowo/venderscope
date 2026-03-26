@@ -127,3 +127,23 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     print(f"[Scanner] {vendor.name} → {score} ({scan_type} Scan) | "
           f"+{len(new_events)} new events | {elapsed}s")
     return score
+
+
+def scan_ephemeral(domain: str, name: str) -> dict:
+    """
+    Guest scan — CVE check only, zero DB writes, no side effects.
+    Returns: {events: list[dict], score: float}
+    Deliberately excludes HIBP, Shodan, Companies House, compliance, and profile
+    — those signals are reserved for authenticated full scans.
+    """
+    print(f"[Scanner] Ephemeral scan: {name} ({domain})")
+    events = []
+    try:
+        cves = check_vendor_cves(name)
+        for c in cves:
+            events.append({**c, "source": "NVD"})
+    except Exception as e:
+        print(f"[Scanner] Ephemeral NVD failed: {e}")
+    score = _compute_score(events)
+    print(f"[Scanner] Ephemeral done: {name} → {score} ({len(events)} CVEs)")
+    return {"events": events, "score": score}

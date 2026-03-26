@@ -13,6 +13,7 @@ import models
 from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
 from routers.dashboard import router as dashboard_router
+from routers.guest import router as guest_router
 from scheduler import start_scheduler
 
 # Debug prints removed — CRIT-02: DATABASE_URL may contain credentials
@@ -68,7 +69,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VenderScope API",
     description="Continuous passive vendor risk intelligence platform",
-    version="3.0.0",
+    version="3.5.0",
     lifespan=lifespan,
 )
 
@@ -97,6 +98,7 @@ app.include_router(intelligence.router,prefix="/api/intelligence",tags=["Intelli
 app.include_router(export.router,      prefix="/api/export",      tags=["Export"])
 app.include_router(quota.router,       prefix="/api/quota",       tags=["Quota"])
 app.include_router(dashboard_router,   prefix="/api/dashboard",   tags=["dashboard"])
+app.include_router(guest_router,       prefix="/api/guest",        tags=["guest"])
 
 
 @app.get("/")

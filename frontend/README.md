@@ -1,16 +1,64 @@
-# React + Vite
+# VenderScope Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + Vite + TailwindCSS frontend for the VenderScope vendor risk intelligence platform.
 
-Currently, two official plugins are available:
+## Setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+```bash
+npm install
+```
 
-## React Compiler
+Create `.env.local`:
+```env
+VITE_API_URL=http://127.0.0.1:8000/api
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Development
 
-## Expanding the ESLint configuration
+```bash
+npm run dev       # http://localhost:5173
+npm run build     # production build to dist/
+npm run lint      # ESLint
+npm run preview   # preview production build locally
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Deployment
+
+Deployed on Vercel. `vercel.json` configures:
+- SPA rewrites (all routes → `index.html`)
+- Security headers: CSP, X-Frame-Options, X-Content-Type-Options, Referrer-Policy
+
+Production env var on Vercel:
+```env
+VITE_API_URL=https://venderscope-api.onrender.com/api
+```
+
+## Structure
+
+```
+src/
+├── api/client.js          # Axios client, token injection, silent refresh interceptor
+├── context/AuthContext.jsx # JWT access token state, silent refresh on mount
+├── pages/
+│   ├── Dashboard.jsx       # Vendor list, risk delta, sort controls
+│   ├── VendorDetail.jsx    # Per-vendor risk detail, score history, compliance
+│   ├── GuestScanPage.jsx   # Unauthenticated CVE scan (v3.5)
+│   ├── Login.jsx
+│   ├── Register.jsx
+│   └── DocPage.jsx         # Renders /privacy, /terms, /security markdown
+├── components/
+│   ├── VendorCard.jsx
+│   ├── ScoreGauge.jsx
+│   ├── ScoreChart.jsx
+│   ├── EventFeed.jsx
+│   ├── CompliancePanel.jsx
+│   ├── AddVendorModal.jsx
+│   ├── DeleteAccountModal.jsx
+│   ├── QuotaBanner.jsx
+│   ├── VendorAvatar.jsx
+│   └── Footer.jsx
+└── docs/
+    ├── privacy.md
+    ├── terms.md
+    └── security.md
+```

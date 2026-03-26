@@ -5,6 +5,7 @@ import VendorDetail from './pages/VendorDetail'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import DocPage from './pages/DocPage'
+import GuestScanPage from './pages/GuestScanPage'
 import privacyMd from './docs/privacy.md?raw'
 import termsMd from './docs/terms.md?raw'
 import securityMd from './docs/security.md?raw'
@@ -33,6 +34,7 @@ export default function App() {
         <Routes>
           <Route path="/login"    element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/guest"    element={<GuestScanPage />} />
           <Route path="/" element={
             <ProtectedRoute><Dashboard /></ProtectedRoute>
           } />

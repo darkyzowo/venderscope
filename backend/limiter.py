@@ -9,12 +9,13 @@ _enabled = os.getenv("RATE_LIMIT_ENABLED", "1") != "0"
 def _real_ip(request: Request) -> str:
     """
     Extract real client IP from X-Forwarded-For.
-    With --proxy-headers enabled in uvicorn, request.client.host is already the real IP.
-    XFF [0] is the fallback for any request that reaches this without the proxy header set.
+    Uses XFF[-1] (the rightmost entry) — Render appends the real client IP at the end,
+    making it unforgeable. XFF[0] is client-controlled and can be spoofed to bypass
+    rate limiting, which is critical for unauthenticated endpoints.
     """
     forwarded = request.headers.get("x-forwarded-for")
     if forwarded:
-        return forwarded.split(",")[0].strip()
+        return forwarded.split(",")[-1].strip()
     return request.client.host if request.client else "unknown"
 
 

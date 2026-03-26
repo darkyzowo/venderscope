@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 23 March 2026
+**Last updated:** 26 March 2026
 **Effective date:** 23 March 2026
 
 This Privacy Policy explains how VenderScope ("we", "us", "our") collects, uses, stores, and protects your information when you use our vendor risk intelligence platform.
@@ -19,6 +19,9 @@ VenderScope is a vendor risk intelligence platform that aggregates publicly avai
 ---
 
 ## 2. What Data We Collect
+
+### 2.0 Guest Mode
+If you use the Guest Scan feature (accessible without an account), VenderScope performs a CVE-only lookup of the domain you enter. No data from a guest scan is stored — not the domain, not the results, not your IP address beyond the standard rate-limit window. Guest scans are ephemeral: they are computed and returned in the HTTP response and immediately discarded.
 
 ### 2.1 Account Data
 When you create an account, we collect:
@@ -174,7 +177,7 @@ VenderScope uses minimal cookies:
 
 | Cookie | Purpose | Type | Duration |
 |--------|---------|------|---------|
-| `vs_refresh` | Stores your refresh token for silent re-authentication | httpOnly, Secure, SameSite=Strict | 30 days |
+| `vs_refresh` | Stores your refresh token for silent re-authentication | httpOnly, Secure, SameSite=None (production) / Lax (local dev) | 7 days |
 | Session storage | Stores your access token in browser memory | Not a cookie — cleared on tab close | 15 minutes |
 
 We do not use advertising cookies, tracking cookies, or third-party analytics cookies.

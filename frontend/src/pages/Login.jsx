@@ -101,6 +101,12 @@ export default function Login() {
             Create one
           </Link>
         </p>
+        <p className="text-center text-sm mt-2" style={{ color: 'var(--mid)' }}>
+          Just browsing?{' '}
+          <Link to="/guest" className="font-medium hover:opacity-80 transition-opacity" style={{ color: 'var(--mid)' }}>
+            Try as Guest →
+          </Link>
+        </p>
       </div>
     </div>
   )

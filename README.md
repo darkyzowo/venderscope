@@ -5,11 +5,34 @@
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
-[![Version](https://img.shields.io/badge/version-v3.1-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
+[![Version](https://img.shields.io/badge/version-v3.5-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time — with full user authentication, production-grade security hardening, and a cloud PostgreSQL backend.
+
+---
+
+## What's New in v3.5
+
+### Guest Mode — Try Before You Register
+
+VenderScope now lets anyone run a quick CVE lookup without creating an account.
+
+- **No account required** — accessible from the login page via "Try as Guest →"
+- **CVE-only scan** — queries NIST NVD for known vulnerabilities associated with the vendor name
+- **Instant risk score** — same weighted 0–100 scoring engine as full scans, based on CVE signals
+- **PDF download** — export a guest report clearly watermarked as a partial scan
+- **Zero data persistence** — results are computed and returned; nothing is written to the database
+- **Clear limitations banner** — guests are shown exactly what is missing (breach data, Shodan, compliance, profiling) and invited to register for a full scan
+
+### v3.5 Security Hardening
+
+A full security audit was conducted before guest mode launch. Findings resolved:
+
+- **Rate limit IP bypass (HIGH)** — `_real_ip()` was using `XFF[0]` (client-controlled) for rate limiting. Since rate limiting is the *only* gate on unauthenticated endpoints, this was critical. Fixed to `XFF[-1]` (Render-appended, unforgeable) — now consistent with the audit log fix applied in v3.1
+- **Missing Content-Security-Policy (MEDIUM)** — CSP added to `vercel.json` as a Vercel response header (`frame-ancestors 'none'`, `connect-src` locked to the API origin, `object-src 'none'`)
+- **55/55 security tests passing** — 23 new tests covering SSRF blocks, zero DB write verification, input validation, XML injection handling, invalid severity/score/event limits, and PDF generation
 
 ---
 
@@ -375,11 +398,13 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] SSRF redirect-chain validation + cloud metadata blocklist (v3.1)
 - [x] HIBP exact domain matching + breach list cache (v3.1)
 - [x] PDF and email content injection prevention (v3.1)
-- [ ] Risk Delta Dashboard — score drift, "needs attention" view, VendorCard delta badges
+- [x] Risk Delta Dashboard — score drift, "needs attention" view, VendorCard delta badges (v3.1)
+- [x] Compliance discovery improvements — expanded path probing, sitemap fallback, broader cert keywords (v3.1)
+- [x] Guest Mode — unauthenticated CVE-only scan with PDF download, zero data persistence (v3.5)
+- [x] Content-Security-Policy on Vercel frontend (v3.5)
 - [ ] Vendor Comparison View — side-by-side risk posture for two vendors
 - [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
 - [ ] Bulk CSV Import — add multiple vendors at once
-- [ ] Compliance discovery improvements — broader path coverage, footer scraping, sitemap fallback
 - [ ] In-app score change alerts (no email dependency)
 - [ ] Per-user alert configuration (threshold, channel, webhook)
 - [ ] Email alerts in production (requires verified Resend domain)

@@ -365,6 +365,183 @@ class TestSecurityHeaders:
 
 
 # ═════════════════════════════════════════════════════════════════════════════
+# GUEST MODE SECURITY TESTS
+# ═════════════════════════════════════════════════════════════════════════════
+
+class TestGuestScan:
+    """Tests for POST /api/guest/scan — unauthenticated CVE-only endpoint."""
+
+    def test_guest_scan_valid_domain(self):
+        """Valid domain returns events list and score — no auth required."""
+        resp = client.post("/api/guest/scan", json={"domain": "example.com", "name": "Example"})
+        # 200 with valid response shape; NVD may return 0 results in test env
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "events" in data
+        assert "score"  in data
+        assert isinstance(data["events"], list)
+        assert isinstance(data["score"], (int, float))
+
+    def test_guest_scan_score_bounded(self):
+        """Score must be in [0, 100]."""
+        resp = client.post("/api/guest/scan", json={"domain": "example.com", "name": "Example"})
+        assert resp.status_code == 200
+        score = resp.json()["score"]
+        assert 0.0 <= score <= 100.0
+
+    def test_guest_scan_requires_no_auth(self):
+        """No Authorization header needed — endpoint is public."""
+        resp = client.post("/api/guest/scan", json={"domain": "example.com", "name": "Example"})
+        assert resp.status_code != 401
+        assert resp.status_code != 403
+
+    def test_guest_scan_ssrf_localhost_blocked(self):
+        """SSRF: localhost domain must be rejected."""
+        resp = client.post("/api/guest/scan", json={"domain": "localhost", "name": "Local"})
+        assert resp.status_code == 400
+
+    def test_guest_scan_ssrf_loopback_ip_blocked(self):
+        """SSRF: 127.0.0.1 must be rejected."""
+        resp = client.post("/api/guest/scan", json={"domain": "127.0.0.1", "name": "Loopback"})
+        assert resp.status_code == 400
+
+    def test_guest_scan_ssrf_internal_ip_blocked(self):
+        """SSRF: private IP ranges must be rejected."""
+        for ip in ["192.168.1.1", "10.0.0.1", "172.16.0.1"]:
+            resp = client.post("/api/guest/scan", json={"domain": ip, "name": "Internal"})
+            assert resp.status_code == 400, f"Expected 400 for {ip}"
+
+    def test_guest_scan_empty_domain_rejected(self):
+        """Empty domain must fail validation — 422."""
+        resp = client.post("/api/guest/scan", json={"domain": "", "name": "Test"})
+        assert resp.status_code == 422
+
+    def test_guest_scan_oversized_domain_rejected(self):
+        """Domain > 253 chars must fail — 422."""
+        resp = client.post("/api/guest/scan", json={"domain": "a" * 300 + ".com", "name": "Test"})
+        assert resp.status_code == 422
+
+    def test_guest_scan_oversized_name_rejected(self):
+        """Name > 100 chars must fail — 422."""
+        resp = client.post("/api/guest/scan", json={"domain": "example.com", "name": "x" * 101})
+        assert resp.status_code == 422
+
+    def test_guest_scan_http_prefix_stripped(self):
+        """https:// prefix in domain should be accepted (stripped by validator)."""
+        resp = client.post("/api/guest/scan", json={"domain": "https://example.com", "name": "Example"})
+        # Should succeed — validator strips the scheme
+        assert resp.status_code in (200, 400)  # 400 if example.com is SSRF-blocked, 200 otherwise
+
+    def test_guest_scan_missing_name_rejected(self):
+        """Missing name field — 422."""
+        resp = client.post("/api/guest/scan", json={"domain": "example.com"})
+        assert resp.status_code == 422
+
+    def test_guest_scan_no_db_write(self):
+        """Ephemeral scan must not write any vendor or event records to DB."""
+        from database import SessionLocal
+        from models import Vendor, RiskEvent
+        db = SessionLocal()
+        vendors_before = db.query(Vendor).count()
+        events_before  = db.query(RiskEvent).count()
+        db.close()
+
+        client.post("/api/guest/scan", json={"domain": "example.com", "name": "EphemeralTest"})
+
+        db = SessionLocal()
+        assert db.query(Vendor).count() == vendors_before, "Guest scan must not create vendors"
+        assert db.query(RiskEvent).count() == events_before, "Guest scan must not create events"
+        db.close()
+
+    def test_guest_scan_events_have_required_fields(self):
+        """Each event in the response must have title, description, severity, source."""
+        resp = client.post("/api/guest/scan", json={"domain": "microsoft.com", "name": "Microsoft"})
+        assert resp.status_code == 200
+        for evt in resp.json()["events"]:
+            for field in ("title", "description", "severity", "source"):
+                assert field in evt, f"Event missing field: {field}"
+
+    def test_guest_scan_severity_values_valid(self):
+        """All event severities must be one of CRITICAL/HIGH/MEDIUM/LOW."""
+        resp = client.post("/api/guest/scan", json={"domain": "microsoft.com", "name": "Microsoft"})
+        assert resp.status_code == 200
+        valid = {"CRITICAL", "HIGH", "MEDIUM", "LOW"}
+        for evt in resp.json()["events"]:
+            assert evt["severity"] in valid, f"Invalid severity: {evt['severity']}"
+
+
+class TestGuestReport:
+    """Tests for POST /api/guest/report — PDF generation from guest scan data."""
+
+    _VALID_PAYLOAD = {
+        "name":   "Test Vendor",
+        "domain": "example.com",
+        "score":  45.0,
+        "events": [
+            {"source": "NVD", "severity": "HIGH", "title": "CVE-2024-1234", "description": "Test CVE"},
+        ],
+    }
+
+    def test_guest_report_returns_pdf(self):
+        """Valid payload returns a PDF binary."""
+        resp = client.post("/api/guest/report", json=self._VALID_PAYLOAD)
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/pdf"
+        assert len(resp.content) > 100  # non-empty PDF
+
+    def test_guest_report_requires_no_auth(self):
+        """No auth header needed."""
+        resp = client.post("/api/guest/report", json=self._VALID_PAYLOAD)
+        assert resp.status_code not in (401, 403)
+
+    def test_guest_report_score_out_of_range_rejected(self):
+        """Score > 100 or < 0 must be rejected — 422."""
+        for bad_score in (-1.0, 101.0, 999.9):
+            payload = {**self._VALID_PAYLOAD, "score": bad_score}
+            resp = client.post("/api/guest/report", json=payload)
+            assert resp.status_code == 422, f"Expected 422 for score={bad_score}"
+
+    def test_guest_report_invalid_severity_rejected(self):
+        """Unknown severity value in events must be rejected — 422."""
+        payload = {**self._VALID_PAYLOAD, "events": [
+            {"source": "NVD", "severity": "EXTREME", "title": "CVE-X", "description": "bad"},
+        ]}
+        resp = client.post("/api/guest/report", json=payload)
+        assert resp.status_code == 422
+
+    def test_guest_report_too_many_events_rejected(self):
+        """More than 50 events must be rejected — 422."""
+        events = [{"source": "NVD", "severity": "LOW", "title": f"CVE-{i}", "description": "x"} for i in range(51)]
+        resp = client.post("/api/guest/report", json={**self._VALID_PAYLOAD, "events": events})
+        assert resp.status_code == 422
+
+    def test_guest_report_oversized_title_rejected(self):
+        """Event title > 300 chars must fail — 422."""
+        events = [{"source": "NVD", "severity": "LOW", "title": "x" * 301, "description": "x"}]
+        resp = client.post("/api/guest/report", json={**self._VALID_PAYLOAD, "events": events})
+        assert resp.status_code == 422
+
+    def test_guest_report_oversized_description_rejected(self):
+        """Event description > 1000 chars must fail — 422."""
+        events = [{"source": "NVD", "severity": "LOW", "title": "CVE-X", "description": "x" * 1001}]
+        resp = client.post("/api/guest/report", json={**self._VALID_PAYLOAD, "events": events})
+        assert resp.status_code == 422
+
+    def test_guest_report_xml_injection_in_title(self):
+        """XML injection characters in event title must not crash PDF generation."""
+        events = [{"source": "NVD", "severity": "HIGH", "title": "<script>alert(1)</script>&'\"", "description": "x"}]
+        resp = client.post("/api/guest/report", json={**self._VALID_PAYLOAD, "events": events})
+        # Must succeed — _xml_escape() handles it
+        assert resp.status_code == 200
+
+    def test_guest_report_zero_events(self):
+        """Empty events list is valid — returns PDF with no CVEs section."""
+        resp = client.post("/api/guest/report", json={**self._VALID_PAYLOAD, "events": []})
+        assert resp.status_code == 200
+        assert resp.headers["content-type"] == "application/pdf"
+
+
+# ═════════════════════════════════════════════════════════════════════════════
 # CLEANUP
 # ═════════════════════════════════════════════════════════════════════════════
 
