@@ -4,7 +4,7 @@
 
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
-[![GitHub](https://img.shields.io/badge/GitHub-darkyzowo%2Fvenderscope-gray?style=for-the-badge&logo=github)](https://github.com/darkyzowo/venderscope)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
 [![Version](https://img.shields.io/badge/version-v3.5-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
