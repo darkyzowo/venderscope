@@ -43,8 +43,10 @@ _engine_kwargs: dict = {"connect_args": _connect_args}
 if not _is_sqlite:
     _engine_kwargs.update({
         "pool_pre_ping": True,
-        "pool_size": 5,
-        "max_overflow": 10,
+        "pool_recycle": 240,   # Recycle before Neon's ~300s idle timeout kills connections
+        "pool_size": 3,        # Reduced from 5 — right-sized for 512MB Render free tier
+        "max_overflow": 5,     # Reduced from 10 — total max 8 connections
+        "pool_timeout": 30,    # Don't block indefinitely waiting for a connection
     })
 
 engine = create_engine(DATABASE_URL, **_engine_kwargs)
