@@ -106,29 +106,31 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
                 {vendor.score_delta > 0 ? `+${vendor.score_delta} ↑` : `${vendor.score_delta} ↓`}
               </div>
             )}
-            {badge && (
-              <div
-                className="text-[9px] font-semibold mt-1.5 px-1.5 py-0.5 rounded-full inline-block"
-                style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}
-              >
-                {badge.label}
-              </div>
-            )}
           </div>
         </div>
 
         {/* Hairline divider */}
         <div className="h-px mb-3" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
-        {/* Timestamp */}
-        <p className="text-[11px] mb-3" style={{ color: '#44445a' }}>
-          {vendor.last_scanned
-            ? new Date(vendor.last_scanned).toLocaleString([], {
-                month: 'short', day: 'numeric',
-                hour: '2-digit', minute: '2-digit',
-              })
-            : 'Never scanned'}
-        </p>
+        {/* Timestamp + sensitivity badge (inline — no layout shift) */}
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[11px]" style={{ color: '#44445a' }}>
+            {vendor.last_scanned
+              ? new Date(vendor.last_scanned).toLocaleString([], {
+                  month: 'short', day: 'numeric',
+                  hour: '2-digit', minute: '2-digit',
+                })
+              : 'Never scanned'}
+          </p>
+          {badge && (
+            <span
+              className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-2"
+              style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}
+            >
+              {badge.label}
+            </span>
+          )}
+        </div>
 
         {/* Actions */}
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

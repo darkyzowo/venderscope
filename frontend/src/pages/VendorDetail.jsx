@@ -253,7 +253,7 @@ export default function VendorDetail() {
                   How is this calculated?
                 </span>
                 <div
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 w-72 rounded-xl p-3.5 text-xs hidden group-hover:block z-50"
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 w-80 rounded-xl p-4 text-xs hidden group-hover:block z-50"
                   style={{
                     background: '#141425',
                     border: '1px solid #2a2a4a',
@@ -261,40 +261,107 @@ export default function VendorDetail() {
                     boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
                   }}
                 >
-                  Top 10 CVEs weighted by severity (CRITICAL=25, HIGH=15, MEDIUM=7, LOW=2),
-                  plus breach data from HIBP, Companies House signals, and Shodan exposure.
-                  Capped at 100. Effective score applies your data sensitivity multiplier.{' '}
-                  <span style={{ color: '#a78bfa' }}>Full PDF contains all detected events.</span>
+                  <p className="font-semibold mb-1.5" style={{ color: '#f0f0ff' }}>Technical Score</p>
+                  <p className="mb-3">
+                    Top 10 CVEs weighted by severity (CRITICAL=25, HIGH=15, MEDIUM=7, LOW=2),
+                    plus breach data from HIBP, Companies House signals, and Shodan exposure. Capped at 100.
+                  </p>
+                  <p className="font-semibold mb-1.5" style={{ color: '#f0f0ff' }}>Effective Exposure</p>
+                  <p className="mb-2">
+                    Applies a business context multiplier based on what data this vendor can access.
+                    A payment processor with a CRITICAL CVE poses far more risk than a marketing tool with the same CVE.
+                  </p>
+                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2" style={{ borderTop: '1px solid #2a2a4a' }}>
+                    {[
+                      ['No Data Access', '×0.8'],
+                      ['PII / Personal', '×1.4'],
+                      ['Financial', '×1.6'],
+                      ['Auth / SSO', '×1.6'],
+                      ['Health / Medical', '×1.8'],
+                      ['Critical Infra', '×2.0'],
+                    ].map(([lbl, mult]) => (
+                      <div key={lbl} className="flex justify-between">
+                        <span>{lbl}</span>
+                        <span style={{ color: '#a78bfa' }}>{mult}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-2.5" style={{ color: '#a78bfa' }}>Full PDF contains all detected events.</p>
                 </div>
               </div>
             </div>
 
             {/* Data sensitivity selector */}
-            <div className="mt-5 w-full px-1">
-              <p
-                className="text-[9px] font-bold tracking-[0.14em] uppercase mb-2 text-center"
-                style={{ color: '#2a2a4a' }}
-              >
-                Data Sensitivity
-              </p>
-              <select
-                value={vendor.data_sensitivity || 'standard'}
-                onChange={(e) => handleContextChange(e.target.value)}
-                disabled={updatingContext}
-                className="w-full text-xs rounded-lg px-3 py-1.5 outline-none"
-                style={{
-                  background: '#0d0d1f',
-                  border: '1px solid #2a2a4a',
-                  color: updatingContext ? '#2a2a4a' : '#8888aa',
-                  cursor: updatingContext ? 'not-allowed' : 'pointer',
-                }}
-              >
-                {SENSITIVITY_OPTIONS.map(({ value, label, hint }) => (
-                  <option key={value} value={value}>
-                    {label} ({hint})
-                  </option>
-                ))}
-              </select>
+            <div className="mt-5 w-full" style={{ opacity: updatingContext ? 0.5 : 1, transition: 'opacity 200ms ease', pointerEvents: updatingContext ? 'none' : 'auto' }}>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#2a2a4a' }}>
+                  Data Sensitivity
+                </p>
+                {updatingContext && (
+                  <span className="text-[9px]" style={{ color: '#44445a' }}>saving…</span>
+                )}
+              </div>
+
+              {/* Reset / default option — full width, dashed when unset */}
+              {(() => {
+                const current = vendor.data_sensitivity || 'standard'
+                const isDefault = current === 'standard'
+                return (
+                  <>
+                    <button
+                      onClick={() => handleContextChange('standard')}
+                      className="w-full mb-2 py-1.5 px-3 rounded-lg text-[11px] flex items-center justify-between"
+                      style={{
+                        background: isDefault ? 'rgba(139,92,246,0.1)' : 'transparent',
+                        border: isDefault ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
+                        color: isDefault ? '#a78bfa' : '#44445a',
+                        transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                        cursor: isDefault ? 'default' : 'pointer',
+                      }}
+                    >
+                      <span className="font-medium">No adjustment</span>
+                      <span style={{ opacity: 0.6, fontSize: '10px' }}>default · 1.0×</span>
+                    </button>
+
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {SENSITIVITY_OPTIONS.filter((o) => o.value !== 'standard').map(({ value, label, hint }) => {
+                        const isSelected = current === value
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => handleContextChange(value)}
+                            className="py-2 px-2.5 rounded-lg text-left"
+                            style={{
+                              background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
+                              border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
+                              color: isSelected ? '#a78bfa' : '#44445a',
+                              cursor: isSelected ? 'default' : 'pointer',
+                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                                e.currentTarget.style.color = '#8888aa'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.color = '#44445a'
+                              }
+                            }}
+                          >
+                            <div className="text-[10px] font-medium leading-tight">{label}</div>
+                            <div className="text-[9px] mt-0.5" style={{ color: isSelected ? 'rgba(167,139,250,0.6)' : '#2a2a4a' }}>{hint}</div>
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
             </div>
           </Panel>
 
