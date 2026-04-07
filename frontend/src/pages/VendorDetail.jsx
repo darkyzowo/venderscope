@@ -127,7 +127,7 @@ export default function VendorDetail() {
   // Skeleton loading state — matches actual page layout
   if (!vendor)
     return (
-      <div className="min-h-screen animate-page" style={{ background: '#090911' }}>
+      <div className="min-h-screen" style={{ background: '#090911' }}>
         <div className="max-w-5xl mx-auto px-6 py-8">
           {/* Back placeholder */}
           <div className="skeleton h-4 w-20 mb-6 rounded" />
@@ -161,7 +161,7 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div className="min-h-screen animate-page" style={{ background: '#090911' }}>
+    <div className="min-h-screen" style={{ background: '#090911' }}>
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* Back */}
@@ -244,7 +244,7 @@ export default function VendorDetail() {
         </div>
 
         {/* Hero: gauge + chart */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 60ms both' }}>
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) both' }}>
           {/* Score gauge panel */}
           <Panel className="md:col-span-2 flex flex-col items-center justify-center py-6">
             <ScoreGauge score={vendor.effective_score ?? vendor.risk_score} />
@@ -394,7 +394,7 @@ export default function VendorDetail() {
 
         {/* Vendor Profile */}
         {(vendor.description || vendor.auth_method || vendor.two_factor) && (
-          <Panel className="mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 140ms both' }}>
+          <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 50ms both' }}>
             <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
             {vendor.description && (
               <p className="text-sm leading-relaxed mb-5" style={{ color: '#8888aa' }}>
@@ -436,13 +436,13 @@ export default function VendorDetail() {
         )}
 
         {/* Compliance */}
-        <Panel className="mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 200ms both' }}>
+        <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 100ms both' }}>
           <PanelTitle meta="(auto-discovered from public sources)">Compliance Posture</PanelTitle>
           <CompliancePanel compliance={vendor.compliance} />
         </Panel>
 
         {/* Risk Events */}
-        <Panel style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 260ms both' }}>
+        <Panel style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 150ms both' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Risk Events{' '}

@@ -132,7 +132,7 @@ export default function Dashboard() {
   })
 
   return (
-    <div className="min-h-screen animate-page" style={{ background: '#090911' }}>
+    <div className="min-h-screen" style={{ background: '#090911' }}>
       <div className="max-w-7xl mx-auto px-6 py-8">
 
         {/* Beta notice */}
@@ -348,7 +348,7 @@ export default function Dashboard() {
                   style={{
                     opacity: cardsVisible ? 1 : 0,
                     transform: cardsVisible ? 'translateY(0)' : 'translateY(14px)',
-                    transition: `opacity 420ms cubic-bezier(0.16,1,0.3,1) ${i * 55}ms, transform 420ms cubic-bezier(0.16,1,0.3,1) ${i * 55}ms`,
+                    transition: `opacity 260ms cubic-bezier(0.16,1,0.3,1) ${i * 18}ms, transform 260ms cubic-bezier(0.16,1,0.3,1) ${i * 18}ms`,
                   }}
                 >
                   <VendorCard
