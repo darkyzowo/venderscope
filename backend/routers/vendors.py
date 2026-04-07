@@ -3,9 +3,9 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
-from datetime import datetime
+from datetime import datetime, timezone
 from database import get_db
-from models import Vendor, RiskEvent, RiskScoreHistory, User
+from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote
 from services.auth_service import get_current_user
 from services.audit import audit
 from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
@@ -52,8 +52,10 @@ class VendorOut(BaseModel):
     score_delta:      Optional[float]  = None
     compliance:       Optional[dict]   = None
     description:      Optional[str]    = None
-    auth_method:      Optional[str]    = None
-    two_factor:       Optional[str]    = None
+    auth_method:          Optional[str]      = None
+    two_factor:           Optional[str]      = None
+    review_interval_days: Optional[int]      = None
+    last_reviewed_at:     Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,6 +68,32 @@ class ContextUpdate(BaseModel):
     def validate_sensitivity(cls, v):
         if v not in VALID_SENSITIVITIES:
             raise ValueError(f"Must be one of: {', '.join(sorted(VALID_SENSITIVITIES))}")
+        return v
+
+
+class NoteCreate(BaseModel):
+    content: str
+
+    @field_validator('content')
+    @classmethod
+    def content_length(cls, v):
+        v = v.strip()
+        if not v:
+            raise ValueError('Note cannot be empty')
+        if len(v) > 1000:
+            raise ValueError('Note must be under 1000 characters')
+        return v
+
+
+class ReviewUpdate(BaseModel):
+    interval_days: Optional[int] = None
+    mark_reviewed: bool = False
+
+    @field_validator('interval_days')
+    @classmethod
+    def validate_interval(cls, v):
+        if v is not None and v not in (30, 60, 90, 180, 365):
+            raise ValueError('interval_days must be one of: 30, 60, 90, 180, 365, or null')
         return v
 
 
@@ -202,3 +230,111 @@ def get_score_history(
                 .filter(RiskScoreHistory.vendor_id == vendor_id)\
                 .order_by(RiskScoreHistory.recorded_at.asc()).all()
     return history
+
+
+# --- Notes ---
+
+@router.get("/{vendor_id}/notes")
+def get_vendor_notes(
+    vendor_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    notes = (
+        db.query(VendorNote)
+        .filter(VendorNote.vendor_id == vendor_id)
+        .order_by(VendorNote.created_at.desc())
+        .all()
+    )
+    return notes
+
+
+@router.post("/{vendor_id}/notes")
+@limiter.limit("20/minute")
+def add_vendor_note(
+    request: Request,
+    vendor_id: str,
+    payload: NoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    note = VendorNote(
+        vendor_id=vendor_id,
+        user_id=str(current_user.id),
+        content=payload.content,
+    )
+    db.add(note)
+    db.commit()
+    db.refresh(note)
+    audit(db, "vendor.note_added", request, user_id=str(current_user.id), detail=vendor_id)
+    return note
+
+
+@router.delete("/{vendor_id}/notes/{note_id}")
+@limiter.limit("20/minute")
+def delete_vendor_note(
+    request: Request,
+    vendor_id: str,
+    note_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    note = db.query(VendorNote).filter(
+        VendorNote.id == note_id,
+        VendorNote.vendor_id == vendor_id,
+        VendorNote.user_id == str(current_user.id),
+    ).first()
+    if not note:
+        raise HTTPException(status_code=404, detail="Note not found")
+    db.delete(note)
+    db.commit()
+    audit(db, "vendor.note_deleted", request, user_id=str(current_user.id),
+          detail=f"{vendor_id}:{note_id}")
+    return {"message": "Note deleted"}
+
+
+# --- Review scheduling ---
+
+@router.patch("/{vendor_id}/review")
+@limiter.limit("10/minute")
+def update_vendor_review(
+    request: Request,
+    vendor_id: str,
+    payload: ReviewUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    if 'interval_days' in payload.model_fields_set:
+        vendor.review_interval_days = payload.interval_days
+    if payload.mark_reviewed:
+        vendor.last_reviewed_at = datetime.now(timezone.utc)
+    db.commit()
+    audit(db, "vendor.review_updated", request, user_id=str(current_user.id), detail=vendor_id)
+    return {
+        "review_interval_days": vendor.review_interval_days,
+        "last_reviewed_at":     vendor.last_reviewed_at,
+    }

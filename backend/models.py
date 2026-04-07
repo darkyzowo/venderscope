@@ -41,9 +41,13 @@ class Vendor(Base):
     two_factor       = Column(String, nullable=True)
     data_sensitivity = Column(String(20), nullable=True, default='standard')
 
-    owner   = relationship("User", back_populates="vendors")
-    events  = relationship("RiskEvent",        back_populates="vendor", cascade="all, delete")
-    scores  = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
+    owner       = relationship("User", back_populates="vendors")
+    events      = relationship("RiskEvent",        back_populates="vendor", cascade="all, delete")
+    scores      = relationship("RiskScoreHistory", back_populates="vendor", cascade="all, delete")
+    notes       = relationship("VendorNote",     back_populates="vendor", cascade="all, delete")
+    acceptances = relationship("RiskAcceptance", back_populates="vendor", cascade="all, delete")
+    review_interval_days = Column(Integer,   nullable=True)
+    last_reviewed_at     = Column(DateTime,  nullable=True)
 
 
 class RiskEvent(Base):
@@ -77,6 +81,35 @@ class RevokedToken(Base):
 
     jti        = Column(String(36), primary_key=True)   # UUID from JWT jti claim
     expires_at = Column(DateTime, nullable=False, index=True)  # used for cleanup
+
+
+class VendorNote(Base):
+    __tablename__ = "vendor_notes"
+
+    id         = Column(Integer, primary_key=True, index=True)
+    vendor_id  = Column(String(36), ForeignKey("vendors.id"), nullable=False)
+    user_id    = Column(String(36), nullable=False, index=True)
+    content    = Column(Text, nullable=False)
+    created_at = Column(DateTime, default=_utcnow)
+
+    vendor = relationship("Vendor", back_populates="notes")
+
+
+class RiskAcceptance(Base):
+    __tablename__ = "risk_acceptances"
+
+    id            = Column(String(36), primary_key=True, default=_new_uuid)
+    vendor_id     = Column(String(36), ForeignKey("vendors.id"), nullable=False)
+    user_id       = Column(String(36), nullable=False, index=True)
+    event_id      = Column(Integer, ForeignKey("risk_events.id"), nullable=True)
+    finding_ref   = Column(String(150), nullable=False)
+    finding_type  = Column(String(20),  nullable=False)
+    justification = Column(Text, nullable=False)
+    reviewer      = Column(String(100), nullable=False)
+    expires_at    = Column(DateTime, nullable=False)
+    created_at    = Column(DateTime, default=_utcnow)
+
+    vendor = relationship("Vendor", back_populates="acceptances")
 
 
 class AuditLog(Base):

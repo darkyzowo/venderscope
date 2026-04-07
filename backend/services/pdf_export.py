@@ -36,7 +36,7 @@ def sort_events(events):
         -parse_epss(e.description)
     ))
 
-def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
+def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None) -> bytes:
     buf     = io.BytesIO()
     W, H    = A4
     margin  = 20 * mm
@@ -150,6 +150,26 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
             ("VALIGN",          (0,0), (-1,-1), "TOP"),
         ]))
         story.append(tbl)
+
+    # Analyst Notes
+    if notes:
+        story.append(Paragraph("Analyst Notes", h2_s))
+        note_rows = []
+        for n in notes:
+            date_str = n.created_at.strftime('%d/%m/%Y') if n.created_at else ''
+            note_rows.append([
+                Paragraph(date_str, cell_s),
+                Paragraph(_xml_escape(str(n.content)), cell_s),
+            ])
+        note_tbl = Table(note_rows, colWidths=[22*mm, usable - 22*mm])
+        note_tbl.setStyle(TableStyle([
+            ("FONTSIZE",       (0, 0), (-1, -1), 8),
+            ("GRID",           (0, 0), (-1, -1), 0.4, colors.HexColor("#e5e7eb")),
+            ("ROWBACKGROUNDS", (0, 0), (-1, -1), [WHITE, LIGHT]),
+            ("PADDING",        (0, 0), (-1, -1), 5),
+            ("VALIGN",         (0, 0), (-1, -1), "TOP"),
+        ]))
+        story.append(note_tbl)
 
     # Footer
     story.append(HRFlowable(width="100%", thickness=0.5, color=LIGHT, spaceBefore=16, spaceAfter=6))

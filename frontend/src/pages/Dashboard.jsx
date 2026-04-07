@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getVendors, addVendor, deleteVendor, scanVendor } from '../api/client'
+import { getVendors, addVendor, deleteVendor, scanVendor, getDashboardSummary } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
 import QuotaBanner from '../components/QuotaBanner'
@@ -77,12 +77,13 @@ export default function Dashboard() {
   const [scanningAll, setScanAll] = useState(false)
   const [cardsVisible, setCardsVisible] = useState(false)
   const [sortBy, setSortBy] = useState('risk')
+  const [summary, setSummary] = useState(null)
 
   const load = () => getVendors().then((r) => setVendors(r.data))
 
   useEffect(() => {
     load()
-    // Tiny delay before triggering card entry animation
+    getDashboardSummary().then((r) => setSummary(r.data)).catch(() => {})
     const t = setTimeout(() => setCardsVisible(true), 80)
     return () => clearTimeout(t)
   }, [])
@@ -112,6 +113,42 @@ export default function Dashboard() {
       }
     } catch (e) { console.error('Scan all failed:', e) }
     finally { setScanAll(false); window.location.reload() }
+  }
+
+  const handleExportRegister = () => {
+    if (!vendors.length) return
+    const headers = [
+      'Vendor Name', 'Domain', 'Data Sensitivity', 'Technical Score',
+      'Effective Exposure Score', 'Risk Band', 'Score Delta', 'Last Scanned',
+      'Review Interval (days)', 'CVE Count', 'Breach Detected', 'Export Date',
+    ]
+    const riskBand = (s) => s >= 70 ? 'HIGH' : s >= 35 ? 'MEDIUM' : 'LOW'
+    const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+    const rows = vendors.map((v) => {
+      const score = v.effective_score ?? v.risk_score
+      return [
+        esc(v.name),
+        esc(v.domain),
+        esc(v.data_sensitivity || 'standard'),
+        esc(v.risk_score),
+        esc(score),
+        esc(riskBand(score)),
+        esc(v.score_delta != null ? (v.score_delta > 0 ? `+${v.score_delta}` : v.score_delta) : 'N/A'),
+        esc(v.last_scanned ? new Date(v.last_scanned).toLocaleDateString() : 'Never'),
+        esc(v.review_interval_days ?? 'None'),
+        esc('See vendor report'),
+        esc('See vendor report'),
+        esc(new Date().toLocaleDateString()),
+      ].join(',')
+    })
+    const csv = [headers.map(esc).join(','), ...rows].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `vendorscope_risk_register_${new Date().toISOString().split('T')[0]}.csv`
+    a.click()
+    URL.revokeObjectURL(url)
   }
 
   const effScore = (v) => v.effective_score ?? v.risk_score
@@ -229,6 +266,30 @@ export default function Dashboard() {
             </div>
 
             <button
+              onClick={handleExportRegister}
+              disabled={vendors.length === 0}
+              className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
+              style={{
+                background: 'rgba(255,255,255,0.05)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                color: '#8888aa',
+              }}
+              onMouseEnter={(e) => {
+                if (vendors.length > 0) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                  e.currentTarget.style.color = '#f0f0ff'
+                }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                e.currentTarget.style.color = '#8888aa'
+              }}
+              title="Download risk register as CSV"
+            >
+              Export Register
+            </button>
+
+            <button
               onClick={() => setShowModal(true)}
               className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150"
               style={{ background: '#8b5cf6', color: '#fff' }}
@@ -275,6 +336,14 @@ export default function Dashboard() {
             <StatPill value={low}            label="Low Risk" color="#22c55e" />
             {rising.length > 0 && (
               <StatPill value={rising.length} label="Rising ↑" color="#ef4444" />
+            )}
+            {summary?.overdue_review_count > 0 && (
+              <div
+                title={`Overdue: ${summary.overdue_reviews?.map((v) => v.name).join(', ')}`}
+                style={{ cursor: 'default' }}
+              >
+                <StatPill value={summary.overdue_review_count} label="Reviews Due ⚠" color="#fbbf24" />
+              </div>
             )}
           </div>
         )}

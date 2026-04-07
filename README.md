@@ -5,11 +5,69 @@
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
-[![Version](https://img.shields.io/badge/version-v3.5-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
+[![Version](https://img.shields.io/badge/version-v3.6-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time — with full user authentication, production-grade security hardening, and a cloud PostgreSQL backend.
+
+---
+
+## What's New in v3.6 — GRC Workflow Features
+
+v3.6 introduces four features designed specifically for GRC and Information Security professionals — moving VenderScope from a monitoring dashboard into a lightweight risk management tool. Every feature works entirely on existing infrastructure with zero additional cost.
+
+### Analyst Notes — Vendor Evidence Log
+
+A timestamped, append-only note log attached to each vendor record. Designed for the annotations GRC teams make throughout a vendor relationship: risk decisions, conversations, follow-up actions, and review outcomes.
+
+- **Per-vendor log** — add timestamped free-text notes directly on the vendor detail page
+- **Immutable by design** — notes can be deleted but not edited, preserving audit integrity
+- **Ctrl+Enter shortcut** — quick keyboard submission without leaving context
+- **Included in PDF export** — notes appear as an "Analyst Notes" section in the vendor risk report, making them available as evidence in ISO 27001 and SOC 2 reviews
+- **Fully scoped** — notes are isolated to the user who created them; no cross-user visibility
+
+### Periodic Review Scheduling — Never Miss a Vendor Review
+
+GRC teams are obligated to review vendors on a defined cycle. This feature brings that obligation into the tool itself rather than a separate spreadsheet or calendar.
+
+- **Set a review interval** — choose from 30 / 60 / 90 / 180 days or annually, per vendor
+- **Mark as Reviewed** — one-click button stamps the current timestamp as the last review date
+- **Live review status** — VendorDetail shows either "Next review: [date]" (green) or "Overdue by X days" (amber)
+- **Dashboard indicator** — a "Reviews Due" count pill appears in the stats row when any vendor is overdue, with vendor names shown on hover
+- **No email dependency** — entirely in-app; works without a verified Resend domain
+
+### Risk Acceptance Workflow — Documented, Auditable Risk Decisions
+
+The most significant gap in the tool's GRC capability: surfacing a risk is not enough — teams must formally document when they choose to accept rather than remediate. This is a direct requirement under ISO 27001 (Annex A.5.20) and SOC 2.
+
+- **Per-event acceptance** — each risk event in the feed has an "Accept Risk" button
+- **Documented acceptance form** — records justification text, reviewer name, and expiry date (default 90 days; max 1 year)
+- **Amber "ACCEPTED" badge** — accepted events show a distinct badge instead of the severity indicator; the badge shows acceptance details on hover
+- **Automatic expiry** — acceptances with a past expiry date become inactive; the event resurfaces with its original severity badge, prompting re-review
+- **One-click revoke** — revoke an acceptance early if the decision changes
+- **Needs Attention logic** — the dashboard only surfaces vendors as needing attention if they have unaccepted rising events
+- **Full audit trail** — every acceptance and revocation is recorded in the append-only audit log with user ID, timestamp, and finding reference
+
+### Risk Register Export — CSV for Audit Evidence Packs
+
+GRC teams maintain risk registers that are manually populated from scan results. This feature closes that gap with a single click.
+
+- **"Export Register" button** on the Dashboard header
+- **12-column CSV** — Vendor Name, Domain, Data Sensitivity, Technical Score, Effective Exposure Score, Risk Band, Score Delta, Last Scanned, Review Interval, and Export Date
+- **Client-side generation** — no server roundtrip; produces a download-ready `.csv` immediately
+- **Filename includes date** — `vendorscope_risk_register_YYYY-MM-DD.csv`
+- **Maps directly to risk registers** — columns align with standard ISO 27001 risk treatment plans and SOC 2 vendor management evidence
+
+### Business Context Weighting — Effective Exposure Score
+
+_(Shipped in v3.5.x — documented here for completeness)_
+
+Raw CVE scores treat a payment processor the same as a marketing tool. Business context weighting corrects this by applying a data sensitivity multiplier to the technical risk score.
+
+- **Per-vendor sensitivity tier** — set the data type this vendor handles: None (×0.8), Standard (×1.0), PII (×1.4), Financial/Auth (×1.6), Health (×1.8), Critical Infrastructure (×2.0)
+- **Effective Exposure Score** — the adjusted score is shown as the primary metric throughout the dashboard, VendorCard, and PDF export
+- **Pill-button selector** — styled to match the app's design system; no native browser controls
 
 ---
 
@@ -89,19 +147,26 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 
 ## Features
 
+### Monitoring & Intelligence
 - **Continuous Passive Monitoring** — Automatically scans vendors every 24 hours with zero manual effort
 - **Multi-Source Intelligence** — Aggregates risk signals from HIBP, NVD (NIST), Companies House, and Shodan simultaneously
 - **Live Risk Scoring** — Weighted severity scoring engine (0–100) with CRITICAL/HIGH/MEDIUM/LOW classification
+- **Business Context Weighting** — Per-vendor data sensitivity multiplier produces an Effective Exposure Score that reflects business risk, not just technical signals
 - **Risk Score Drift Timeline** — Area chart showing how a vendor's risk posture changes over time
 - **Vendor Profile Auto-Discovery** — Passively detects description, authentication method, and 2FA support from public pages
 - **Third-Party Certification Attribution** — Distinguishes vendors who hold certs directly vs those referencing their infrastructure providers' certs
 - **UK-Native Governance** — Companies House integration flags financial distress, overdue filings, and director changes
-- **One-Click PDF Export** — Structured for ISO 27001 Annex A and Cyber Essentials reviews
 - **Exposed Infrastructure Detection** — Shodan flags dangerous open ports (RDP, SMB, MongoDB, etc.)
 - **24hr Intelligent Caching** — Repeat scans return instantly; nightly scheduler forces fresh data overnight
 - **Two-Stage Compliance Discovery** — Scrapes vendor pages for ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS evidence; Google CSE fallback when direct scraping is insufficient
 - **Verified Security Contacts** — Finds security/privacy contacts via RFC 9116 `security.txt`, page scraping, and web search
 - **Scan Quota Tracker** — Live banner showing remaining Google CSE quota with automatic daily reset
+
+### GRC Workflow (v3.6)
+- **Analyst Notes** — Timestamped evidence log per vendor; included in PDF export; append-only for audit integrity
+- **Periodic Review Scheduling** — Set review intervals per vendor; track overdue reviews on the dashboard
+- **Risk Acceptance Workflow** — Formally document accepted risks with justification, reviewer, and expiry; full audit trail
+- **Risk Register Export** — One-click CSV export of the full vendor estate, formatted for ISO 27001 risk treatment plans
 
 ---
 
@@ -142,13 +207,16 @@ VenderScope/
 ├── backend/
 │   ├── main.py                   # FastAPI app, CORS, security headers, lifespan
 │   ├── models.py                 # Vendor, RiskEvent, RiskScoreHistory, User,
-│   │                             #   RevokedToken, AuditLog (SQLAlchemy)
+│   │                             #   RevokedToken, AuditLog, VendorNote,
+│   │                             #   RiskAcceptance (SQLAlchemy)
 │   ├── database.py               # PostgreSQL + SQLite connection (pg8000, ssl_context)
 │   ├── scheduler.py              # 24hr scan + 6hr JTI cleanup + 10min keep-alive
 │   ├── routers/
 │   │   ├── auth.py               # Register, login, refresh, logout, /me, delete account
-│   │   ├── vendors.py            # Vendor CRUD (all user-scoped)
+│   │   ├── vendors.py            # Vendor CRUD, notes, review scheduling (all user-scoped)
+│   │   ├── acceptances.py        # Risk acceptance lifecycle (create, list, revoke)
 │   │   ├── intelligence.py       # Scan trigger endpoints
+│   │   ├── dashboard.py          # Aggregate stats, needs attention, overdue reviews
 │   │   ├── export.py             # PDF export (Content-Disposition sanitised)
 │   │   └── quota.py              # Google CSE quota status
 │   └── services/
@@ -402,6 +470,11 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] Compliance discovery improvements — expanded path probing, sitemap fallback, broader cert keywords (v3.1)
 - [x] Guest Mode — unauthenticated CVE-only scan with PDF download, zero data persistence (v3.5)
 - [x] Content-Security-Policy on Vercel frontend (v3.5)
+- [x] Business context weighting — data sensitivity multiplier produces Effective Exposure Score (v3.5.x)
+- [x] Analyst Notes — timestamped per-vendor evidence log, included in PDF export (v3.6)
+- [x] Periodic Review Scheduling — per-vendor review intervals, overdue indicator on dashboard (v3.6)
+- [x] Risk Acceptance Workflow — documented risk decisions with justification, reviewer, expiry, audit trail (v3.6)
+- [x] Risk Register CSV Export — one-click 12-column export from dashboard (v3.6)
 - [ ] Vendor Comparison View — side-by-side risk posture for two vendors
 - [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
 - [ ] Bulk CSV Import — add multiple vendors at once

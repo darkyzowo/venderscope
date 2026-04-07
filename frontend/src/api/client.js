@@ -107,4 +107,17 @@ export const deleteAccount  = (body) => api.delete('/auth/account', { data: body
 export const guestScan           = (data) => api.post('/guest/scan', data)
 export const downloadGuestReport = (data) => api.post('/guest/report', data, { responseType: 'blob' })
 
+// Notes
+export const getNotes    = (id)           => api.get(`/vendors/${id}/notes`)
+export const addNote     = (id, content)  => api.post(`/vendors/${id}/notes`, { content })
+export const deleteNote  = (id, noteId)   => api.delete(`/vendors/${id}/notes/${noteId}`)
+
+// Review scheduling
+export const updateReview = (id, data) => api.patch(`/vendors/${id}/review`, data)
+
+// Risk acceptances
+export const getAcceptances   = (id)       => api.get(`/vendors/${id}/acceptances`)
+export const createAcceptance = (id, data) => api.post(`/vendors/${id}/acceptances`, data)
+export const revokeAcceptance = (id, accId) => api.delete(`/vendors/${id}/acceptances/${accId}`)
+
 export default api

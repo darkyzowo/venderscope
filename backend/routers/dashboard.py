@@ -63,11 +63,34 @@ def dashboard_summary(
 
     rising.sort(key=lambda x: x["delta"], reverse=True)
 
+    # Overdue review computation
+    now = datetime.now(timezone.utc)
+    overdue_reviews = []
+    for v in vendors:
+        if not v.review_interval_days:
+            continue
+        if v.last_reviewed_at is None:
+            days_overdue = v.review_interval_days  # never reviewed — treat as fully overdue
+        else:
+            reviewed_utc = v.last_reviewed_at.replace(tzinfo=timezone.utc) if v.last_reviewed_at.tzinfo is None else v.last_reviewed_at
+            due_at = reviewed_utc.replace(microsecond=0) + timedelta(days=v.review_interval_days)
+            days_overdue = (now - due_at).days
+        if days_overdue > 0:
+            overdue_reviews.append({
+                "id":           v.id,
+                "name":         v.name,
+                "domain":       v.domain,
+                "days_overdue": days_overdue,
+            })
+    overdue_reviews.sort(key=lambda x: x["days_overdue"], reverse=True)
+
     return {
-        "total":            len(vendors),
-        "high_risk":        high_risk,
-        "medium_risk":      medium_risk,
-        "low_risk":         low_risk,
-        "rising":           rising,
-        "scanned_last_24h": scanned_last_24h,
+        "total":                len(vendors),
+        "high_risk":            high_risk,
+        "medium_risk":          medium_risk,
+        "low_risk":             low_risk,
+        "rising":               rising,
+        "scanned_last_24h":     scanned_last_24h,
+        "overdue_review_count": len(overdue_reviews),
+        "overdue_reviews":      overdue_reviews,
     }

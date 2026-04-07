@@ -14,6 +14,7 @@ from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
 from routers.dashboard import router as dashboard_router
 from routers.guest import router as guest_router
+from routers.acceptances import router as acceptances_router
 from scheduler import start_scheduler
 
 # Debug prints removed — CRIT-02: DATABASE_URL may contain credentials
@@ -29,7 +30,9 @@ if _is_sqlite:
             ("auth_method",      "ALTER TABLE vendors ADD COLUMN auth_method VARCHAR"),
             ("two_factor",       "ALTER TABLE vendors ADD COLUMN two_factor VARCHAR"),
             ("user_id",          "ALTER TABLE vendors ADD COLUMN user_id VARCHAR(36)"),
-            ("data_sensitivity", "ALTER TABLE vendors ADD COLUMN data_sensitivity VARCHAR(20) DEFAULT 'standard'"),
+            ("data_sensitivity",     "ALTER TABLE vendors ADD COLUMN data_sensitivity VARCHAR(20) DEFAULT 'standard'"),
+            ("review_interval_days", "ALTER TABLE vendors ADD COLUMN review_interval_days INTEGER"),
+            ("last_reviewed_at",     "ALTER TABLE vendors ADD COLUMN last_reviewed_at TIMESTAMP"),
         ]:
             if _col not in _vendor_cols:
                 _conn.execute(text(_ddl))
@@ -39,10 +42,9 @@ if _is_sqlite:
 # Column-level migration for PostgreSQL (Neon) — create_all won't add columns to existing tables
 if not _is_sqlite:
     with engine.connect() as _conn:
-        _conn.execute(text(
-            "ALTER TABLE vendors ADD COLUMN IF NOT EXISTS "
-            "data_sensitivity VARCHAR(20) DEFAULT 'standard'"
-        ))
+        _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS data_sensitivity VARCHAR(20) DEFAULT 'standard'"))
+        _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS review_interval_days INTEGER"))
+        _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP"))
         _conn.commit()
 
 # ── Security headers middleware ─────────────────────────────────────────────
@@ -109,6 +111,7 @@ app.include_router(export.router,      prefix="/api/export",      tags=["Export"
 app.include_router(quota.router,       prefix="/api/quota",       tags=["Quota"])
 app.include_router(dashboard_router,   prefix="/api/dashboard",   tags=["dashboard"])
 app.include_router(guest_router,       prefix="/api/guest",        tags=["guest"])
+app.include_router(acceptances_router, prefix="/api/vendors",      tags=["Acceptances"])
 
 
 @app.get("/")

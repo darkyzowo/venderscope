@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF, setVendorContext } from '../api/client'
+import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF, setVendorContext, getNotes, addNote, deleteNote, updateReview, getAcceptances, createAcceptance, revokeAcceptance } from '../api/client'
 import api from '../api/client'
 import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
@@ -67,24 +67,33 @@ export default function VendorDetail() {
   const [exporting, setExporting] = useState(false)
   const [quotaExhausted, setQuotaEx] = useState(false)
   const [updatingContext, setUpdatingContext] = useState(false)
+  const [notes, setNotes] = useState([])
+  const [noteInput, setNoteInput] = useState('')
+  const [addingNote, setAddingNote] = useState(false)
+  const [updatingReview, setUpdatingReview] = useState(false)
+  const [acceptances, setAcceptances] = useState([])
 
   const fetchData = async () => {
-    const [vRes, eRes, hRes] = await Promise.all([
-      getVendors(), getVendorEvents(id), getScoreHistory(id),
+    const [vRes, eRes, hRes, nRes, aRes] = await Promise.all([
+      getVendors(), getVendorEvents(id), getScoreHistory(id), getNotes(id), getAcceptances(id),
     ])
     setVendor(vRes.data.find((v) => v.id === id))
     setEvents(sortEvents(eRes.data))
     setHistory(hRes.data)
+    setNotes(nRes.data)
+    setAcceptances(aRes.data)
   }
 
   useEffect(() => {
     async function load() {
-      const [vRes, eRes, hRes] = await Promise.all([
-        getVendors(), getVendorEvents(id), getScoreHistory(id),
+      const [vRes, eRes, hRes, nRes, aRes] = await Promise.all([
+        getVendors(), getVendorEvents(id), getScoreHistory(id), getNotes(id), getAcceptances(id),
       ])
       setVendor(vRes.data.find((v) => v.id === id))
       setEvents(sortEvents(eRes.data))
       setHistory(hRes.data)
+      setNotes(nRes.data)
+      setAcceptances(aRes.data)
     }
     load()
     api.get('/quota').then((r) => setQuotaEx(r.data.exhausted)).catch(() => {})
@@ -122,6 +131,45 @@ export default function VendorDetail() {
       URL.revokeObjectURL(url)
     } catch (e) { console.error('PDF export failed:', e) }
     finally { setExporting(false) }
+  }
+
+  const handleAddNote = async () => {
+    if (!noteInput.trim()) return
+    setAddingNote(true)
+    try {
+      await addNote(id, noteInput.trim())
+      setNoteInput('')
+      const res = await getNotes(id)
+      setNotes(res.data)
+    } catch (e) { console.error('Add note failed:', e) }
+    finally { setAddingNote(false) }
+  }
+
+  const handleDeleteNote = async (noteId) => {
+    try {
+      await deleteNote(id, noteId)
+      setNotes((n) => n.filter((x) => x.id !== noteId))
+    } catch (e) { console.error('Delete note failed:', e) }
+  }
+
+  const handleReviewUpdate = async (patch) => {
+    setUpdatingReview(true)
+    try {
+      await updateReview(id, patch)
+      await fetchData()
+    } catch (e) { console.error('Review update failed:', e) }
+    finally { setUpdatingReview(false) }
+  }
+
+  const handleAccept = async (eventId, data) => {
+    await createAcceptance(id, data)
+    const res = await getAcceptances(id)
+    setAcceptances(res.data)
+  }
+
+  const handleRevoke = async (accId) => {
+    await revokeAcceptance(id, accId)
+    setAcceptances((a) => a.filter((x) => x.id !== accId))
   }
 
   // Skeleton loading state — matches actual page layout
@@ -384,6 +432,129 @@ export default function VendorDetail() {
                 )
               })()}
             </div>
+
+            {/* Review Scheduling */}
+            <div
+              className="mt-5 w-full"
+              style={{
+                opacity: updatingReview ? 0.5 : 1,
+                transition: 'opacity 200ms ease',
+                pointerEvents: updatingReview ? 'none' : 'auto',
+              }}
+            >
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#2a2a4a' }}>
+                  Review Schedule
+                </p>
+                {updatingReview && (
+                  <span className="text-[9px]" style={{ color: '#44445a' }}>saving…</span>
+                )}
+              </div>
+
+              {/* No-schedule reset pill */}
+              {(() => {
+                const current = vendor.review_interval_days ?? null
+                const isNone = current === null
+                return (
+                  <>
+                    <button
+                      onClick={() => handleReviewUpdate({ interval_days: null })}
+                      className="w-full mb-2 py-1.5 px-3 rounded-lg text-[11px] flex items-center justify-between"
+                      style={{
+                        background: isNone ? 'rgba(139,92,246,0.1)' : 'transparent',
+                        border: isNone ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
+                        color: isNone ? '#a78bfa' : '#44445a',
+                        transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                        cursor: isNone ? 'default' : 'pointer',
+                      }}
+                    >
+                      <span className="font-medium">No schedule</span>
+                      <span style={{ opacity: 0.6, fontSize: '10px' }}>default</span>
+                    </button>
+
+                    <div className="grid grid-cols-3 gap-1.5 mb-2">
+                      {[
+                        { value: 30,  label: '30 days' },
+                        { value: 60,  label: '60 days' },
+                        { value: 90,  label: '90 days' },
+                        { value: 180, label: '180 days' },
+                        { value: 365, label: 'Annually' },
+                      ].map(({ value, label }) => {
+                        const isSelected = current === value
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => handleReviewUpdate({ interval_days: value })}
+                            className="py-2 px-2 rounded-lg text-center"
+                            style={{
+                              background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
+                              border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
+                              color: isSelected ? '#a78bfa' : '#44445a',
+                              cursor: isSelected ? 'default' : 'pointer',
+                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                              fontSize: '10px',
+                              fontWeight: isSelected ? 600 : 400,
+                            }}
+                            onMouseEnter={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                                e.currentTarget.style.color = '#8888aa'
+                              }
+                            }}
+                            onMouseLeave={(e) => {
+                              if (!isSelected) {
+                                e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
+                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
+                                e.currentTarget.style.color = '#44445a'
+                              }
+                            }}
+                          >
+                            {label}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </>
+                )
+              })()}
+
+              {vendor.review_interval_days && (() => {
+                const lastReviewed = vendor.last_reviewed_at ? new Date(vendor.last_reviewed_at) : null
+                const dueAt = lastReviewed
+                  ? new Date(lastReviewed.getTime() + vendor.review_interval_days * 86400000)
+                  : null
+                const now = new Date()
+                const daysOverdue = dueAt ? Math.floor((now - dueAt) / 86400000) : null
+
+                return (
+                  <div className="flex items-center justify-between">
+                    <p className="text-[10px]" style={{
+                      color: daysOverdue > 0 ? '#fbbf24' : dueAt ? '#22c55e' : '#44445a',
+                    }}>
+                      {!lastReviewed
+                        ? 'Never reviewed'
+                        : daysOverdue > 0
+                        ? `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''}`
+                        : `Next: ${dueAt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`}
+                    </p>
+                    <button
+                      onClick={() => handleReviewUpdate({ mark_reviewed: true })}
+                      className="text-[10px] px-2.5 py-1 rounded-lg transition-all duration-150"
+                      style={{
+                        background: 'rgba(34,197,94,0.08)',
+                        border: '1px solid rgba(34,197,94,0.2)',
+                        color: '#22c55e',
+                      }}
+                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.15)'}
+                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.08)'}
+                    >
+                      Mark Reviewed
+                    </button>
+                  </div>
+                )
+              })()}
+            </div>
           </Panel>
 
           {/* Score history chart */}
@@ -468,7 +639,95 @@ export default function VendorDetail() {
               </button>
             )}
           </div>
-          <EventFeed events={displayedEvents} />
+          <EventFeed events={displayedEvents} acceptances={acceptances} onAccept={handleAccept} onRevoke={handleRevoke} />
+        </Panel>
+
+        {/* Analyst Notes */}
+        <Panel className="mt-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 200ms both' }}>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
+              Analyst Notes{' '}
+              {notes.length > 0 && (
+                <span className="font-normal text-xs" style={{ color: '#44445a' }}>({notes.length})</span>
+              )}
+            </h3>
+            <p className="text-[10px]" style={{ color: '#44445a' }}>Included in PDF export</p>
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2 mb-4">
+            <textarea
+              value={noteInput}
+              onChange={(e) => setNoteInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddNote()
+              }}
+              placeholder="Add a note — Ctrl+Enter to submit"
+              rows={2}
+              maxLength={1000}
+              disabled={addingNote}
+              className="flex-1 rounded-lg px-3 py-2 text-xs resize-none"
+              style={{
+                background: '#141425',
+                border: '1px solid #2a2a4a',
+                color: '#f0f0ff',
+                outline: 'none',
+                opacity: addingNote ? 0.5 : 1,
+                transition: 'opacity 200ms ease',
+              }}
+            />
+            <button
+              onClick={handleAddNote}
+              disabled={addingNote || !noteInput.trim()}
+              className="px-3 py-2 rounded-lg text-xs font-semibold self-end transition-all duration-150 disabled:opacity-40"
+              style={{ background: '#8b5cf6', color: '#fff' }}
+              onMouseEnter={(e) => { if (!addingNote && noteInput.trim()) e.currentTarget.style.background = '#7c3aed' }}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
+            >
+              {addingNote ? 'Saving…' : 'Add'}
+            </button>
+          </div>
+
+          {/* Notes list */}
+          {notes.length === 0 ? (
+            <p className="text-xs py-4 text-center" style={{ color: '#44445a' }}>
+              No notes yet. Notes are included in PDF exports.
+            </p>
+          ) : (
+            <div className="space-y-2">
+              {notes.map((note, i) => (
+                <div
+                  key={note.id}
+                  className="group flex items-start gap-3 p-3 rounded-lg"
+                  style={{
+                    background: 'rgba(255,255,255,0.02)',
+                    border: '1px solid rgba(255,255,255,0.04)',
+                    animation: `fade-up 200ms cubic-bezier(0.16,1,0.3,1) ${i * 30}ms both`,
+                  }}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs leading-relaxed" style={{ color: '#f0f0ff' }}>{note.content}</p>
+                    <p className="text-[10px] mt-1 font-mono" style={{ color: '#44445a' }}>
+                      {new Date(note.created_at).toLocaleString([], {
+                        month: 'short', day: 'numeric', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeleteNote(note.id)}
+                    className="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all duration-150 shrink-0"
+                    style={{ color: '#44445a', background: 'transparent' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+                    title="Delete note"
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </Panel>
 
       </div>
