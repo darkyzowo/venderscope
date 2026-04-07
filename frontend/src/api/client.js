@@ -80,11 +80,12 @@ api.interceptors.response.use(
 
 // --- API methods ---
 
-export const getVendors      = ()     => api.get('/vendors/')
-export const addVendor       = (data) => api.post('/vendors/', data)
-export const deleteVendor    = (id)   => api.delete(`/vendors/${id}`)
-export const getVendorEvents = (id)   => api.get(`/vendors/${id}/events`)
-export const getScoreHistory = (id)   => api.get(`/vendors/${id}/history`)
+export const getVendors       = ()                    => api.get('/vendors/')
+export const addVendor        = (data)                => api.post('/vendors/', data)
+export const deleteVendor     = (id)                  => api.delete(`/vendors/${id}`)
+export const setVendorContext = (id, data_sensitivity) => api.patch(`/vendors/${id}/context`, { data_sensitivity })
+export const getVendorEvents  = (id)                  => api.get(`/vendors/${id}/events`)
+export const getScoreHistory  = (id)                  => api.get(`/vendors/${id}/history`)
 
 // force=true — always fetches fresh data, 90s timeout covers cold start + scan
 export const scanVendor = (id) => api.post(`/intelligence/scan/${id}?force=true`, {}, { timeout: 90000 })

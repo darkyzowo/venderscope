@@ -8,6 +8,7 @@ from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User
 from services.auth_service import get_current_user
 from services.audit import audit
+from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
 from limiter import limiter
 
 router = APIRouter()
@@ -40,19 +41,32 @@ class VendorCreate(BaseModel):
 
 
 class VendorOut(BaseModel):
-    id:             str
-    name:           str
-    domain:         str
-    company_number: Optional[str]
-    risk_score:     float
-    last_scanned:   Optional[datetime] = None
-    score_delta:    Optional[float]    = None
-    compliance:     Optional[dict]     = None
-    description:    Optional[str]      = None
-    auth_method:    Optional[str]      = None
-    two_factor:     Optional[str]      = None
+    id:               str
+    name:             str
+    domain:           str
+    company_number:   Optional[str]
+    risk_score:       float
+    effective_score:  float            = 0.0
+    data_sensitivity: Optional[str]   = None
+    last_scanned:     Optional[datetime] = None
+    score_delta:      Optional[float]  = None
+    compliance:       Optional[dict]   = None
+    description:      Optional[str]    = None
+    auth_method:      Optional[str]    = None
+    two_factor:       Optional[str]    = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ContextUpdate(BaseModel):
+    data_sensitivity: str
+
+    @field_validator('data_sensitivity')
+    @classmethod
+    def validate_sensitivity(cls, v):
+        if v not in VALID_SENSITIVITIES:
+            raise ValueError(f"Must be one of: {', '.join(sorted(VALID_SENSITIVITIES))}")
+        return v
 
 
 # --- Routes ---
@@ -83,6 +97,7 @@ def list_vendors(
             delta = round(history[0].score - history[1].score, 1)
         out = VendorOut.model_validate(v)
         out.score_delta = delta
+        out.effective_score = compute_effective_score(v.risk_score, v.data_sensitivity)
         result.append(out)
     return result
 
@@ -129,6 +144,28 @@ def delete_vendor(
     db.commit()
     audit(db, "vendor.deleted", request, user_id=str(current_user.id), detail=vendor_id)
     return {"message": f"Vendor '{name}' deleted"}
+
+
+@router.patch("/{vendor_id}/context")
+@limiter.limit("10/minute")
+def update_vendor_context(
+    request: Request,
+    vendor_id: str,
+    payload: ContextUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+    vendor.data_sensitivity = payload.data_sensitivity
+    db.commit()
+    audit(db, "vendor.context_updated", request, user_id=str(current_user.id),
+          detail=f"{vendor_id}:{payload.data_sensitivity}")
+    return {"data_sensitivity": vendor.data_sensitivity}
 
 
 @router.get("/{vendor_id}/events")

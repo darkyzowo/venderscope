@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF } from '../api/client'
+import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF, setVendorContext } from '../api/client'
 import api from '../api/client'
 import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
@@ -11,6 +11,16 @@ import VendorAvatar from '../components/VendorAvatar'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 const EVENTS_SHOWN = 10
+
+const SENSITIVITY_OPTIONS = [
+  { value: 'none',      label: 'No Data Access',          hint: '0.8×' },
+  { value: 'standard',  label: 'Standard / Unknown',      hint: '1.0×' },
+  { value: 'pii',       label: 'PII / Personal Data',     hint: '1.4×' },
+  { value: 'financial', label: 'Financial / Payment',     hint: '1.6×' },
+  { value: 'auth',      label: 'Authentication / SSO',    hint: '1.6×' },
+  { value: 'health',    label: 'Health / Medical',        hint: '1.8×' },
+  { value: 'critical',  label: 'Critical Infrastructure', hint: '2.0×' },
+]
 
 const parseEPSS = (desc) => {
   const m = desc?.match(/\[EPSS: ([\d.]+)%/)
@@ -55,6 +65,7 @@ export default function VendorDetail() {
   const [scanning, setScan] = useState(false)
   const [exporting, setExporting] = useState(false)
   const [quotaExhausted, setQuotaEx] = useState(false)
+  const [updatingContext, setUpdatingContext] = useState(false)
 
   const fetchData = async () => {
     const [vRes, eRes, hRes] = await Promise.all([
@@ -86,6 +97,15 @@ export default function VendorDetail() {
       api.get('/quota/').then((r) => setQuotaEx(r.data.exhausted)).catch(() => {})
     } catch (e) { console.error('Scan failed:', e) }
     finally { setScan(false) }
+  }
+
+  const handleContextChange = async (sensitivity) => {
+    setUpdatingContext(true)
+    try {
+      await setVendorContext(id, sensitivity)
+      await fetchData()
+    } catch (e) { console.error('Context update failed:', e) }
+    finally { setUpdatingContext(false) }
   }
 
   const handleExportPDF = async () => {
@@ -206,8 +226,16 @@ export default function VendorDetail() {
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
           {/* Score gauge panel */}
           <Panel className="md:col-span-2 flex flex-col items-center justify-center py-6">
-            <ScoreGauge score={vendor.risk_score} />
-            <div className="mt-5 text-center">
+            <ScoreGauge score={vendor.effective_score ?? vendor.risk_score} />
+
+            {/* Effective vs technical scores */}
+            {vendor.effective_score != null && vendor.effective_score !== vendor.risk_score && (
+              <p className="text-[10px] mt-1 tabular-nums" style={{ color: '#44445a' }}>
+                Technical: {vendor.risk_score} → Effective: {vendor.effective_score}
+              </p>
+            )}
+
+            <div className="mt-4 text-center">
               <p className="text-[11px]" style={{ color: '#44445a' }}>
                 {vendor.last_scanned
                   ? `Last scanned · ${new Date(vendor.last_scanned).toLocaleString([], {
@@ -235,10 +263,38 @@ export default function VendorDetail() {
                 >
                   Top 10 CVEs weighted by severity (CRITICAL=25, HIGH=15, MEDIUM=7, LOW=2),
                   plus breach data from HIBP, Companies House signals, and Shodan exposure.
-                  Capped at 100.{' '}
+                  Capped at 100. Effective score applies your data sensitivity multiplier.{' '}
                   <span style={{ color: '#a78bfa' }}>Full PDF contains all detected events.</span>
                 </div>
               </div>
+            </div>
+
+            {/* Data sensitivity selector */}
+            <div className="mt-5 w-full px-1">
+              <p
+                className="text-[9px] font-bold tracking-[0.14em] uppercase mb-2 text-center"
+                style={{ color: '#2a2a4a' }}
+              >
+                Data Sensitivity
+              </p>
+              <select
+                value={vendor.data_sensitivity || 'standard'}
+                onChange={(e) => handleContextChange(e.target.value)}
+                disabled={updatingContext}
+                className="w-full text-xs rounded-lg px-3 py-1.5 outline-none"
+                style={{
+                  background: '#0d0d1f',
+                  border: '1px solid #2a2a4a',
+                  color: updatingContext ? '#2a2a4a' : '#8888aa',
+                  cursor: updatingContext ? 'not-allowed' : 'pointer',
+                }}
+              >
+                {SENSITIVITY_OPTIONS.map(({ value, label, hint }) => (
+                  <option key={value} value={value}>
+                    {label} ({hint})
+                  </option>
+                ))}
+              </select>
             </div>
           </Panel>
 

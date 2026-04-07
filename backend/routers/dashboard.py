@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from database import get_db
 from models import Vendor, RiskScoreHistory, User
 from services.auth_service import get_current_user
+from services.risk_context import compute_effective_score
 from datetime import datetime, timezone, timedelta
 
 router = APIRouter()
@@ -28,9 +29,9 @@ def dashboard_summary(
             "scanned_last_24h": 0,
         }
 
-    high_risk   = sum(1 for v in vendors if v.risk_score >= 70)
-    medium_risk = sum(1 for v in vendors if 40 <= v.risk_score < 70)
-    low_risk    = sum(1 for v in vendors if v.risk_score < 40)
+    high_risk   = sum(1 for v in vendors if compute_effective_score(v.risk_score, v.data_sensitivity) >= 70)
+    medium_risk = sum(1 for v in vendors if 40 <= compute_effective_score(v.risk_score, v.data_sensitivity) < 70)
+    low_risk    = sum(1 for v in vendors if compute_effective_score(v.risk_score, v.data_sensitivity) < 40)
 
     cutoff = datetime.now(timezone.utc) - timedelta(hours=24)
     scanned_last_24h = sum(
@@ -52,11 +53,12 @@ def dashboard_summary(
             delta = round(history[0].score - history[1].score, 1)
             if delta > 0:
                 rising.append({
-                    "id":         v.id,
-                    "name":       v.name,
-                    "domain":     v.domain,
-                    "risk_score": v.risk_score,
-                    "delta":      delta,
+                    "id":              v.id,
+                    "name":            v.name,
+                    "domain":          v.domain,
+                    "risk_score":      v.risk_score,
+                    "effective_score": compute_effective_score(v.risk_score, v.data_sensitivity),
+                    "delta":           delta,
                 })
 
     rising.sort(key=lambda x: x["delta"], reverse=True)

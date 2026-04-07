@@ -25,10 +25,23 @@ const riskConfig = (s) => {
   }
 }
 
+const SENSITIVITY_BADGES = {
+  none:      { label: 'No Access',    color: '#6b7280', bg: 'rgba(107,114,128,0.1)',  border: 'rgba(107,114,128,0.2)' },
+  pii:       { label: 'PII',          color: '#f59e0b', bg: 'rgba(245,158,11,0.1)',   border: 'rgba(245,158,11,0.25)' },
+  financial: { label: 'Financial',    color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)'  },
+  auth:      { label: 'Auth/SSO',     color: '#ef4444', bg: 'rgba(239,68,68,0.1)',    border: 'rgba(239,68,68,0.25)'  },
+  health:    { label: 'Health',       color: '#ec4899', bg: 'rgba(236,72,153,0.1)',   border: 'rgba(236,72,153,0.25)' },
+  critical:  { label: 'Critical',     color: '#dc2626', bg: 'rgba(220,38,38,0.12)',   border: 'rgba(220,38,38,0.3)'   },
+}
+
 export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
   const nav = useNavigate()
-  const cfg = riskConfig(vendor.risk_score)
+  const displayScore = vendor.effective_score ?? vendor.risk_score
+  const cfg = riskConfig(displayScore)
   const domain = vendor.domain.split('?')[0].split('/')[0]
+  const badge = vendor.data_sensitivity && vendor.data_sensitivity !== 'standard'
+    ? SENSITIVITY_BADGES[vendor.data_sensitivity]
+    : null
 
   const handleMouseEnter = (e) => {
     e.currentTarget.style.borderColor = cfg.hoverBorder
@@ -77,7 +90,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
               className="text-3xl font-bold tabular-nums leading-none"
               style={{ color: cfg.color }}
             >
-              {vendor.risk_score}
+              {displayScore}
             </div>
             <div
               className="text-[9px] font-bold tracking-[0.12em] mt-0.5"
@@ -91,6 +104,14 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
                 style={{ color: vendor.score_delta > 0 ? '#ef4444' : '#22c55e' }}
               >
                 {vendor.score_delta > 0 ? `+${vendor.score_delta} ↑` : `${vendor.score_delta} ↓`}
+              </div>
+            )}
+            {badge && (
+              <div
+                className="text-[9px] font-semibold mt-1.5 px-1.5 py-0.5 rounded-full inline-block"
+                style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}
+              >
+                {badge.label}
               </div>
             )}
           </div>

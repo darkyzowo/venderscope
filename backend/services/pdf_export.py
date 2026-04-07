@@ -2,6 +2,7 @@ import io
 import re
 from datetime import datetime
 from xml.sax.saxutils import escape as _xml_escape
+from services.risk_context import compute_effective_score, SENSITIVITY_LABELS
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.units import mm
@@ -56,10 +57,15 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
     cell_s   = ParagraphStyle("c",  fontSize=8,  textColor=DARK,   leading=10)
     footer_s = ParagraphStyle("f",  fontSize=7,  textColor=GREY,   spaceBefore=12)
 
-    score       = vendor.risk_score
-    score_color = RED if score >= 70 else YELLOW if score >= 35 else GREEN
-    risk_label  = "HIGH RISK" if score >= 70 else "MEDIUM RISK" if score >= 35 else "LOW RISK"
-    events      = sort_events(events)
+    score            = vendor.risk_score
+    score_color      = RED if score >= 70 else YELLOW if score >= 35 else GREEN
+    risk_label       = "HIGH RISK" if score >= 70 else "MEDIUM RISK" if score >= 35 else "LOW RISK"
+    sensitivity      = vendor.data_sensitivity or "standard"
+    sensitivity_label = SENSITIVITY_LABELS.get(sensitivity, "Standard / Unknown")
+    effective        = compute_effective_score(score, sensitivity)
+    eff_color        = RED if effective >= 70 else YELLOW if effective >= 35 else GREEN
+    eff_label        = "HIGH RISK" if effective >= 70 else "MEDIUM RISK" if effective >= 35 else "LOW RISK"
+    events           = sort_events(events)
 
     story = []
 
@@ -72,11 +78,16 @@ def generate_vendor_pdf(vendor, events: list, history: list) -> bytes:
 
     # Vendor summary table
     story.append(Paragraph("Vendor Summary", h2_s))
-    rows = [["Vendor Name", _xml_escape(vendor.name)], ["Domain", _xml_escape(vendor.domain)],
-            ["Last Scanned", vendor.last_scanned.strftime('%d %B %Y, %H:%M UTC')
-             if vendor.last_scanned else "Never"]]
+    rows = [
+        ["Vendor Name",       _xml_escape(vendor.name)],
+        ["Domain",            _xml_escape(vendor.domain)],
+        ["Last Scanned",      vendor.last_scanned.strftime('%d %B %Y, %H:%M UTC') if vendor.last_scanned else "Never"],
+        ["Data Sensitivity",  sensitivity_label],
+        ["Technical Score",   str(int(score))],
+        ["Effective Exposure", f"{effective}  ({eff_label})"],
+    ]
     if vendor.company_number:
-        rows.append(["Companies House", _xml_escape(vendor.company_number)])
+        rows.insert(2, ["Companies House", _xml_escape(vendor.company_number)])
 
     col_w = [45*mm, usable - 45*mm]
     t = Table(rows, colWidths=col_w)

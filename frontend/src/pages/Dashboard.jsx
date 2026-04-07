@@ -114,13 +114,14 @@ export default function Dashboard() {
     finally { setScanAll(false); window.location.reload() }
   }
 
-  const high    = vendors.filter((v) => v.risk_score >= 70).length
-  const medium  = vendors.filter((v) => v.risk_score >= 35 && v.risk_score < 70).length
-  const low     = vendors.filter((v) => v.risk_score < 35).length
+  const effScore = (v) => v.effective_score ?? v.risk_score
+  const high    = vendors.filter((v) => effScore(v) >= 70).length
+  const medium  = vendors.filter((v) => effScore(v) >= 35 && effScore(v) < 70).length
+  const low     = vendors.filter((v) => effScore(v) < 35).length
   const rising  = vendors.filter((v) => v.score_delta > 0).sort((a, b) => b.score_delta - a.score_delta)
 
   const sortedVendors = [...vendors].sort((a, b) => {
-    if (sortBy === 'risk')    return b.risk_score - a.risk_score
+    if (sortBy === 'risk')    return effScore(b) - effScore(a)
     if (sortBy === 'delta')   return (b.score_delta ?? -Infinity) - (a.score_delta ?? -Infinity)
     if (sortBy === 'scanned') {
       const ta = a.last_scanned ? new Date(a.last_scanned).getTime() : 0

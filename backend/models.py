@@ -35,10 +35,11 @@ class Vendor(Base):
     risk_score     = Column(Float, default=0.0)
     added_at       = Column(DateTime, default=_utcnow)
     last_scanned   = Column(DateTime, nullable=True)
-    compliance     = Column(Text, nullable=True)  # JSON stored as string
-    description    = Column(Text,   nullable=True)
-    auth_method    = Column(String, nullable=True)
-    two_factor     = Column(String, nullable=True)
+    compliance       = Column(Text, nullable=True)  # JSON stored as string
+    description      = Column(Text,   nullable=True)
+    auth_method      = Column(String, nullable=True)
+    two_factor       = Column(String, nullable=True)
+    data_sensitivity = Column(String(20), nullable=True, default='standard')
 
     owner   = relationship("User", back_populates="vendors")
     events  = relationship("RiskEvent",        back_populates="vendor", cascade="all, delete")
