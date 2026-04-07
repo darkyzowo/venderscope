@@ -34,13 +34,14 @@ const sortEvents = (evts) =>
   })
 
 // Reusable panel wrapper
-const Panel = ({ children, className = '' }) => (
+const Panel = ({ children, className = '', style: extraStyle }) => (
   <div
     className={`rounded-xl p-6 ${className}`}
     style={{
       background: 'linear-gradient(160deg, #0f0f1e 0%, #0a0a15 100%)',
       border: '1px solid #1e1e35',
       boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+      ...extraStyle,
     }}
   >
     {children}
@@ -123,15 +124,35 @@ export default function VendorDetail() {
     finally { setExporting(false) }
   }
 
-  // Loading state
+  // Skeleton loading state — matches actual page layout
   if (!vendor)
     return (
-      <div className="min-h-screen flex items-center justify-center" style={{ background: '#090911' }}>
-        <div className="flex items-center gap-2.5 text-sm" style={{ color: '#44445a' }}>
-          <svg className="animate-spin" width="14" height="14" viewBox="0 0 24 24" fill="none">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round"/>
-          </svg>
-          Loading…
+      <div className="min-h-screen animate-page" style={{ background: '#090911' }}>
+        <div className="max-w-5xl mx-auto px-6 py-8">
+          {/* Back placeholder */}
+          <div className="skeleton h-4 w-20 mb-6 rounded" />
+          {/* Header */}
+          <div className="flex items-start justify-between mb-8">
+            <div className="flex items-center gap-4">
+              <div className="skeleton w-12 h-12 rounded-xl" />
+              <div>
+                <div className="skeleton h-7 w-40 mb-2 rounded" />
+                <div className="skeleton h-4 w-24 rounded" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <div className="skeleton h-9 w-24 rounded-xl" />
+              <div className="skeleton h-9 w-24 rounded-xl" />
+            </div>
+          </div>
+          {/* Hero panels */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+            <div className="skeleton md:col-span-2 h-64 rounded-xl" />
+            <div className="skeleton md:col-span-3 h-64 rounded-xl" />
+          </div>
+          {/* Lower panels */}
+          <div className="skeleton h-32 rounded-xl mb-4" />
+          <div className="skeleton h-48 rounded-xl" />
         </div>
       </div>
     )
@@ -140,7 +161,7 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div className="min-h-screen" style={{ background: '#090911' }}>
+    <div className="min-h-screen animate-page" style={{ background: '#090911' }}>
       <div className="max-w-5xl mx-auto px-6 py-8">
 
         {/* Back */}
@@ -223,7 +244,7 @@ export default function VendorDetail() {
         </div>
 
         {/* Hero: gauge + chart */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 60ms both' }}>
           {/* Score gauge panel */}
           <Panel className="md:col-span-2 flex flex-col items-center justify-center py-6">
             <ScoreGauge score={vendor.effective_score ?? vendor.risk_score} />
@@ -373,7 +394,7 @@ export default function VendorDetail() {
 
         {/* Vendor Profile */}
         {(vendor.description || vendor.auth_method || vendor.two_factor) && (
-          <Panel className="mb-4">
+          <Panel className="mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 140ms both' }}>
             <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
             {vendor.description && (
               <p className="text-sm leading-relaxed mb-5" style={{ color: '#8888aa' }}>
@@ -415,13 +436,13 @@ export default function VendorDetail() {
         )}
 
         {/* Compliance */}
-        <Panel className="mb-4">
+        <Panel className="mb-4" style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 200ms both' }}>
           <PanelTitle meta="(auto-discovered from public sources)">Compliance Posture</PanelTitle>
           <CompliancePanel compliance={vendor.compliance} />
         </Panel>
 
         {/* Risk Events */}
-        <Panel>
+        <Panel style={{ animation: 'fade-up 420ms cubic-bezier(0.16,1,0.3,1) 260ms both' }}>
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Risk Events{' '}

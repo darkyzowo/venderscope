@@ -63,9 +63,9 @@ export default function Register() {
       <div
         style={{
           width: '100%', maxWidth: 400,
-          transition: 'opacity 220ms ease, transform 220ms ease',
+          transition: 'opacity 400ms cubic-bezier(0.16,1,0.3,1), transform 400ms cubic-bezier(0.16,1,0.3,1)',
           opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0)' : 'translateY(12px)',
+          transform: visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
         }}
       >
         {/* Logo + heading */}

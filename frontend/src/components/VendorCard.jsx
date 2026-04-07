@@ -61,10 +61,12 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
         background: 'linear-gradient(160deg, #0f0f1e 0%, #0a0a15 100%)',
         border: `1px solid ${cfg.border}`,
         boxShadow: '0 2px 16px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.04)',
-        transition: 'transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease',
+        transition: 'transform 200ms cubic-bezier(0.16,1,0.3,1), box-shadow 200ms ease, border-color 200ms ease',
       }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
+      onMouseDown={(e) => { e.currentTarget.style.transform = 'translateY(0) scale(0.98)' }}
+      onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1)' }}
       onClick={() => nav(`/vendor/${vendor.id}`)}
     >
       <div className="p-5">

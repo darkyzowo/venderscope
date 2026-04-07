@@ -16,10 +16,24 @@ function ProtectedRoute({ children }) {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
-        <svg className="animate-spin" width="24" height="24" viewBox="0 0 24 24" fill="none">
-          <circle cx="12" cy="12" r="9" stroke="var(--line)" strokeWidth="2" />
-          <path d="M12 3a9 9 0 0 1 9 9" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" />
-        </svg>
+        {/* Delayed fade-in prevents flash on fast auth checks */}
+        <div className="animate-spinner-in flex flex-col items-center gap-4">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <path
+              d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z"
+              stroke="var(--line)" strokeWidth="1.5" fill="none"
+            />
+            <path
+              d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z"
+              stroke="var(--accent)" strokeWidth="1.5" fill="none"
+              strokeDasharray="88"
+              strokeDashoffset="66"
+              style={{ transformOrigin: '50% 50%', animation: 'spin 1.1s linear infinite' }}
+            />
+          </svg>
+          <span style={{ fontSize: 11, color: 'var(--lo)', letterSpacing: '0.1em' }}>LOADING</span>
+        </div>
+        <style>{`@keyframes spin { to { stroke-dashoffset: -88; } }`}</style>
       </div>
     )
   }
