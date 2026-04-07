@@ -36,7 +36,7 @@ def sort_events(events):
         -parse_epss(e.description)
     ))
 
-def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None) -> bytes:
+def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None, acceptances: list = None) -> bytes:
     buf     = io.BytesIO()
     W, H    = A4
     margin  = 20 * mm
@@ -88,6 +88,25 @@ def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None)
     ]
     if vendor.company_number:
         rows.insert(2, ["Companies House", _xml_escape(vendor.company_number)])
+
+    # Review schedule rows
+    if vendor.review_interval_days:
+        interval_label = {30: "Monthly (30 days)", 60: "Every 60 days", 90: "Quarterly (90 days)",
+                          180: "Every 180 days", 365: "Annually (365 days)"}.get(
+            vendor.review_interval_days, f"Every {vendor.review_interval_days} days")
+        rows.append(["Review Interval", interval_label])
+        if vendor.last_reviewed_at:
+            rows.append(["Last Reviewed", vendor.last_reviewed_at.strftime('%d %B %Y')])
+            due_ts = vendor.last_reviewed_at.timestamp() + vendor.review_interval_days * 86400
+            due_dt = datetime.utcfromtimestamp(due_ts)
+            now_ts = datetime.utcnow().timestamp()
+            if due_ts < now_ts:
+                diff_days = int((now_ts - due_ts) / 86400)
+                rows.append(["Review Status", f"OVERDUE by {diff_days} day(s)"])
+            else:
+                rows.append(["Next Review Due", due_dt.strftime('%d %B %Y')])
+        else:
+            rows.append(["Review Status", "Never reviewed"])
 
     col_w = [45*mm, usable - 45*mm]
     t = Table(rows, colWidths=col_w)
@@ -150,6 +169,42 @@ def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None)
             ("VALIGN",          (0,0), (-1,-1), "TOP"),
         ]))
         story.append(tbl)
+
+    # Risk Acceptances
+    if acceptances:
+        story.append(Paragraph("Risk Acceptances", h2_s))
+        AMBER = colors.HexColor("#d97706")
+        acc_cw = [25*mm, 20*mm, usable - 25*mm - 20*mm - 24*mm - 22*mm - 20*mm, 24*mm, 22*mm, 20*mm]
+        acc_hdr = [Paragraph(f"<b>{h}</b>", cell_s) for h in
+                   ["Finding", "Type", "Justification", "Reviewer", "Expires", "Status"]]
+        acc_data = [acc_hdr]
+        for acc in acceptances:
+            exp_dt = acc.expires_at
+            is_active = exp_dt > datetime.utcnow() if exp_dt else False
+            status_para = Paragraph(
+                "<b>ACTIVE</b>" if is_active else "<b>EXPIRED</b>",
+                ParagraphStyle("acc_st", fontSize=8, fontName="Helvetica-Bold",
+                               textColor=AMBER if is_active else GREY)
+            )
+            acc_data.append([
+                Paragraph(_xml_escape(acc.finding_ref or ""), cell_s),
+                Paragraph(_xml_escape(acc.finding_type or ""), cell_s),
+                Paragraph(_xml_escape(acc.justification or ""), cell_s),
+                Paragraph(_xml_escape(acc.reviewer or ""), cell_s),
+                Paragraph(exp_dt.strftime('%d/%m/%Y') if exp_dt else "N/A", cell_s),
+                status_para,
+            ])
+        acc_tbl = Table(acc_data, colWidths=acc_cw, repeatRows=1)
+        acc_tbl.setStyle(TableStyle([
+            ("BACKGROUND",     (0,0), (-1,0), DARK),
+            ("TEXTCOLOR",      (0,0), (-1,0), WHITE),
+            ("FONTSIZE",       (0,0), (-1,-1), 8),
+            ("GRID",           (0,0), (-1,-1), 0.4, colors.HexColor("#e5e7eb")),
+            ("ROWBACKGROUNDS", (0,1), (-1,-1), [WHITE, LIGHT]),
+            ("PADDING",        (0,0), (-1,-1), 5),
+            ("VALIGN",         (0,0), (-1,-1), "TOP"),
+        ]))
+        story.append(acc_tbl)
 
     # Analyst Notes
     if notes:

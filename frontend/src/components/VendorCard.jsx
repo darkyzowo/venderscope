@@ -115,7 +115,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
         <div className="h-px mb-3" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
         {/* Timestamp + sensitivity badge (inline — no layout shift) */}
-        <div className="flex items-center justify-between mb-3">
+        <div className={`flex items-center justify-between ${vendor.review_interval_days ? 'mb-1.5' : 'mb-3'}`}>
           <p className="text-[11px]" style={{ color: '#44445a' }}>
             {vendor.last_scanned
               ? new Date(vendor.last_scanned).toLocaleString([], {
@@ -133,6 +133,33 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             </span>
           )}
         </div>
+
+        {/* Review status line — only shown when a schedule is set */}
+        {(() => {
+          if (!vendor.review_interval_days) return null
+          const now = Date.now()
+          if (!vendor.last_reviewed_at) {
+            return (
+              <p className="text-[10px] mb-2.5" style={{ color: '#fbbf24' }}>
+                ⏱ Never reviewed
+              </p>
+            )
+          }
+          const dueAt = new Date(vendor.last_reviewed_at).getTime() + vendor.review_interval_days * 86400000
+          const diffDays = Math.round((dueAt - now) / 86400000)
+          if (diffDays < 0) {
+            return (
+              <p className="text-[10px] mb-2.5" style={{ color: '#fbbf24' }}>
+                ⏱ Review overdue by {Math.abs(diffDays)}d
+              </p>
+            )
+          }
+          return (
+            <p className="text-[10px] mb-2.5" style={{ color: '#44445a' }}>
+              ⏱ Review: {new Date(dueAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
+            </p>
+          )
+        })()}
 
         {/* Actions */}
         <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>

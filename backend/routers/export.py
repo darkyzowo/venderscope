@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 from database import get_db
-from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote
+from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote, RiskAcceptance
 from services.pdf_export import generate_vendor_pdf
 from services.auth_service import get_current_user
 from services.audit import audit
@@ -37,8 +37,10 @@ def export_vendor_pdf(
                 .order_by(RiskScoreHistory.recorded_at.asc()).all()
     notes = db.query(VendorNote).filter(VendorNote.vendor_id == vendor_id)\
                .order_by(VendorNote.created_at.desc()).all()
+    acceptances = db.query(RiskAcceptance).filter(RiskAcceptance.vendor_id == vendor_id)\
+                    .order_by(RiskAcceptance.created_at.desc()).all()
 
-    pdf = generate_vendor_pdf(vendor, events, history, notes)
+    pdf = generate_vendor_pdf(vendor, events, history, notes, acceptances)
     audit(db, "export.pdf", request, user_id=str(current_user.id), detail=vendor_id)
 
     # Sanitise vendor name for use in Content-Disposition header — prevents CRIT-03

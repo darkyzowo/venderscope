@@ -339,10 +339,22 @@ export default function Dashboard() {
             )}
             {summary?.overdue_review_count > 0 && (
               <div
+                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
                 title={`Overdue: ${summary.overdue_reviews?.map((v) => v.name).join(', ')}`}
-                style={{ cursor: 'default' }}
+                style={{
+                  background: 'rgba(251,191,36,0.06)',
+                  border: '1px solid rgba(251,191,36,0.2)',
+                  cursor: 'default',
+                }}
               >
-                <StatPill value={summary.overdue_review_count} label="Reviews Due ⚠" color="#fbbf24" />
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true" style={{ flexShrink: 0 }}>
+                  <circle cx="12" cy="12" r="9.5" stroke="#fbbf24" strokeWidth="1.5"/>
+                  <path d="M12 7v5l3 3" stroke="#fbbf24" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
+                <span className="text-xl font-bold tabular-nums" style={{ color: '#fbbf24' }}>
+                  {summary.overdue_review_count}
+                </span>
+                <span className="text-sm" style={{ color: '#92723a' }}>Reviews Due</span>
               </div>
             )}
           </div>
