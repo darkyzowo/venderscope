@@ -154,7 +154,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="page-glow page-glow-a" aria-hidden="true" />
+      <div className="page-glow page-glow-b" aria-hidden="true" />
+      <div className="page-glow page-glow-c" aria-hidden="true" />
+      <div className="max-w-7xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Beta notice */}
         <div className="flex items-center gap-2.5 mb-5 text-xs">

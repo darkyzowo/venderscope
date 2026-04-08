@@ -211,7 +211,10 @@ export default function VendorDetail() {
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
-      <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="page-glow page-glow-a" aria-hidden="true" />
+      <div className="page-glow page-glow-b" aria-hidden="true" />
+      <div className="page-glow page-glow-c" aria-hidden="true" />
+      <div className="max-w-5xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Back nav */}
         <div className="flex items-center justify-between mb-6">

@@ -262,6 +262,51 @@ html { scroll-behavior: smooth; }
   50%      { transform: translate(-28px,42px) scale(1.10); border-radius: 55% 45% 40% 60% / 40% 60% 55% 45%; }
 }
 
+/* ── Main page ambient background glows ─────────────────────────────────── */
+/* Three very large, very diffuse radial orbs that drift imperceptibly slowly.
+   Much larger and lower-opacity than auth orbs — nebula depth, not foreground fx. */
+.page-glow {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 0;
+  will-change: transform;
+}
+.page-glow-a {
+  width: 1100px; height: 900px;
+  background: radial-gradient(ellipse, rgba(139,92,246,0.055) 0%, transparent 65%);
+  top: -380px; left: -320px;
+  animation: pg-drift-a 52s ease-in-out infinite;
+}
+.page-glow-b {
+  width: 900px; height: 1100px;
+  background: radial-gradient(ellipse, rgba(99,102,241,0.042) 0%, transparent 65%);
+  bottom: -400px; right: -350px;
+  animation: pg-drift-b 66s ease-in-out infinite;
+}
+.page-glow-c {
+  width: 680px; height: 680px;
+  background: radial-gradient(ellipse, rgba(109,87,200,0.036) 0%, transparent 65%);
+  top: 30%; left: 58%;
+  animation: pg-drift-c 80s ease-in-out infinite;
+}
+
+@keyframes pg-drift-a {
+  0%,100% { transform: translate(0,0)         scale(1);    }
+  25%      { transform: translate(120px,90px)  scale(1.07); }
+  50%      { transform: translate(55px,175px)  scale(0.95); }
+  75%      { transform: translate(140px,50px)  scale(1.03); }
+}
+@keyframes pg-drift-b {
+  0%,100% { transform: translate(0,0)          scale(1);    }
+  33%      { transform: translate(-90px,-110px) scale(1.06); }
+  66%      { transform: translate(-45px,-65px)  scale(0.97); }
+}
+@keyframes pg-drift-c {
+  0%,100% { transform: translate(0,0)        scale(1);    }
+  50%      { transform: translate(-70px,95px) scale(1.09); }
+}
+
 /* ── Shimmer skeleton for loading states */
 @keyframes shimmer {
   0%   { background-position: -200% center; }
