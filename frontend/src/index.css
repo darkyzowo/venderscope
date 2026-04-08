@@ -49,6 +49,7 @@ body {
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden; /* prevent fixed bg elements from creating horizontal scroll */
 }
 
 /* Smooth scrolling */
@@ -272,23 +273,19 @@ html { scroll-behavior: smooth; }
   z-index: 0;
   will-change: transform;
 }
+/* Position and animation are applied as inline styles by PageBackground.jsx
+   so each mount gets a randomised layout. Only visual properties live here. */
 .page-glow-a {
   width: 1100px; height: 900px;
   background: radial-gradient(ellipse, rgba(139,92,246,0.055) 0%, transparent 65%);
-  top: -380px; left: -320px;
-  animation: pg-drift-a 52s ease-in-out infinite;
 }
 .page-glow-b {
   width: 900px; height: 1100px;
   background: radial-gradient(ellipse, rgba(99,102,241,0.042) 0%, transparent 65%);
-  bottom: -400px; right: -350px;
-  animation: pg-drift-b 66s ease-in-out infinite;
 }
 .page-glow-c {
   width: 680px; height: 680px;
   background: radial-gradient(ellipse, rgba(109,87,200,0.036) 0%, transparent 65%);
-  top: 30%; left: 58%;
-  animation: pg-drift-c 80s ease-in-out infinite;
 }
 
 @keyframes pg-drift-a {

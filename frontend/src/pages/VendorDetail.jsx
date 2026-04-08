@@ -9,6 +9,7 @@ import QuotaBanner from '../components/QuotaBanner'
 import ScoreGauge from '../components/ScoreGauge'
 import VendorAvatar from '../components/VendorAvatar'
 import VSLogo from '../components/VSLogo'
+import PageBackground from '../components/PageBackground'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 const EVENTS_SHOWN = 10
@@ -211,9 +212,7 @@ export default function VendorDetail() {
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
-      <div className="page-glow page-glow-a" aria-hidden="true" />
-      <div className="page-glow page-glow-b" aria-hidden="true" />
-      <div className="page-glow page-glow-c" aria-hidden="true" />
+      <PageBackground />
       <div className="max-w-5xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Back nav */}

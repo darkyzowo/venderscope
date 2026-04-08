@@ -7,6 +7,7 @@ import QuotaBanner from '../components/QuotaBanner'
 import Footer from '../components/Footer'
 import { useAuth } from '../auth/AuthContext'
 import VSLogo from '../components/VSLogo'
+import PageBackground from '../components/PageBackground'
 
 const StatPill = ({ value, label, color }) => (
   <div
@@ -154,9 +155,7 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen" style={{ background: '#090911' }}>
-      <div className="page-glow page-glow-a" aria-hidden="true" />
-      <div className="page-glow page-glow-b" aria-hidden="true" />
-      <div className="page-glow page-glow-c" aria-hidden="true" />
+      <PageBackground />
       <div className="max-w-7xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Beta notice */}
