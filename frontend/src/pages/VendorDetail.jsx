@@ -8,6 +8,7 @@ import CompliancePanel from '../components/CompliancePanel'
 import QuotaBanner from '../components/QuotaBanner'
 import ScoreGauge from '../components/ScoreGauge'
 import VendorAvatar from '../components/VendorAvatar'
+import VSLogo from '../components/VSLogo'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 const EVENTS_SHOWN = 10
@@ -212,19 +213,22 @@ export default function VendorDetail() {
     <div className="min-h-screen" style={{ background: '#090911' }}>
       <div className="max-w-5xl mx-auto px-6 py-8">
 
-        {/* Back */}
-        <button
-          onClick={() => nav('/')}
-          className="inline-flex items-center gap-1.5 text-sm mb-6 transition-colors duration-150"
-          style={{ color: '#8080aa' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
-        >
-          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
-          Dashboard
-        </button>
+        {/* Back nav */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => nav('/')}
+            className="inline-flex items-center gap-1.5 text-sm transition-colors duration-150"
+            style={{ color: '#8080aa' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Dashboard
+          </button>
+          <VSLogo height={24} />
+        </div>
 
         {/* Quota */}
         <div className="mb-6"><QuotaBanner /></div>

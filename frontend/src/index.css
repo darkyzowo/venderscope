@@ -109,7 +109,124 @@ html { scroll-behavior: smooth; }
   animation: fade-in 300ms ease 150ms both;
 }
 
-/* Shimmer skeleton for loading states */
+/* ── VS Logo draw animation ───────────────────────────────────── */
+/* pathLength="1" on each SVG element normalises its length to 1,
+   so stroke-dasharray/offset of 1 = "fully hidden", 0 = "fully drawn" */
+.vs-logo-animated .vs-v-left {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: logo-draw 0.55s cubic-bezier(0.4,0,0.2,1) 0.1s forwards;
+}
+.vs-logo-animated .vs-v-right {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: logo-draw 0.55s cubic-bezier(0.4,0,0.2,1) 0.45s forwards;
+}
+.vs-logo-animated .vs-s {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: logo-draw 0.7s cubic-bezier(0.4,0,0.2,1) 0.72s forwards;
+}
+
+@keyframes logo-draw {
+  from { stroke-dashoffset: 1; }
+  to   { stroke-dashoffset: 0; }
+}
+
+/* ── Auth page backgrounds ────────────────────────────────────── */
+/* Dot-grid overlay — fixed so it covers the full viewport */
+.auth-grid {
+  position: fixed;
+  inset: 0;
+  background-image: radial-gradient(rgba(139,92,246,0.07) 1px, transparent 1px);
+  background-size: 28px 28px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Single-pass scan line — sweeps top→bottom once on load */
+.auth-scan {
+  position: fixed;
+  left: 0;
+  right: 0;
+  height: 1px;
+  top: 0;
+  background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.45) 50%, transparent 100%);
+  pointer-events: none;
+  z-index: 2;
+  animation: scan-sweep 2.8s cubic-bezier(0.4,0,0.6,1) 0.3s 1 forwards;
+  opacity: 0;
+}
+
+@keyframes scan-sweep {
+  0%   { transform: translateY(0);    opacity: 0; }
+  4%   { opacity: 1; }
+  96%  { opacity: 1; }
+  100% { transform: translateY(100vh); opacity: 0; }
+}
+
+/* Ambient orbs */
+.auth-orb {
+  position: fixed;
+  border-radius: 50%;
+  pointer-events: none;
+  will-change: transform;
+}
+.auth-orb-a {
+  width: 520px; height: 520px;
+  background: radial-gradient(circle, rgba(139,92,246,0.16) 0%, transparent 68%);
+  top: -200px; left: -200px;
+  animation: orb-a 16s ease-in-out infinite;
+}
+.auth-orb-b {
+  width: 420px; height: 420px;
+  background: radial-gradient(circle, rgba(99,102,241,0.13) 0%, transparent 68%);
+  bottom: -160px; right: -160px;
+  animation: orb-b 20s ease-in-out infinite;
+}
+.auth-orb-c {
+  width: 280px; height: 280px;
+  background: radial-gradient(circle, rgba(109,87,200,0.11) 0%, transparent 68%);
+  top: 42%; right: 15%;
+  animation: orb-c 26s ease-in-out infinite;
+}
+/* Register page variant — shifted orb positions */
+.auth-orb-a-reg {
+  width: 460px; height: 460px;
+  background: radial-gradient(circle, rgba(124,58,237,0.14) 0%, transparent 68%);
+  bottom: -180px; left: -180px;
+  animation: orb-a 18s ease-in-out infinite reverse;
+}
+.auth-orb-b-reg {
+  width: 380px; height: 380px;
+  background: radial-gradient(circle, rgba(79,70,229,0.12) 0%, transparent 68%);
+  top: -140px; right: -140px;
+  animation: orb-b 22s ease-in-out infinite reverse;
+}
+.auth-orb-c-reg {
+  width: 240px; height: 240px;
+  background: radial-gradient(circle, rgba(139,92,246,0.1) 0%, transparent 68%);
+  top: 30%; left: 12%;
+  animation: orb-c 28s ease-in-out infinite;
+}
+
+@keyframes orb-a {
+  0%,100% { transform: translate(0,0);    }
+  25%      { transform: translate(55px, 45px); }
+  50%      { transform: translate(25px, 85px); }
+  75%      { transform: translate(65px, 20px); }
+}
+@keyframes orb-b {
+  0%,100% { transform: translate(0,0);      }
+  33%      { transform: translate(-45px,-50px); }
+  66%      { transform: translate(35px,-18px); }
+}
+@keyframes orb-c {
+  0%,100% { transform: translate(0,0);   }
+  50%      { transform: translate(-28px, 42px); }
+}
+
+/* ── Shimmer skeleton for loading states */
 @keyframes shimmer {
   0%   { background-position: -200% center; }
   100% { background-position:  200% center; }

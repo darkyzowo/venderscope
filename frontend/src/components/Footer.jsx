@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DeleteAccountModal from './DeleteAccountModal'
+import VSLogo from './VSLogo'
 
 const FooterLink = ({ to, children, external }) =>
   external ? (
@@ -34,9 +35,7 @@ export default function Footer() {
           {/* Main row */}
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Brand */}
-            <span className="text-sm font-semibold" style={{ color: '#8b5cf6' }}>
-              Vender<span style={{ color: '#94a3b8' }}>Scope</span>
-            </span>
+            <VSLogo height={22} />
 
             {/* Navigation links */}
             <nav className="flex flex-wrap items-center gap-5 text-xs">

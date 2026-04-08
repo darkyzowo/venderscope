@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { register as apiRegister } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
+import VSLogo from '../components/VSLogo'
 
 export default function Register() {
   const { user, login } = useAuth()
@@ -20,7 +21,7 @@ export default function Register() {
   }, [user, navigate])
 
   useEffect(() => {
-    requestAnimationFrame(() => setVisible(true))
+    requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
     emailRef.current?.focus()
   }, [])
 
@@ -28,27 +29,14 @@ export default function Register() {
     e.preventDefault()
     setError('')
 
-    if (password !== confirm) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (password.length < 12) {
-      setError('Password must be at least 12 characters.')
-      return
-    }
-    if (!/[A-Z]/.test(password)) {
-      setError('Password must contain at least one uppercase letter.')
-      return
-    }
-    if (!/[0-9]/.test(password)) {
-      setError('Password must contain at least one number.')
-      return
-    }
+    if (password !== confirm) { setError('Passwords do not match.'); return }
+    if (password.length < 12) { setError('Password must be at least 12 characters.'); return }
+    if (!/[A-Z]/.test(password)) { setError('Password must contain at least one uppercase letter.'); return }
+    if (!/[0-9]/.test(password)) { setError('Password must contain at least one number.'); return }
 
     setLoading(true)
     try {
       await apiRegister({ email, password })
-      // Auto-login after registration
       await login(email, password)
       navigate('/', { replace: true })
     } catch (err) {
@@ -58,74 +46,237 @@ export default function Register() {
     }
   }
 
+  const reveal = (delayMs) => ({
+    opacity:    visible ? 1 : 0,
+    transform:  visible ? 'translateY(0)' : 'translateY(18px)',
+    transition: `opacity 600ms cubic-bezier(0.16,1,0.3,1) ${delayMs}ms,
+                 transform 600ms cubic-bezier(0.16,1,0.3,1) ${delayMs}ms`,
+  })
+
   return (
-    <div className="min-h-screen flex items-center justify-center px-4" style={{ background: 'var(--bg)' }}>
-      <div
-        style={{
-          width: '100%', maxWidth: 400,
-          transition: 'opacity 400ms cubic-bezier(0.16,1,0.3,1), transform 400ms cubic-bezier(0.16,1,0.3,1)',
-          opacity: visible ? 1 : 0,
-          transform: visible ? 'translateY(0) scale(1)' : 'translateY(20px) scale(0.98)',
-        }}
-      >
-        {/* Logo + heading */}
-        <div className="flex flex-col items-center mb-8 gap-3">
-          <HexLogo />
-          <span className="text-xl font-semibold tracking-tight" style={{ color: 'var(--hi)' }}>
-            VenderScope
-          </span>
-          <p className="text-sm" style={{ color: 'var(--mid)' }}>Create your workspace</p>
+    <div
+      style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '24px',
+        background: '#090911',
+        position: 'relative',
+        overflow: 'hidden',
+      }}
+    >
+      {/* ── Background layers (variant positions for Register) ── */}
+      <div className="auth-grid"  aria-hidden="true" />
+      <div className="auth-scan"  aria-hidden="true" />
+      <div className="auth-orb auth-orb-a-reg" aria-hidden="true" />
+      <div className="auth-orb auth-orb-b-reg" aria-hidden="true" />
+      <div className="auth-orb auth-orb-c-reg" aria-hidden="true" />
+
+      {/* ── Content ──────────────────────────────────────────── */}
+      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}>
+
+        {/* Logo */}
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28, ...reveal(0) }}>
+          <VSLogo height={68} animated />
         </div>
 
-        {/* Form card */}
-        <form
-          onSubmit={handleSubmit}
-          className="rounded-xl p-6 space-y-4"
-          style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
-        >
-          <AuthField label="Email" type="email" value={email} onChange={setEmail}
-            placeholder="you@company.com" autoComplete="email" inputRef={emailRef} />
+        {/* Tagline */}
+        <p style={{
+          textAlign: 'center',
+          fontSize: 12,
+          color: '#8080aa',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          marginBottom: 32,
+          ...reveal(220),
+        }}>
+          Start your risk intelligence workspace
+        </p>
 
-          <AuthField label="Password" type="password" value={password} onChange={setPassword}
-            placeholder="Min. 12 chars, 1 uppercase, 1 number" autoComplete="new-password" />
+        {/* Glass card */}
+        <div style={{
+          background: 'rgba(9,9,17,0.78)',
+          border: '1px solid rgba(139,92,246,0.18)',
+          borderRadius: 20,
+          padding: '32px 32px 28px',
+          backdropFilter: 'blur(28px)',
+          WebkitBackdropFilter: 'blur(28px)',
+          boxShadow: [
+            '0 0 0 1px rgba(139,92,246,0.06)',
+            '0 24px 64px rgba(0,0,0,0.55)',
+            'inset 0 1px 0 rgba(255,255,255,0.05)',
+          ].join(', '),
+          ...reveal(340),
+        }}>
 
-          <AuthField label="Confirm password" type="password" value={confirm} onChange={setConfirm}
-            placeholder="••••••••" autoComplete="new-password" />
+          <p style={{
+            fontSize: 10,
+            fontWeight: 700,
+            letterSpacing: '0.14em',
+            textTransform: 'uppercase',
+            color: '#44445a',
+            marginBottom: 20,
+          }}>
+            Create your account
+          </p>
 
-          {error && (
-            <p className="text-xs px-3 py-2 rounded-lg" style={{
-              color: '#ff4444', background: 'rgba(255,68,68,0.06)', border: '1px solid rgba(255,68,68,0.12)',
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+            <div style={reveal(430)}>
+              <LoginField
+                label="Email"
+                type="email"
+                value={email}
+                onChange={setEmail}
+                placeholder="you@company.com"
+                autoComplete="email"
+                inputRef={emailRef}
+              />
+            </div>
+
+            <div style={reveal(510)}>
+              <LoginField
+                label="Password"
+                type="password"
+                value={password}
+                onChange={setPassword}
+                placeholder="Min. 12 chars, 1 uppercase, 1 number"
+                autoComplete="new-password"
+              />
+            </div>
+
+            <div style={reveal(590)}>
+              <LoginField
+                label="Confirm password"
+                type="password"
+                value={confirm}
+                onChange={setConfirm}
+                placeholder="••••••••"
+                autoComplete="new-password"
+              />
+            </div>
+
+            {/* Requirements hint */}
+            <p style={{
+              fontSize: 11,
+              color: '#44445a',
+              lineHeight: 1.5,
+              paddingLeft: 2,
+              ...reveal(640),
             }}>
-              {error}
+              12+ characters · uppercase letter · number
             </p>
-          )}
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2.5 rounded-lg text-sm font-semibold transition-opacity"
-            style={{ background: 'var(--accent)', color: '#fff', opacity: loading ? 0.7 : 1, cursor: loading ? 'not-allowed' : 'pointer' }}
-          >
-            {loading ? <SpinnerRow label="Creating account…" /> : 'Create account'}
-          </button>
-        </form>
+            {error && (
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: 8,
+                background: 'rgba(255,68,68,0.06)',
+                border: '1px solid rgba(255,68,68,0.18)',
+                borderRadius: 10,
+                padding: '10px 13px',
+                fontSize: 13,
+                color: '#ff6b6b',
+              }}>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1.2"/>
+                  <path d="M7 4v3.5M7 9.5v.5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
+                </svg>
+                {error}
+              </div>
+            )}
 
-        <p className="text-center text-sm mt-4" style={{ color: 'var(--mid)' }}>
-          Already have an account?{' '}
-          <Link to="/login" className="font-medium hover:opacity-80 transition-opacity" style={{ color: 'var(--accent-l)' }}>
-            Sign in
-          </Link>
+            <div style={{ marginTop: 6, ...reveal(700) }}>
+              <button
+                type="submit"
+                disabled={loading}
+                style={{
+                  width: '100%',
+                  padding: '12px 20px',
+                  borderRadius: 12,
+                  border: 'none',
+                  background: 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)',
+                  color: '#fff',
+                  fontSize: 14,
+                  fontWeight: 600,
+                  letterSpacing: '0.02em',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.75 : 1,
+                  transition: 'all 200ms ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!loading) {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #9b6cf6 0%, #8b4ced 100%)'
+                    e.currentTarget.style.boxShadow = '0 0 28px rgba(139,92,246,0.38), 0 8px 24px rgba(0,0,0,0.35)'
+                    e.currentTarget.style.transform = 'translateY(-1px)'
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%)'
+                  e.currentTarget.style.boxShadow = 'none'
+                  e.currentTarget.style.transform = 'translateY(0)'
+                }}
+                onMouseDown={(e) => { if (!loading) e.currentTarget.style.transform = 'translateY(0) scale(0.98)' }}
+                onMouseUp={(e) => { if (!loading) e.currentTarget.style.transform = 'translateY(-1px) scale(1)' }}
+              >
+                {loading ? <SpinnerRow label="Creating account…" /> : 'Create account'}
+              </button>
+            </div>
+
+          </form>
+        </div>
+
+        {/* Footer link */}
+        <div style={{ marginTop: 24, textAlign: 'center', ...reveal(800) }}>
+          <p style={{ fontSize: 13, color: '#8080aa' }}>
+            Already have an account?{' '}
+            <Link
+              to="/login"
+              style={{ color: '#a78bfa', fontWeight: 500, textDecoration: 'none' }}
+              onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
+              onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
+            >
+              Sign in
+            </Link>
+          </p>
+        </div>
+
+        <p style={{
+          marginTop: 36,
+          textAlign: 'center',
+          fontSize: 10,
+          color: '#2a2a4a',
+          letterSpacing: '0.1em',
+          textTransform: 'uppercase',
+          ...reveal(880),
+        }}>
+          VenderScope · Vendor Risk Intelligence
         </p>
       </div>
     </div>
   )
 }
 
-function AuthField({ label, type, value, onChange, placeholder, autoComplete, inputRef }) {
+/* ── Sub-components ──────────────────────────────────────────── */
+
+function LoginField({ label, type, value, onChange, placeholder, autoComplete, inputRef }) {
   const [focused, setFocused] = useState(false)
   return (
     <div>
-      <label className="block text-xs font-medium mb-1.5" style={{ color: 'var(--mid)' }}>{label}</label>
+      <label style={{
+        display: 'block',
+        fontSize: 10,
+        fontWeight: 700,
+        letterSpacing: '0.1em',
+        textTransform: 'uppercase',
+        color: focused ? '#a78bfa' : '#8080aa',
+        marginBottom: 7,
+        transition: 'color 180ms ease',
+      }}>
+        {label}
+      </label>
       <input
         ref={inputRef}
         type={type}
@@ -135,12 +286,24 @@ function AuthField({ label, type, value, onChange, placeholder, autoComplete, in
         autoComplete={autoComplete}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}
-        className="w-full px-3 py-2 rounded-lg text-sm outline-none transition-all"
         style={{
-          background: 'var(--input)',
-          border: `1px solid ${focused ? 'var(--accent)' : 'var(--line)'}`,
-          color: 'var(--hi)',
-          boxShadow: focused ? '0 0 0 3px rgba(139,92,246,0.12)' : 'none',
+          width: '100%',
+          padding: '11px 14px',
+          borderRadius: 10,
+          border: focused
+            ? '1px solid rgba(139,92,246,0.55)'
+            : '1px solid rgba(255,255,255,0.07)',
+          background: focused
+            ? 'rgba(139,92,246,0.06)'
+            : 'rgba(255,255,255,0.03)',
+          color: '#f0f0ff',
+          fontSize: 14,
+          outline: 'none',
+          transition: 'all 180ms ease',
+          boxShadow: focused
+            ? '0 0 0 3px rgba(139,92,246,0.12), inset 0 1px 2px rgba(0,0,0,0.15)'
+            : 'none',
+          boxSizing: 'border-box',
         }}
       />
     </div>
@@ -149,26 +312,12 @@ function AuthField({ label, type, value, onChange, placeholder, autoComplete, in
 
 function SpinnerRow({ label }) {
   return (
-    <span className="flex items-center justify-center gap-2">
+    <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
       <svg className="animate-spin" width="14" height="14" viewBox="0 0 14 14" fill="none">
         <circle cx="7" cy="7" r="5" stroke="rgba(255,255,255,0.3)" strokeWidth="2" />
         <path d="M7 2a5 5 0 0 1 5 5" stroke="white" strokeWidth="2" strokeLinecap="round" />
       </svg>
       {label}
     </span>
-  )
-}
-
-function HexLogo() {
-  return (
-    <svg width="40" height="40" viewBox="0 0 32 32" fill="none">
-      <path d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z" stroke="#8b5cf6" strokeWidth="1.5" fill="rgba(139,92,246,0.08)" />
-      <circle cx="16" cy="16" r="5.5" stroke="#8b5cf6" strokeWidth="1.2" fill="rgba(139,92,246,0.12)" />
-      <circle cx="16" cy="16" r="1.8" fill="#8b5cf6" />
-      <line x1="16" y1="10.5" x2="16" y2="12.2" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-      <line x1="16" y1="19.8" x2="16" y2="21.5" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-      <line x1="10.5" y1="16" x2="12.2" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-      <line x1="19.8" y1="16" x2="21.5" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-    </svg>
   )
 }

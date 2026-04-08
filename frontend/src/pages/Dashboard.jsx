@@ -6,23 +6,7 @@ import AddVendorModal from '../components/AddVendorModal'
 import QuotaBanner from '../components/QuotaBanner'
 import Footer from '../components/Footer'
 import { useAuth } from '../auth/AuthContext'
-
-// Hexagon logo mark — hex outline with inner target
-const Logo = () => (
-  <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true">
-    <path
-      d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z"
-      stroke="#8b5cf6" strokeWidth="1.5"
-      fill="rgba(139,92,246,0.08)"
-    />
-    <circle cx="16" cy="16" r="5.5" stroke="#8b5cf6" strokeWidth="1.2" fill="rgba(139,92,246,0.12)" />
-    <circle cx="16" cy="16" r="1.8" fill="#8b5cf6" />
-    <line x1="16" y1="10.5" x2="16" y2="12.2" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-    <line x1="16" y1="19.8" x2="16" y2="21.5" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-    <line x1="10.5" y1="16" x2="12.2" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-    <line x1="19.8" y1="16" x2="21.5" y2="16" stroke="#8b5cf6" strokeWidth="1.2" strokeOpacity="0.6" />
-  </svg>
-)
+import VSLogo from '../components/VSLogo'
 
 const StatPill = ({ value, label, color }) => (
   <div
@@ -207,12 +191,9 @@ export default function Dashboard() {
         {/* Header */}
         <div className="flex items-start justify-between mb-8">
           <div className="flex items-center gap-3">
-            <Logo />
+            <VSLogo height={40} />
             <div>
-              <h1 className="text-2xl font-bold tracking-tight leading-none" style={{ color: '#f0f0ff' }}>
-                Vender<span style={{ color: '#8b5cf6' }}>Scope</span>
-              </h1>
-              <p className="text-xs mt-1.5" style={{ color: '#8080aa' }}>
+              <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>
                 Vendor risk intelligence · continuous monitoring
               </p>
             </div>

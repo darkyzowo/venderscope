@@ -1,0 +1,12 @@
+<svg width="100%" viewBox="0 0 680 300" role="img" xmlns="http://www.w3.org/2000/svg">
+  <title style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">VenderScope VS wordmark logo</title>
+  <desc style="fill:rgb(0, 0, 0);stroke:none;color:rgb(255, 255, 255);stroke-width:1px;stroke-linecap:butt;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto">A unique VS wordmark logo for VenderScope in purple and soft white, no background.</desc>
+
+  <!-- V: two strokes forming a clean chevron, left leg white, right leg purple -->
+  <line x1="140" y1="60" x2="210" y2="230" stroke="rgb(240,240,255)" stroke-width="28" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(240, 240, 255);color:rgb(255, 255, 255);stroke-width:28px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+  <line x1="210" y1="230" x2="280" y2="60" stroke="#7F77DD" stroke-width="28" stroke-linecap="round" style="fill:rgb(0, 0, 0);stroke:rgb(127, 119, 221);color:rgb(255, 255, 255);stroke-width:28px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+  <!-- S: drawn as a custom path, muted purple -->
+  <path d="M340,100 &#10;           C340,78 358,62 382,62 &#10;           C406,62 424,78 424,98 &#10;           C424,118 406,132 382,132 &#10;           C358,132 340,148 340,168 &#10;           C340,188 358,206 382,206 &#10;           C406,206 424,190 424,168" fill="none" stroke="#4B3FA0" stroke-width="28" stroke-linecap="round" style="fill:none;stroke:rgb(75, 63, 160);color:rgb(255, 255, 255);stroke-width:28px;stroke-linecap:round;stroke-linejoin:miter;opacity:1;font-family:&quot;Anthropic Sans&quot;, -apple-system, BlinkMacSystemFont, &quot;Segoe UI&quot;, sans-serif;font-size:16px;font-weight:400;text-anchor:start;dominant-baseline:auto"/>
+
+</svg>
