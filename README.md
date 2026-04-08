@@ -5,11 +5,50 @@
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
-[![Version](https://img.shields.io/badge/version-v3.6-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
+[![Version](https://img.shields.io/badge/version-v3.7-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time — with full user authentication, production-grade security hardening, and a cloud PostgreSQL backend.
+
+---
+
+## What's New in v3.7 — UI/UX Overhaul & Brand Identity
+
+v3.7 is a frontend-focused release centred on visual polish and brand identity ahead of a production demo. No backend changes.
+
+### VS Wordmark Logo
+
+A custom `VSLogo` component renders the official VS wordmark as an inline SVG with a sequential stroke-draw animation — the V left leg, V right leg, and S each draw in independently using `pathLength="1"` + `stroke-dashoffset` keyframes. The logo appears in the Dashboard header, VendorDetail navigation bar, and Footer, replacing all previous text-based and icon-based brand marks.
+
+### Login & Register Page Overhaul
+
+Both auth pages were fully redesigned with a layered background system and staggered entrance animations:
+
+- **Looping background traces** — four curved SVG paths stroke-draw in and loop with staggered timing (7–10s cycles), directly mirroring the VS logo draw animation. The background is perpetually alive without being distracting.
+- **Radar pulse rings** — on page load, three concentric rings expand outward from the card centre and fade, creating a "system initialising" sonar effect. Plays once.
+- **Morphing ambient orbs** — the floating violet gradient orbs now animate `border-radius` alongside position and scale, shifting between organic blob shapes for a living, nebula-like feel.
+- **Dot-grid overlay** — a fixed radial-gradient dot grid covers the viewport as a subtle structural layer.
+- **Glassmorphism card** — `backdrop-filter: blur(28px)` with a semi-transparent background and violet border accent.
+- **Staggered entrance** — every element fades and lifts in sequentially using a double-`requestAnimationFrame` technique to guarantee clean paint timing.
+- **No scroll on auth pages** — `height: 100vh` + body scroll lock prevents any scrolling on login/register.
+
+### Text Color Standardization
+
+A consistent four-level text palette is now applied across all pages:
+
+| Token | Hex | Contrast | Use |
+|-------|-----|----------|-----|
+| `--hi` | `#f0f0ff` | 14:1 | Headings, key values |
+| `--mid` | `#b8b8d0` | 6.5:1 | Body text, descriptions |
+| `--lo` | `#8080aa` | 4.8:1 | Labels, metadata, hints |
+| `--lo2` / `#44445a` | — | decorative | Separator dots and dashes only |
+
+### GRC Polish (v3.6 continuation)
+
+- **VendorCard review status** — cards now show a live "Review overdue by Xd" (amber) or "Review: MMM D" (muted) line when a review schedule is set
+- **Dashboard Reviews Due pill** — redesigned as an amber glassmorphism pill with a clock icon and hover tooltip listing overdue vendor names
+- **PDF export enrichment** — vendor reports now include a review schedule section and a Risk Acceptances table (finding reference, type, justification, reviewer, expiry, active/expired status)
 
 ---
 
@@ -475,6 +514,11 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] Periodic Review Scheduling — per-vendor review intervals, overdue indicator on dashboard (v3.6)
 - [x] Risk Acceptance Workflow — documented risk decisions with justification, reviewer, expiry, audit trail (v3.6)
 - [x] Risk Register CSV Export — one-click 12-column export from dashboard (v3.6)
+- [x] VS wordmark logo with animated stroke-draw — placed in dashboard, footer, vendor detail (v3.7)
+- [x] Login/Register overhaul — looping traces, pulse rings, morphing orbs, glassmorphism card (v3.7)
+- [x] Site-wide text color standardization — four-level contrast palette (v3.7)
+- [x] VendorCard review status line + Dashboard Reviews Due amber pill (v3.7)
+- [x] PDF export enriched with review schedule and risk acceptance table (v3.7)
 - [ ] Vendor Comparison View — side-by-side risk posture for two vendors
 - [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
 - [ ] Bulk CSV Import — add multiple vendors at once
