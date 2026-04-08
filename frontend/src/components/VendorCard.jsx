@@ -81,7 +81,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
               >
                 {vendor.name}
               </h3>
-              <p className="text-xs mt-0.5 truncate" style={{ color: '#44445a' }}>
+              <p className="text-xs mt-0.5 truncate" style={{ color: '#8080aa' }}>
                 {domain}
               </p>
             </div>
@@ -116,7 +116,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
 
         {/* Timestamp + sensitivity badge (inline — no layout shift) */}
         <div className={`flex items-center justify-between ${vendor.review_interval_days ? 'mb-1.5' : 'mb-3'}`}>
-          <p className="text-[11px]" style={{ color: '#44445a' }}>
+          <p className="text-[11px]" style={{ color: '#8080aa' }}>
             {vendor.last_scanned
               ? new Date(vendor.last_scanned).toLocaleString([], {
                   month: 'short', day: 'numeric',
@@ -155,7 +155,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             )
           }
           return (
-            <p className="text-[10px] mb-2.5" style={{ color: '#44445a' }}>
+            <p className="text-[10px] mb-2.5" style={{ color: '#8080aa' }}>
               ⏱ Review: {new Date(dueAt).toLocaleDateString([], { month: 'short', day: 'numeric' })}
             </p>
           )
@@ -201,7 +201,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             className="py-2 px-3 rounded-lg text-xs transition-colors duration-150"
             style={{
               background: 'rgba(255,255,255,0.04)',
-              color: '#44445a',
+              color: '#8080aa',
               border: '1px solid rgba(255,255,255,0.07)',
             }}
             onMouseEnter={(e) => {
@@ -211,7 +211,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-              e.currentTarget.style.color = '#44445a'
+              e.currentTarget.style.color = '#8080aa'
               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
             }}
             aria-label="Remove vendor"

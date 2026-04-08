@@ -68,7 +68,7 @@ const AcceptedBadge = ({ acceptance }) => {
         border:     '1px solid #2a2a4a',
         borderRadius: 12,
         padding:    '12px 14px',
-        color:      '#8888aa',
+        color:      '#b8b8d0',
         fontSize:   12,
         boxShadow:  '0 8px 40px rgba(0,0,0,0.85)',
         zIndex:     9999,
@@ -123,7 +123,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
   if (!events.length)
     return (
       <div className="py-8 text-center">
-        <p className="text-sm" style={{ color: '#44445a' }}>No risk events detected yet.</p>
+        <p className="text-sm" style={{ color: '#8080aa' }}>No risk events detected yet.</p>
       </div>
     )
 
@@ -212,9 +212,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                         <button
                           onClick={() => onRevoke(acceptance.id)}
                           className="text-[9px] px-1.5 py-0.5 rounded transition-colors duration-150"
-                          style={{ color: '#44445a', background: 'transparent' }}
+                          style={{ color: '#8080aa', background: 'transparent' }}
                           onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
                           title="Revoke acceptance"
                         >
                           ✕
@@ -231,7 +231,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                           style={{
                             background: isExpanded ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)',
                             border: isExpanded ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.07)',
-                            color: isExpanded ? '#fbbf24' : '#44445a',
+                            color: isExpanded ? '#fbbf24' : '#8080aa',
                           }}
                           onMouseEnter={(e) => {
                             if (!isExpanded) {
@@ -241,7 +241,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                           }}
                           onMouseLeave={(e) => {
                             if (!isExpanded) {
-                              e.currentTarget.style.color = '#44445a'
+                              e.currentTarget.style.color = '#8080aa'
                               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
                             }
                           }}
@@ -256,15 +256,15 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
 
               {/* Description */}
               {evt.description && (
-                <p className="text-xs leading-relaxed line-clamp-2 mb-1.5" style={{ color: '#8888aa' }}>
+                <p className="text-xs leading-relaxed line-clamp-2 mb-1.5" style={{ color: '#b8b8d0' }}>
                   {evt.description}
                 </p>
               )}
 
               {/* Meta: source · date */}
-              <div className="flex items-center gap-2 text-[10px] font-mono" style={{ color: '#44445a' }}>
+              <div className="flex items-center gap-2 text-[10px] font-mono" style={{ color: '#8080aa' }}>
                 <span>{evt.source}</span>
-                <span style={{ color: '#2a2a4a' }}>·</span>
+                <span style={{ color: '#44445a' }}>·</span>
                 <span>
                   {new Date(evt.detected_at).toLocaleDateString([], {
                     month: 'short', day: 'numeric', year: 'numeric',
@@ -318,7 +318,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                     }}
                   />
                   <div className="flex items-center gap-2">
-                    <label className="text-[10px] shrink-0" style={{ color: '#44445a' }}>Expires</label>
+                    <label className="text-[10px] shrink-0" style={{ color: '#8080aa' }}>Expires</label>
                     <input
                       type="date"
                       value={form.expires_at}
@@ -350,9 +350,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   <button
                     onClick={() => setExpandedEvent(null)}
                     className="px-3 py-1.5 rounded-lg text-xs transition-all duration-150"
-                    style={{ color: '#44445a', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+                    style={{ color: '#8080aa', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
                   >
                     Cancel
                   </button>

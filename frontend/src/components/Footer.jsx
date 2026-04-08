@@ -9,17 +9,17 @@ const FooterLink = ({ to, children, external }) =>
       target="_blank"
       rel="noreferrer"
       className="transition-colors duration-150"
-      style={{ color: '#6b7280' }}
+      style={{ color: '#8080aa' }}
       onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
-      onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+      onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
     >{children}</a>
   ) : (
     <Link
       to={to}
       className="transition-colors duration-150"
-      style={{ color: '#6b7280' }}
+      style={{ color: '#8080aa' }}
       onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
-      onMouseLeave={(e) => e.currentTarget.style.color = '#6b7280'}
+      onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
     >{children}</Link>
   )
 
@@ -48,16 +48,16 @@ export default function Footer() {
 
           {/* Bottom row */}
           <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-            <p className="text-xs" style={{ color: '#4b5563' }}>
+            <p className="text-xs" style={{ color: '#8080aa' }}>
               © {new Date().getFullYear()} VenderScope · Continuous Passive Vendor Risk Intelligence · MIT Licence
             </p>
 
             <button
               onClick={() => setShowDelete(true)}
               className="text-xs transition-colors duration-150"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#4b5563' }}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: '#8080aa' }}
               onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-              onMouseLeave={(e) => e.currentTarget.style.color = '#4b5563'}
+              onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
             >
               Delete Account
             </button>

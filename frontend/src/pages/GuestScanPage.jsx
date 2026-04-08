@@ -4,7 +4,7 @@ import { guestScan, downloadGuestReport } from '../api/client'
 
 const riskColor = (s) => s >= 70 ? '#f97316' : s >= 35 ? '#eab308' : '#22c55e'
 const riskLabel = (s) => s >= 70 ? 'HIGH RISK' : s >= 35 ? 'MEDIUM RISK' : 'LOW RISK'
-const sevColor  = (s) => ({ CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' }[s] || '#6b7280')
+const sevColor  = (s) => ({ CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' }[s] || '#8080aa')
 
 export default function GuestScanPage() {
   const [domain,      setDomain]      = useState('')

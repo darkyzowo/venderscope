@@ -49,7 +49,7 @@ function MdTable({ rows }) {
             {headers.map((h, i) => (
               <th key={i} style={{
                 padding: '10px 12px', textAlign: 'left',
-                color: '#6b7280', borderBottom: '1px solid #2a2a4a',
+                color: '#8080aa', borderBottom: '1px solid #2a2a4a',
               }}><Inline text={h} /></th>
             ))}
           </tr>
@@ -59,7 +59,7 @@ function MdTable({ rows }) {
             <tr key={ri} style={{ background: ri % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.02)' }}>
               {parseCells(row).map((cell, ci) => (
                 <td key={ci} style={{
-                  padding: '8px 12px', color: '#94a3b8',
+                  padding: '8px 12px', color: '#b8b8d0',
                   borderBottom: '1px solid #1a1a2e',
                 }}><Inline text={cell} /></td>
               ))}
@@ -112,7 +112,7 @@ function parseMarkdown(md) {
         i++
       }
       elements.push(
-        <ul key={`ul-${i}`} style={{ color: '#94a3b8', paddingLeft: '20px', margin: '8px 0', lineHeight: '1.7' }}>
+        <ul key={`ul-${i}`} style={{ color: '#b8b8d0', paddingLeft: '20px', margin: '8px 0', lineHeight: '1.7' }}>
           {items.map((item, idx) => (
             <li key={idx}><Inline text={item} /></li>
           ))}
@@ -137,7 +137,7 @@ function parseMarkdown(md) {
     // Regular paragraph
     } else {
       elements.push(
-        <p key={i} style={{ color: '#94a3b8', lineHeight: '1.75', margin: '10px 0' }}>
+        <p key={i} style={{ color: '#b8b8d0', lineHeight: '1.75', margin: '10px 0' }}>
           <Inline text={line} />
         </p>
       )
@@ -160,9 +160,9 @@ export default function DocPage({ markdown }) {
         <button
           onClick={() => navigate(-1)}
           className="mb-8 flex items-center gap-2 text-sm transition-colors"
-          style={{ color: '#44445a', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+          style={{ color: '#8080aa', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
             <path d="M19 12H5M5 12l7 7M5 12l7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -181,7 +181,7 @@ export default function DocPage({ markdown }) {
           {parseMarkdown(markdown)}
         </div>
 
-        <p className="text-center text-xs mt-8" style={{ color: '#2a2a4a' }}>
+        <p className="text-center text-xs mt-8" style={{ color: '#8080aa' }}>
           VenderScope · Continuous Passive Vendor Risk Intelligence
         </p>
       </div>

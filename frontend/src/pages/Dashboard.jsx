@@ -33,7 +33,7 @@ const StatPill = ({ value, label, color }) => (
     }}
   >
     <span className="text-xl font-bold tabular-nums" style={{ color }}>{value}</span>
-    <span className="text-sm" style={{ color: '#44445a' }}>{label}</span>
+    <span className="text-sm" style={{ color: '#8080aa' }}>{label}</span>
   </div>
 )
 
@@ -46,8 +46,8 @@ const EmptyState = ({ onAdd }) => (
         <circle cx="16" cy="16" r="1.8" fill="#8b5cf6"/>
       </svg>
     </div>
-    <p className="font-medium" style={{ color: '#44445a' }}>No vendors monitored yet</p>
-    <p className="text-sm mt-1" style={{ color: '#2a2a4a' }}>
+    <p className="font-medium" style={{ color: '#8080aa' }}>No vendors monitored yet</p>
+    <p className="text-sm mt-1" style={{ color: '#8080aa' }}>
       Add your first vendor to start continuous monitoring.
     </p>
     <button
@@ -185,7 +185,7 @@ export default function Dashboard() {
             <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ background: '#8b5cf6' }} />
             BETA
           </span>
-          <span style={{ color: '#44445a' }}>
+          <span style={{ color: '#8080aa' }}>
             Vendor data is private to your account.
           </span>
           <a
@@ -193,9 +193,9 @@ export default function Dashboard() {
             target="_blank"
             rel="noreferrer"
             className="ml-auto shrink-0 transition-colors duration-150"
-            style={{ color: '#44445a' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+            style={{ color: '#8080aa' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+            onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
           >
             GitHub →
           </a>
@@ -212,7 +212,7 @@ export default function Dashboard() {
               <h1 className="text-2xl font-bold tracking-tight leading-none" style={{ color: '#f0f0ff' }}>
                 Vender<span style={{ color: '#8b5cf6' }}>Scope</span>
               </h1>
-              <p className="text-xs mt-1.5" style={{ color: '#44445a' }}>
+              <p className="text-xs mt-1.5" style={{ color: '#8080aa' }}>
                 Vendor risk intelligence · continuous monitoring
               </p>
             </div>
@@ -228,7 +228,7 @@ export default function Dashboard() {
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#8888aa',
+                  color: '#b8b8d0',
                 }}
                 onMouseEnter={(e) => {
                   if (!scanningAll && vendors.length > 0) {
@@ -238,7 +238,7 @@ export default function Dashboard() {
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                  e.currentTarget.style.color = '#8888aa'
+                  e.currentTarget.style.color = '#b8b8d0'
                 }}
               >
                 {scanningAll ? (
@@ -255,7 +255,7 @@ export default function Dashboard() {
                 style={{
                   background: '#141425',
                   border: '1px solid #2a2a4a',
-                  color: '#8888aa',
+                  color: '#b8b8d0',
                   boxShadow: '0 12px 40px rgba(0,0,0,0.7)',
                 }}
               >
@@ -272,7 +272,7 @@ export default function Dashboard() {
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#8888aa',
+                color: '#b8b8d0',
               }}
               onMouseEnter={(e) => {
                 if (vendors.length > 0) {
@@ -282,7 +282,7 @@ export default function Dashboard() {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                e.currentTarget.style.color = '#8888aa'
+                e.currentTarget.style.color = '#b8b8d0'
               }}
               title="Download risk register as CSV"
             >
@@ -307,14 +307,14 @@ export default function Dashboard() {
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
-                color: '#44445a',
+                color: '#8080aa',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.color = '#ff4444'
                 e.currentTarget.style.borderColor = 'rgba(255,68,68,0.2)'
               }}
               onMouseLeave={(e) => {
-                e.currentTarget.style.color = '#44445a'
+                e.currentTarget.style.color = '#8080aa'
                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
               }}
             >
@@ -354,7 +354,7 @@ export default function Dashboard() {
                 <span className="text-xl font-bold tabular-nums" style={{ color: '#fbbf24' }}>
                   {summary.overdue_review_count}
                 </span>
-                <span className="text-sm" style={{ color: '#92723a' }}>Reviews Due</span>
+                <span className="text-sm" style={{ color: '#c4a060' }}>Reviews Due</span>
               </div>
             )}
           </div>
@@ -370,7 +370,7 @@ export default function Dashboard() {
               <span className="text-xs font-bold tracking-widest" style={{ color: '#ef4444' }}>
                 NEEDS ATTENTION
               </span>
-              <span className="text-xs" style={{ color: '#44445a' }}>
+              <span className="text-xs" style={{ color: '#8080aa' }}>
                 — scores rose since last scan
               </span>
             </div>
@@ -405,7 +405,7 @@ export default function Dashboard() {
           <>
             {/* Sort controls */}
             <div className="flex items-center gap-2 mb-4">
-              <span className="text-xs" style={{ color: '#44445a' }}>Sort:</span>
+              <span className="text-xs" style={{ color: '#8080aa' }}>Sort:</span>
               {SORT_OPTIONS.map(({ key, label }) => (
                 <button
                   key={key}
@@ -414,7 +414,7 @@ export default function Dashboard() {
                   style={{
                     background: sortBy === key ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.04)',
                     border: sortBy === key ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.06)',
-                    color: sortBy === key ? '#a78bfa' : '#44445a',
+                    color: sortBy === key ? '#a78bfa' : '#8080aa',
                   }}
                 >
                   {label}

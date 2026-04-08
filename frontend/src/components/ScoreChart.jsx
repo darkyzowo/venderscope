@@ -17,9 +17,9 @@ const CustomTooltip = ({ active, payload, label }) => {
       padding: '10px 14px',
       boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
     }}>
-      <p style={{ color: '#44445a', fontSize: 10, marginBottom: 4 }}>{label}</p>
+      <p style={{ color: '#8080aa', fontSize: 10, marginBottom: 4 }}>{label}</p>
       <p style={{ color, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{score}</p>
-      <p style={{ color: '#2a2a4a', fontSize: 10, marginTop: 3 }}>risk score</p>
+      <p style={{ color: '#8080aa', fontSize: 10, marginTop: 3 }}>risk score</p>
     </div>
   )
 }
@@ -40,14 +40,14 @@ export default function ScoreChart({ history }) {
           Risk Score Drift
         </h3>
         {latest !== null && (
-          <p className="text-xs mt-0.5" style={{ color: '#44445a' }}>
+          <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>
             Latest:{' '}
             <span style={{ color: scoreColor, fontWeight: 600 }}>{latest}</span>
           </p>
         )}
       </div>
       {/* Legend */}
-      <div className="flex items-center gap-4 text-[10px] pt-0.5 select-none" style={{ color: '#44445a' }}>
+      <div className="flex items-center gap-4 text-[10px] pt-0.5 select-none" style={{ color: '#8080aa' }}>
         <span className="flex items-center gap-1.5">
           <svg width="16" height="8" aria-hidden="true">
             <line x1="0" y1="4" x2="16" y2="4" stroke="#f97316" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7"/>
@@ -76,7 +76,7 @@ export default function ScoreChart({ history }) {
     return (
       <div style={panelStyle}>
         {header}
-        <p className="text-sm py-8 text-center" style={{ color: '#44445a' }}>
+        <p className="text-sm py-8 text-center" style={{ color: '#8080aa' }}>
           No history yet — run a scan to start tracking.
         </p>
       </div>
@@ -90,8 +90,8 @@ export default function ScoreChart({ history }) {
           <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
             {latest}
           </span>
-          <p className="text-sm" style={{ color: '#44445a' }}>First scan recorded</p>
-          <p className="text-xs" style={{ color: '#2a2a4a' }}>Scan again to begin tracking drift</p>
+          <p className="text-sm" style={{ color: '#8080aa' }}>First scan recorded</p>
+          <p className="text-xs" style={{ color: '#8080aa' }}>Scan again to begin tracking drift</p>
         </div>
       </div>
     )
@@ -110,7 +110,7 @@ export default function ScoreChart({ history }) {
           <CartesianGrid strokeDasharray="3 3" stroke="#1e1e35" vertical={false} />
           <XAxis
             dataKey="date"
-            tick={{ fill: '#44445a', fontSize: 10 }}
+            tick={{ fill: '#8080aa', fontSize: 10 }}
             tickLine={false}
             axisLine={false}
           />

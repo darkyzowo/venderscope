@@ -17,7 +17,7 @@ const CERT_LABELS = {
 const SectionHeading = ({ children }) => (
   <h4
     className="text-[10px] font-bold uppercase tracking-[0.14em] mb-3"
-    style={{ color: '#44445a' }}
+    style={{ color: '#8080aa' }}
   >
     {children}
   </h4>
@@ -28,7 +28,7 @@ const Row = ({ label, children }) => (
     className="flex items-center justify-between py-2.5"
     style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
   >
-    <span className="text-sm" style={{ color: '#8888aa' }}>{label}</span>
+    <span className="text-sm" style={{ color: '#b8b8d0' }}>{label}</span>
     {children}
   </div>
 )
@@ -61,7 +61,7 @@ const ViewLink = ({ href, label = 'View' }) => (
 )
 
 const EmptyDash = () => (
-  <span className="text-xs" style={{ color: '#2a2a4a' }}>—</span>
+  <span className="text-xs" style={{ color: '#44445a' }}>—</span>
 )
 
 // Certification grid card
@@ -77,9 +77,9 @@ const CertCard = ({ label, cert }) => {
       bg: 'rgba(255,255,255,0.02)',
       border: 'rgba(255,255,255,0.06)',
       icon: '—',
-      iconColor: '#44445a',
+      iconColor: '#8080aa',
       text: 'No evidence',
-      textColor: '#44445a',
+      textColor: '#8080aa',
     },
     found: {
       bg: 'rgba(34,197,94,0.06)',
@@ -118,7 +118,7 @@ const CertCard = ({ label, cert }) => {
       <span className="text-sm font-bold leading-none" style={{ color: cfg.iconColor }}>
         {cfg.icon}
       </span>
-      <span className="text-xs font-semibold leading-tight" style={{ color: '#8888aa' }}>
+      <span className="text-xs font-semibold leading-tight" style={{ color: '#b8b8d0' }}>
         {label}
       </span>
       <span className="text-[10px] font-medium" style={{ color: cfg.textColor }}>
@@ -157,7 +157,7 @@ const sourceLabel = (src) => {
 export default function CompliancePanel({ compliance }) {
   if (!compliance || Object.keys(compliance).length === 0)
     return (
-      <p className="text-sm py-2" style={{ color: '#44445a' }}>
+      <p className="text-sm py-2" style={{ color: '#8080aa' }}>
         No compliance data yet — run a scan to discover this vendor's compliance posture.
       </p>
     )
@@ -214,10 +214,10 @@ export default function CompliancePanel({ compliance }) {
               border: '1px solid rgba(139,92,246,0.15)',
             }}
           >
-            <p className="text-xs" style={{ color: '#8888aa' }}>
+            <p className="text-xs" style={{ color: '#b8b8d0' }}>
               <span style={{ color: '#a78bfa', fontWeight: 600 }}>Security contact</span>
-              <span style={{ color: '#44445a' }}> via {sourceLabel(security_contact?.source)}</span>
-              <span style={{ color: '#2a2a4a', margin: '0 8px' }}>·</span>
+              <span style={{ color: '#8080aa' }}> via {sourceLabel(security_contact?.source)}</span>
+              <span style={{ color: '#44445a', margin: '0 8px' }}>·</span>
               <a
                 href={`mailto:${verifiedContact}?subject=Trust Centre Access Request`}
                 className="hover:underline underline-offset-2 transition-colors"
@@ -237,8 +237,8 @@ export default function CompliancePanel({ compliance }) {
               border: '1px solid rgba(255,255,255,0.05)',
             }}
           >
-            <p className="text-xs" style={{ color: '#44445a' }}>
-              <span style={{ color: '#8888aa', fontWeight: 500 }}>No verified security contact</span>
+            <p className="text-xs" style={{ color: '#8080aa' }}>
+              <span style={{ color: '#b8b8d0', fontWeight: 500 }}>No verified security contact</span>
               {' '}— no security.txt or recognised contact email found.
             </p>
           </div>
@@ -248,7 +248,7 @@ export default function CompliancePanel({ compliance }) {
       {/* Certifications grid */}
       <div>
         <SectionHeading>Certifications</SectionHeading>
-        <p className="text-[10px] mb-3" style={{ color: '#44445a' }}>
+        <p className="text-[10px] mb-3" style={{ color: '#8080aa' }}>
           Based on public evidence only — not a verified audit. External = found via web search.
         </p>
         <div className="grid grid-cols-3 gap-2">

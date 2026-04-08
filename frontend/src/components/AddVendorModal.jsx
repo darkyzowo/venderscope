@@ -74,9 +74,9 @@ export default function AddVendorModal({ onAdd, onClose }) {
             <button
               onClick={close}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150"
-              style={{ background: 'rgba(255,255,255,0.05)', color: '#44445a' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#8888aa' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#44445a' }}
+              style={{ background: 'rgba(255,255,255,0.05)', color: '#8080aa' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = '#b8b8d0' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = '#8080aa' }}
               aria-label="Close"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -136,7 +136,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#8888aa',
+                color: '#b8b8d0',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
@@ -144,7 +144,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                e.currentTarget.style.color = '#8888aa'
+                e.currentTarget.style.color = '#b8b8d0'
               }}
             >
               Cancel
@@ -181,10 +181,10 @@ function Field({ label, hint, required, placeholder, value, onChange }) {
 
   return (
     <div>
-      <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#8888aa' }}>
+      <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#b8b8d0' }}>
         {label}
         {required && <span style={{ color: '#8b5cf6' }}>*</span>}
-        {hint && <span style={{ color: '#44445a', fontWeight: 400 }}>({hint})</span>}
+        {hint && <span style={{ color: '#8080aa', fontWeight: 400 }}>({hint})</span>}
       </label>
       <input
         className="w-full rounded-xl px-4 py-2.5 text-sm transition-all duration-150 outline-none"

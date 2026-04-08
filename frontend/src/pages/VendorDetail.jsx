@@ -52,7 +52,7 @@ const PanelTitle = ({ children, meta }) => (
   <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: '#f0f0ff' }}>
     {children}
     {meta && (
-      <span className="text-xs font-normal" style={{ color: '#44445a' }}>{meta}</span>
+      <span className="text-xs font-normal" style={{ color: '#8080aa' }}>{meta}</span>
     )}
   </h3>
 )
@@ -216,9 +216,9 @@ export default function VendorDetail() {
         <button
           onClick={() => nav('/')}
           className="inline-flex items-center gap-1.5 text-sm mb-6 transition-colors duration-150"
-          style={{ color: '#44445a' }}
-          onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
-          onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+          style={{ color: '#8080aa' }}
+          onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+          onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
         >
           <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -235,9 +235,9 @@ export default function VendorDetail() {
             <VendorAvatar name={vendor.name} size={48} />
             <div>
               <h1 className="text-2xl font-bold" style={{ color: '#f0f0ff' }}>{vendor.name}</h1>
-              <p className="text-sm mt-0.5" style={{ color: '#44445a' }}>{vendor.domain}</p>
+              <p className="text-sm mt-0.5" style={{ color: '#8080aa' }}>{vendor.domain}</p>
               {vendor.company_number && (
-                <p className="text-xs mt-0.5" style={{ color: '#2a2a4a' }}>CH: {vendor.company_number}</p>
+                <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>CH: {vendor.company_number}</p>
               )}
             </div>
           </div>
@@ -271,7 +271,7 @@ export default function VendorDetail() {
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#8888aa',
+                color: '#b8b8d0',
                 cursor: exporting ? 'not-allowed' : 'pointer',
                 opacity: exporting ? 0.5 : 1,
               }}
@@ -283,7 +283,7 @@ export default function VendorDetail() {
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                e.currentTarget.style.color = '#8888aa'
+                e.currentTarget.style.color = '#b8b8d0'
               }}
             >
               {exporting ? 'Exporting…' : 'Export PDF'}
@@ -299,13 +299,13 @@ export default function VendorDetail() {
 
             {/* Effective vs technical scores */}
             {vendor.effective_score != null && vendor.effective_score !== vendor.risk_score && (
-              <p className="text-[10px] mt-1 tabular-nums" style={{ color: '#44445a' }}>
+              <p className="text-[10px] mt-1 tabular-nums" style={{ color: '#8080aa' }}>
                 Technical: {vendor.risk_score} → Effective: {vendor.effective_score}
               </p>
             )}
 
             <div className="mt-4 text-center">
-              <p className="text-[11px]" style={{ color: '#44445a' }}>
+              <p className="text-[11px]" style={{ color: '#8080aa' }}>
                 {vendor.last_scanned
                   ? `Last scanned · ${new Date(vendor.last_scanned).toLocaleString([], {
                       month: 'short', day: 'numeric',
@@ -317,7 +317,7 @@ export default function VendorDetail() {
               <div className="group relative inline-block mt-1">
                 <span
                   className="text-[11px] cursor-help"
-                  style={{ color: '#44445a', borderBottom: '1px dotted #44445a' }}
+                  style={{ color: '#8080aa', borderBottom: '1px dotted #44445a' }}
                 >
                   How is this calculated?
                 </span>
@@ -326,7 +326,7 @@ export default function VendorDetail() {
                   style={{
                     background: '#141425',
                     border: '1px solid #2a2a4a',
-                    color: '#8888aa',
+                    color: '#b8b8d0',
                     boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
                   }}
                 >
@@ -363,11 +363,11 @@ export default function VendorDetail() {
             {/* Data sensitivity selector */}
             <div className="mt-5 w-full" style={{ opacity: updatingContext ? 0.5 : 1, transition: 'opacity 200ms ease', pointerEvents: updatingContext ? 'none' : 'auto' }}>
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#2a2a4a' }}>
+                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
                   Data Sensitivity
                 </p>
                 {updatingContext && (
-                  <span className="text-[9px]" style={{ color: '#44445a' }}>saving…</span>
+                  <span className="text-[9px]" style={{ color: '#8080aa' }}>saving…</span>
                 )}
               </div>
 
@@ -383,7 +383,7 @@ export default function VendorDetail() {
                       style={{
                         background: isDefault ? 'rgba(139,92,246,0.1)' : 'transparent',
                         border: isDefault ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
-                        color: isDefault ? '#a78bfa' : '#44445a',
+                        color: isDefault ? '#a78bfa' : '#8080aa',
                         transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
                         cursor: isDefault ? 'default' : 'pointer',
                       }}
@@ -403,7 +403,7 @@ export default function VendorDetail() {
                             style={{
                               background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
                               border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
-                              color: isSelected ? '#a78bfa' : '#44445a',
+                              color: isSelected ? '#a78bfa' : '#8080aa',
                               cursor: isSelected ? 'default' : 'pointer',
                               transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
                             }}
@@ -411,19 +411,19 @@ export default function VendorDetail() {
                               if (!isSelected) {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
                                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.color = '#8888aa'
+                                e.currentTarget.style.color = '#b8b8d0'
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isSelected) {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
                                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.color = '#44445a'
+                                e.currentTarget.style.color = '#8080aa'
                               }
                             }}
                           >
                             <div className="text-[10px] font-medium leading-tight">{label}</div>
-                            <div className="text-[9px] mt-0.5" style={{ color: isSelected ? 'rgba(167,139,250,0.6)' : '#2a2a4a' }}>{hint}</div>
+                            <div className="text-[9px] mt-0.5" style={{ color: isSelected ? 'rgba(167,139,250,0.6)' : '#44445a' }}>{hint}</div>
                           </button>
                         )
                       })}
@@ -443,11 +443,11 @@ export default function VendorDetail() {
               }}
             >
               <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#2a2a4a' }}>
+                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
                   Review Schedule
                 </p>
                 {updatingReview && (
-                  <span className="text-[9px]" style={{ color: '#44445a' }}>saving…</span>
+                  <span className="text-[9px]" style={{ color: '#8080aa' }}>saving…</span>
                 )}
               </div>
 
@@ -463,7 +463,7 @@ export default function VendorDetail() {
                       style={{
                         background: isNone ? 'rgba(139,92,246,0.1)' : 'transparent',
                         border: isNone ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
-                        color: isNone ? '#a78bfa' : '#44445a',
+                        color: isNone ? '#a78bfa' : '#8080aa',
                         transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
                         cursor: isNone ? 'default' : 'pointer',
                       }}
@@ -489,7 +489,7 @@ export default function VendorDetail() {
                             style={{
                               background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
                               border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
-                              color: isSelected ? '#a78bfa' : '#44445a',
+                              color: isSelected ? '#a78bfa' : '#8080aa',
                               cursor: isSelected ? 'default' : 'pointer',
                               transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
                               fontSize: '10px',
@@ -499,14 +499,14 @@ export default function VendorDetail() {
                               if (!isSelected) {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
                                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.color = '#8888aa'
+                                e.currentTarget.style.color = '#b8b8d0'
                               }
                             }}
                             onMouseLeave={(e) => {
                               if (!isSelected) {
                                 e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
                                 e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.color = '#44445a'
+                                e.currentTarget.style.color = '#8080aa'
                               }
                             }}
                           >
@@ -530,7 +530,7 @@ export default function VendorDetail() {
                 return (
                   <div className="flex items-center justify-between">
                     <p className="text-[10px]" style={{
-                      color: daysOverdue > 0 ? '#fbbf24' : dueAt ? '#22c55e' : '#44445a',
+                      color: daysOverdue > 0 ? '#fbbf24' : dueAt ? '#22c55e' : '#8080aa',
                     }}>
                       {!lastReviewed
                         ? 'Never reviewed'
@@ -568,23 +568,23 @@ export default function VendorDetail() {
           <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 50ms both' }}>
             <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
             {vendor.description && (
-              <p className="text-sm leading-relaxed mb-5" style={{ color: '#8888aa' }}>
+              <p className="text-sm leading-relaxed mb-5" style={{ color: '#b8b8d0' }}>
                 {vendor.description}
               </p>
             )}
             <div className="grid grid-cols-2 gap-6">
               <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#44445a' }}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#8080aa' }}>
                   Auth Method
                 </p>
-                <p className="text-sm" style={{ color: '#8888aa' }}>
+                <p className="text-sm" style={{ color: '#b8b8d0' }}>
                   {vendor.auth_method || (
-                    <span style={{ color: '#2a2a4a' }}>Not detected</span>
+                    <span style={{ color: '#8080aa' }}>Not detected</span>
                   )}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#44445a' }}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#8080aa' }}>
                   2FA Support
                 </p>
                 {vendor.two_factor === 'Yes' ? (
@@ -599,7 +599,7 @@ export default function VendorDetail() {
                     Yes
                   </span>
                 ) : (
-                  <span className="text-sm" style={{ color: '#2a2a4a' }}>Not detected</span>
+                  <span className="text-sm" style={{ color: '#8080aa' }}>Not detected</span>
                 )}
               </div>
             </div>
@@ -617,7 +617,7 @@ export default function VendorDetail() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Risk Events{' '}
-              <span className="font-normal" style={{ color: '#44445a' }}>
+              <span className="font-normal" style={{ color: '#8080aa' }}>
                 (top {displayedEvents.length} of {events.length})
               </span>
             </h3>
@@ -648,10 +648,10 @@ export default function VendorDetail() {
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Analyst Notes{' '}
               {notes.length > 0 && (
-                <span className="font-normal text-xs" style={{ color: '#44445a' }}>({notes.length})</span>
+                <span className="font-normal text-xs" style={{ color: '#8080aa' }}>({notes.length})</span>
               )}
             </h3>
-            <p className="text-[10px]" style={{ color: '#44445a' }}>Included in PDF export</p>
+            <p className="text-[10px]" style={{ color: '#8080aa' }}>Included in PDF export</p>
           </div>
 
           {/* Input */}
@@ -690,7 +690,7 @@ export default function VendorDetail() {
 
           {/* Notes list */}
           {notes.length === 0 ? (
-            <p className="text-xs py-4 text-center" style={{ color: '#44445a' }}>
+            <p className="text-xs py-4 text-center" style={{ color: '#8080aa' }}>
               No notes yet. Notes are included in PDF exports.
             </p>
           ) : (
@@ -707,7 +707,7 @@ export default function VendorDetail() {
                 >
                   <div className="flex-1 min-w-0">
                     <p className="text-xs leading-relaxed" style={{ color: '#f0f0ff' }}>{note.content}</p>
-                    <p className="text-[10px] mt-1 font-mono" style={{ color: '#44445a' }}>
+                    <p className="text-[10px] mt-1 font-mono" style={{ color: '#8080aa' }}>
                       {new Date(note.created_at).toLocaleString([], {
                         month: 'short', day: 'numeric', year: 'numeric',
                         hour: '2-digit', minute: '2-digit',
@@ -717,9 +717,9 @@ export default function VendorDetail() {
                   <button
                     onClick={() => handleDeleteNote(note.id)}
                     className="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all duration-150 shrink-0"
-                    style={{ color: '#44445a', background: 'transparent' }}
+                    style={{ color: '#8080aa', background: 'transparent' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#44445a'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
                     title="Delete note"
                   >
                     ✕

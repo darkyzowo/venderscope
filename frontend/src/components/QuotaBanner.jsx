@@ -31,7 +31,7 @@ export default function QuotaBanner() {
     ? '#f87171'
     : full_scans_remaining <= 3
     ? '#fbbf24'
-    : '#8888aa'
+    : '#b8b8d0'
 
   const bgStyle = exhausted
     ? { background: 'rgba(239,68,68,0.06)', borderColor: 'rgba(239,68,68,0.15)' }
@@ -52,7 +52,7 @@ export default function QuotaBanner() {
       />
 
       {/* Label */}
-      <span className="font-medium whitespace-nowrap" style={{ color: '#8888aa' }}>
+      <span className="font-medium whitespace-nowrap" style={{ color: '#b8b8d0' }}>
         CSE quota
       </span>
 
@@ -68,21 +68,21 @@ export default function QuotaBanner() {
       </div>
 
       {/* Stats */}
-      <span className="whitespace-nowrap tabular-nums" style={{ color: '#44445a' }}>
+      <span className="whitespace-nowrap tabular-nums" style={{ color: '#8080aa' }}>
         {limit - remaining}/{limit}
       </span>
-      <span style={{ color: '#2a2a4a' }}>·</span>
+      <span style={{ color: '#44445a' }}>·</span>
       <span className="font-semibold whitespace-nowrap tabular-nums" style={{ color: textColor }}>
         {full_scans_remaining} left
       </span>
-      <span style={{ color: '#2a2a4a' }}>·</span>
-      <span className="whitespace-nowrap" style={{ color: '#44445a' }}>
+      <span style={{ color: '#44445a' }}>·</span>
+      <span className="whitespace-nowrap" style={{ color: '#8080aa' }}>
         resets {resetTime} UTC
       </span>
 
       {exhausted && (
         <>
-          <span style={{ color: '#2a2a4a' }}>·</span>
+          <span style={{ color: '#44445a' }}>·</span>
           <span className="whitespace-nowrap font-medium" style={{ color: '#f87171' }}>
             standard scans still available
           </span>
@@ -91,7 +91,7 @@ export default function QuotaBanner() {
 
       {!exhausted && full_scans_remaining <= 2 && (
         <>
-          <span style={{ color: '#2a2a4a' }}>·</span>
+          <span style={{ color: '#44445a' }}>·</span>
           <span className="whitespace-nowrap font-medium" style={{ color: '#fbbf24' }}>
             running low
           </span>
@@ -102,9 +102,9 @@ export default function QuotaBanner() {
       <button
         onClick={() => setDismissed(true)}
         className="ml-auto shrink-0 transition-colors duration-150"
-        style={{ color: '#2a2a4a' }}
-        onMouseEnter={(e) => e.currentTarget.style.color = '#8888aa'}
-        onMouseLeave={(e) => e.currentTarget.style.color = '#2a2a4a'}
+        style={{ color: '#8080aa' }}
+        onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
+        onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
         aria-label="Dismiss"
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

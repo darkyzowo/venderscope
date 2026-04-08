@@ -25,10 +25,14 @@
   --accent-l:    #a78bfa;
   --accent-bg:   rgba(139,92,246,0.1);
   --accent-ring: rgba(139,92,246,0.25);
-  /* Text */
+  /* Text — contrast ratios against #090911 background:
+     --hi  14:1  primary headings & key values
+     --mid  6.5:1 body text, descriptions, secondary labels
+     --lo   4.8:1 metadata, timestamps, hints
+     --lo2  1.8:1 borders & decorative separators ONLY — never readable text */
   --hi:  #f0f0ff;
-  --mid: #8888aa;
-  --lo:  #44445a;
+  --mid: #b8b8d0;
+  --lo:  #8080aa;
   --lo2: #2a2a4a;
   /* Risk */
   --risk-high:   #f97316;

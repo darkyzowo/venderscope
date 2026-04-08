@@ -63,7 +63,7 @@ export default function DeleteAccountModal({ onClose }) {
               </div>
               <div>
                 <h2 className="font-bold text-base" style={{ color: '#f0f0ff' }}>Delete Account</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#44445a' }}>This action is permanent and cannot be undone.</p>
+                <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>This action is permanent and cannot be undone.</p>
               </div>
             </div>
 
@@ -80,7 +80,7 @@ export default function DeleteAccountModal({ onClose }) {
               </ul>
             </div>
 
-            <p className="text-sm mb-5" style={{ color: '#6b7280' }}>
+            <p className="text-sm mb-5" style={{ color: '#b8b8d0' }}>
               Your account and all associated data will be permanently and immediately deleted, in accordance with our{' '}
               <a href="/privacy" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>Privacy Policy</a>.
             </p>
@@ -92,7 +92,7 @@ export default function DeleteAccountModal({ onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#8888aa',
+                  color: '#b8b8d0',
                 }}
               >
                 Cancel
@@ -113,7 +113,7 @@ export default function DeleteAccountModal({ onClose }) {
             {/* Step 2 — Type DELETE */}
             <div className="mb-5">
               <h2 className="font-bold text-base mb-1" style={{ color: '#f0f0ff' }}>Confirm Deletion</h2>
-              <p className="text-sm" style={{ color: '#6b7280' }}>
+              <p className="text-sm" style={{ color: '#b8b8d0' }}>
                 Type <span style={{ color: '#ef4444', fontWeight: 700, fontFamily: 'monospace' }}>DELETE</span> in
                 the field below to permanently delete your account.
               </p>
@@ -135,7 +135,7 @@ export default function DeleteAccountModal({ onClose }) {
               }}
             />
 
-            <label className="block text-xs mb-1" style={{ color: '#44445a' }}>
+            <label className="block text-xs mb-1" style={{ color: '#8080aa' }}>
               Enter your password to confirm
             </label>
             <input
@@ -162,7 +162,7 @@ export default function DeleteAccountModal({ onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#8888aa',
+                  color: '#b8b8d0',
                 }}
               >
                 ← Back
