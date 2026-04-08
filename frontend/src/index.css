@@ -144,25 +144,61 @@ html { scroll-behavior: smooth; }
   z-index: 0;
 }
 
-/* Single-pass scan line — sweeps top→bottom once on load */
-.auth-scan {
+/* ── Background traces — looping stroke-draw echoing the VS logo animation ── */
+.auth-traces {
   position: fixed;
-  left: 0;
-  right: 0;
-  height: 1px;
-  top: 0;
-  background: linear-gradient(90deg, transparent 0%, rgba(139,92,246,0.45) 50%, transparent 100%);
+  inset: 0;
+  width: 100%;
+  height: 100%;
   pointer-events: none;
-  z-index: 2;
-  animation: scan-sweep 2.8s cubic-bezier(0.4,0,0.6,1) 0.3s 1 forwards;
-  opacity: 0;
+  z-index: 0;
+}
+.auth-trace {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+}
+.auth-trace-1 { animation: trace-draw  7s ease-in-out 0.3s  infinite; }
+.auth-trace-2 { animation: trace-draw  9s ease-in-out 2.8s  infinite; }
+.auth-trace-3 { animation: trace-draw  8s ease-in-out 1.4s  infinite; }
+.auth-trace-4 { animation: trace-draw 10s ease-in-out 4.5s  infinite; }
+
+@keyframes trace-draw {
+  0%,100% { stroke-dashoffset: 1; opacity: 0; }
+  8%      { opacity: 1; }
+  45%     { stroke-dashoffset: 0; opacity: 1; }
+  85%     { opacity: 0.5; }
 }
 
-@keyframes scan-sweep {
-  0%   { transform: translateY(0);    opacity: 0; }
-  4%   { opacity: 1; }
-  96%  { opacity: 1; }
-  100% { transform: translateY(100vh); opacity: 0; }
+/* ── Pulse rings — radar ping on load, plays once ─────────────────────────── */
+.auth-pulse-ring {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 340px;
+  height: 340px;
+  border-radius: 50%;
+  transform: translate(-50%,-50%) scale(0);
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0;
+}
+.auth-pulse-ring-1 {
+  border: 1px solid rgba(139,92,246,0.38);
+  animation: pulse-ring-out 2.6s cubic-bezier(0.2,0,0.8,1) 0.15s 1 forwards;
+}
+.auth-pulse-ring-2 {
+  border: 1px solid rgba(139,92,246,0.22);
+  animation: pulse-ring-out 2.6s cubic-bezier(0.2,0,0.8,1) 0.55s 1 forwards;
+}
+.auth-pulse-ring-3 {
+  border: 1px solid rgba(139,92,246,0.10);
+  animation: pulse-ring-out 2.6s cubic-bezier(0.2,0,0.8,1) 0.95s 1 forwards;
+}
+
+@keyframes pulse-ring-out {
+  0%   { transform: translate(-50%,-50%) scale(0); opacity: 0.9; }
+  40%  { opacity: 0.6; }
+  100% { transform: translate(-50%,-50%) scale(5); opacity: 0;   }
 }
 
 /* Ambient orbs */
@@ -211,19 +247,19 @@ html { scroll-behavior: smooth; }
 }
 
 @keyframes orb-a {
-  0%,100% { transform: translate(0,0);    }
-  25%      { transform: translate(55px, 45px); }
-  50%      { transform: translate(25px, 85px); }
-  75%      { transform: translate(65px, 20px); }
+  0%,100% { transform: translate(0,0)         scale(1);    border-radius: 50%; }
+  25%      { transform: translate(55px,45px)   scale(1.08); border-radius: 60% 40% 55% 45% / 45% 55% 40% 60%; }
+  50%      { transform: translate(25px,85px)   scale(0.95); border-radius: 42% 58% 48% 52% / 55% 42% 58% 45%; }
+  75%      { transform: translate(65px,20px)   scale(1.04); border-radius: 55% 45% 62% 38% / 38% 62% 45% 55%; }
 }
 @keyframes orb-b {
-  0%,100% { transform: translate(0,0);      }
-  33%      { transform: translate(-45px,-50px); }
-  66%      { transform: translate(35px,-18px); }
+  0%,100% { transform: translate(0,0)          scale(1);    border-radius: 50%; }
+  33%      { transform: translate(-45px,-50px)  scale(1.06); border-radius: 45% 55% 60% 40% / 60% 40% 55% 45%; }
+  66%      { transform: translate(35px,-18px)   scale(0.97); border-radius: 58% 42% 45% 55% / 42% 58% 48% 52%; }
 }
 @keyframes orb-c {
-  0%,100% { transform: translate(0,0);   }
-  50%      { transform: translate(-28px, 42px); }
+  0%,100% { transform: translate(0,0)        scale(1);    border-radius: 50%; }
+  50%      { transform: translate(-28px,42px) scale(1.10); border-radius: 55% 45% 40% 60% / 40% 60% 55% 45%; }
 }
 
 /* ── Shimmer skeleton for loading states */

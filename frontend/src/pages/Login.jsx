@@ -21,9 +21,10 @@ export default function Login() {
   }, [user, navigate])
 
   useEffect(() => {
-    // Double rAF ensures paint has happened before we trigger transitions
     requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
     emailRef.current?.focus()
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = '' }
   }, [])
 
   const handleSubmit = async (e) => {
@@ -51,29 +52,37 @@ export default function Login() {
   return (
     <div
       style={{
-        minHeight: '100vh',
+        height: '100vh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '24px',
+        padding: '12px 24px',
         background: '#090911',
         position: 'relative',
         overflow: 'hidden',
       }}
     >
       {/* ── Background layers ────────────────────────────────── */}
-      <div className="auth-grid"  aria-hidden="true" />
-      <div className="auth-scan"  aria-hidden="true" />
+      <div className="auth-grid" aria-hidden="true" />
+      <svg className="auth-traces" viewBox="0 0 1440 900" preserveAspectRatio="xMidYMid slice" aria-hidden="true">
+        <path className="auth-trace auth-trace-1" d="M-80,260 C200,180 550,360 900,280 S1280,240 1540,300" stroke="rgba(139,92,246,0.13)" strokeWidth="1.5" fill="none" pathLength="1" />
+        <path className="auth-trace auth-trace-2" d="M-80,680 C160,620 420,730 720,650 S1080,640 1540,700" stroke="rgba(99,102,241,0.10)" strokeWidth="1"   fill="none" pathLength="1" />
+        <path className="auth-trace auth-trace-3" d="M1180,-30 C1140,180 1220,380 1160,580 S1180,740 1150,940" stroke="rgba(139,92,246,0.09)" strokeWidth="1.2" fill="none" pathLength="1" />
+        <path className="auth-trace auth-trace-4" d="M-60,440 C280,370 580,490 880,410 S1250,400 1540,370" stroke="rgba(109,87,200,0.11)" strokeWidth="1"   fill="none" pathLength="1" />
+      </svg>
+      <div className="auth-pulse-ring auth-pulse-ring-1" aria-hidden="true" />
+      <div className="auth-pulse-ring auth-pulse-ring-2" aria-hidden="true" />
+      <div className="auth-pulse-ring auth-pulse-ring-3" aria-hidden="true" />
       <div className="auth-orb auth-orb-a" aria-hidden="true" />
       <div className="auth-orb auth-orb-b" aria-hidden="true" />
       <div className="auth-orb auth-orb-c" aria-hidden="true" />
 
       {/* ── Content ──────────────────────────────────────────── */}
-      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 1 }}>
+      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 3 }}>
 
         {/* Logo — draws in on first paint */}
-        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28, ...reveal(0) }}>
-          <VSLogo height={68} animated />
+        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, ...reveal(0) }}>
+          <VSLogo height={54} animated />
         </div>
 
         {/* Tagline */}
@@ -83,7 +92,7 @@ export default function Login() {
           color: '#8080aa',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
-          marginBottom: 32,
+          marginBottom: 16,
           ...reveal(220),
         }}>
           Continuous vendor risk intelligence
@@ -111,7 +120,7 @@ export default function Login() {
           background: 'rgba(9,9,17,0.78)',
           border: '1px solid rgba(139,92,246,0.18)',
           borderRadius: 20,
-          padding: '32px 32px 28px',
+          padding: '24px 28px 20px',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
           boxShadow: [
@@ -220,7 +229,7 @@ export default function Login() {
         </div>
 
         {/* Footer links */}
-        <div style={{ marginTop: 24, textAlign: 'center', ...reveal(720) }}>
+        <div style={{ marginTop: 12, textAlign: 'center', ...reveal(720) }}>
           <p style={{ fontSize: 13, color: '#8080aa', marginBottom: 8 }}>
             Don't have an account?{' '}
             <Link
@@ -247,10 +256,10 @@ export default function Login() {
 
         {/* Micro brand footer */}
         <p style={{
-          marginTop: 36,
+          marginTop: 14,
           textAlign: 'center',
           fontSize: 10,
-          color: '#2a2a4a',
+          color: '#8080aa',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           ...reveal(820),
