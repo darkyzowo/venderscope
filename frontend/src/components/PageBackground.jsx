@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 
 /**
  * PageBackground — three large radial-gradient orbs that drift across the
@@ -45,11 +46,12 @@ export default function PageBackground() {
     ]
   }, []) // empty deps → computed once per mount, new values on every navigation
 
-  return (
+  return createPortal(
     <>
       {orbs.map(({ cls, style }, i) => (
         <div key={i} className={`page-glow ${cls}`} style={style} aria-hidden="true" />
       ))}
-    </>
+    </>,
+    document.body
   )
 }
