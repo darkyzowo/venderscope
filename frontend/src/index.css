@@ -49,13 +49,16 @@ body {
   font-family: 'Geist', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow-x: hidden; /* prevent fixed bg elements from creating horizontal scroll */
+  /* NO overflow-x here — overflow-x:hidden on body implicitly sets overflow-y:auto,
+     turning body into a scroll container. Combining with html also having it creates
+     nested scroll containers: body content clips at 100vh and html drifts infinitely. */
 }
 
-/* Smooth scrolling */
+/* Smooth scrolling + horizontal clip */
 html {
   scroll-behavior: smooth;
-  overflow-x: hidden; /* must be on html (not just body) to prevent double-scroll-container in Chromium */
+  overflow-x: clip; /* clip (not hidden) — clips painted overflow without creating a scroll
+                       container or implicitly setting overflow-y, so vertical scroll is untouched */
 }
 
 /* Custom scrollbar */
