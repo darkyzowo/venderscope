@@ -211,7 +211,7 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div className="min-h-screen" style={{ background: '#090911' }}>
+    <div style={{ background: '#090911' }}>
       <PageBackground />
       <div className="max-w-5xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
 

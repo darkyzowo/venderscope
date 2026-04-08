@@ -154,9 +154,9 @@ export default function Dashboard() {
   })
 
   return (
-    <div className="min-h-screen" style={{ background: '#090911' }}>
+    <div className="min-h-screen flex flex-col" style={{ background: '#090911' }}>
       <PageBackground />
-      <div className="max-w-7xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-7xl mx-auto px-6 py-8 w-full" style={{ position: 'relative', zIndex: 1, flex: 1 }}>
 
         {/* Beta notice */}
         <div className="flex items-center gap-2.5 mb-5 text-xs">
