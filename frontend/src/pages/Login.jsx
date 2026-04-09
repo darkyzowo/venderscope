@@ -35,7 +35,8 @@ export default function Login() {
       await login(email, password)
       navigate('/', { replace: true })
     } catch (err) {
-      setError(err.response?.data?.detail || 'Login failed. Please try again.')
+      const detail = err.response?.data?.detail
+      setError(typeof detail === 'string' ? detail : 'Login failed. Please try again.')
     } finally {
       setLoading(false)
     }

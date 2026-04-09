@@ -87,8 +87,8 @@ export const setVendorContext = (id, data_sensitivity) => api.patch(`/vendors/${
 export const getVendorEvents  = (id)                  => api.get(`/vendors/${id}/events`)
 export const getScoreHistory  = (id)                  => api.get(`/vendors/${id}/history`)
 
-// force=true — always fetches fresh data, 90s timeout covers cold start + scan
-export const scanVendor = (id) => api.post(`/intelligence/scan/${id}?force=true`, {}, { timeout: 90000 })
+// force=true — always fetches fresh data, 150s timeout covers cold start (~50s) + scan (~60s)
+export const scanVendor = (id) => api.post(`/intelligence/scan/${id}?force=true`, {}, { timeout: 150000 })
 
 // force=false — uses 24hr cache, makes Scan All fast for recently scanned vendors
 export const scanAll    = ()   => api.post('/intelligence/scan-all?force=false')

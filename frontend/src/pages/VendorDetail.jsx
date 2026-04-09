@@ -105,10 +105,12 @@ export default function VendorDetail() {
     setScan(true)
     try {
       await scanVendor(id)
+    } catch (e) { console.error('Scan failed:', e) }
+    finally {
       await fetchData()
       api.get('/quota/').then((r) => setQuotaEx(r.data.exhausted)).catch(() => {})
-    } catch (e) { console.error('Scan failed:', e) }
-    finally { setScan(false) }
+      setScan(false)
+    }
   }
 
   const handleContextChange = async (sensitivity) => {
