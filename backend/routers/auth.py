@@ -4,7 +4,8 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Cookie, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
-from jose import JWTError, jwt
+import jwt
+from jwt.exceptions import PyJWTError as JWTError
 from database import get_db
 from datetime import datetime, timezone
 from models import User, RevokedToken

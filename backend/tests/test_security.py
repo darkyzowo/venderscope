@@ -7,7 +7,7 @@ import time
 import uuid
 import pytest
 from fastapi.testclient import TestClient
-from jose import jwt
+import jwt
 
 # ── Bootstrap ────────────────────────────────────────────────────────────────
 # Set env vars BEFORE importing main — auth_service and limiter read them at import time
