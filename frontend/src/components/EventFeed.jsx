@@ -1,11 +1,12 @@
 import { useState, useRef } from 'react'
 import { createPortal } from 'react-dom'
+import { formatApiDate, parseApiDate } from '../utils/datetime'
 
 const SEV = {
-  CRITICAL: { color: '#ff4444', bg: 'rgba(255,68,68,0.06)',  border: 'rgba(255,68,68,0.12)'  },
-  HIGH:     { color: '#f97316', bg: 'rgba(249,115,22,0.06)', border: 'rgba(249,115,22,0.12)' },
-  MEDIUM:   { color: '#eab308', bg: 'rgba(234,179,8,0.05)',  border: 'rgba(234,179,8,0.1)'   },
-  LOW:      { color: '#22c55e', bg: 'rgba(34,197,94,0.04)',  border: 'rgba(34,197,94,0.09)'  },
+  CRITICAL: { color: 'var(--risk-crit)',   bg: 'rgba(240,68,56,0.06)',  border: 'rgba(240,68,56,0.14)'  },
+  HIGH:     { color: 'var(--risk-high)',   bg: 'rgba(240,68,56,0.05)',  border: 'rgba(240,68,56,0.12)'  },
+  MEDIUM:   { color: 'var(--risk-medium)', bg: 'rgba(245,158,11,0.05)', border: 'rgba(245,158,11,0.1)'  },
+  LOW:      { color: 'var(--risk-low)',    bg: 'rgba(16,185,129,0.04)', border: 'rgba(16,185,129,0.09)' },
 }
 
 const getCVELink = (title) => {
@@ -34,7 +35,7 @@ const AcceptedBadge = ({ acceptance }) => {
   const [hovered, setHovered] = useState(false)
   const [pos, setPos] = useState({ top: 0, right: 0 })
   const badgeRef = useRef(null)
-  const expiryDate = new Date(acceptance.expires_at).toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })
+  const expiryDate = formatApiDate(acceptance.expires_at, [], { month: 'short', day: 'numeric', year: 'numeric' })
 
   const handleMouseEnter = () => {
     if (badgeRef.current) {
@@ -64,11 +65,11 @@ const AcceptedBadge = ({ acceptance }) => {
         top:        pos.top,
         right:      pos.right,
         width:      256,
-        background: '#141425',
-        border:     '1px solid #2a2a4a',
+        background: 'var(--elevated)',
+        border:     '1px solid var(--border)',
         borderRadius: 12,
         padding:    '12px 14px',
-        color:      '#b8b8d0',
+        color:      'var(--mid)',
         fontSize:   12,
         boxShadow:  '0 8px 40px rgba(0,0,0,0.85)',
         zIndex:     9999,
@@ -81,9 +82,9 @@ const AcceptedBadge = ({ acceptance }) => {
       }}
     >
       <p style={{ color: '#fbbf24', fontWeight: 600, marginBottom: 4 }}>Risk Accepted</p>
-      <p style={{ color: '#f0f0ff', fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>{acceptance.justification}</p>
-      <p style={{ fontSize: 10 }}>Reviewer: <span style={{ color: '#f0f0ff' }}>{acceptance.reviewer}</span></p>
-      <p style={{ fontSize: 10, marginTop: 2 }}>Expires: <span style={{ color: '#f0f0ff' }}>{expiryDate}</span></p>
+      <p style={{ color: 'var(--hi)', fontSize: 11, lineHeight: 1.5, marginBottom: 8 }}>{acceptance.justification}</p>
+      <p style={{ fontSize: 10 }}>Reviewer: <span style={{ color: 'var(--hi)' }}>{acceptance.reviewer}</span></p>
+      <p style={{ fontSize: 10, marginTop: 2 }}>Expires: <span style={{ color: 'var(--hi)' }}>{expiryDate}</span></p>
     </div>,
     document.body
   )
@@ -122,8 +123,55 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
 
   if (!events.length)
     return (
-      <div className="py-8 text-center">
-        <p className="text-sm" style={{ color: '#8080aa' }}>No risk events detected yet.</p>
+      <div
+        className="rounded-xl p-4 sm:p-5"
+        style={{
+          background: 'rgba(255,255,255,0.02)',
+          border: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
+        <div className="flex items-start gap-3">
+          <div
+            className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full shrink-0"
+            style={{
+              background: 'rgba(16,185,129,0.08)',
+              border: '1px solid rgba(16,185,129,0.16)',
+              color: 'var(--risk-low)',
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M5 12l4 4L19 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold" style={{ color: 'var(--hi)' }}>
+              No public risk events were detected in this scan.
+            </p>
+            <p className="text-xs mt-1 leading-relaxed" style={{ color: 'var(--lo)' }}>
+              This means VenderScope did not find public CVEs, breach references, infrastructure exposure, or other passive signals for this vendor at the time of scanning.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+              {[
+                ['Passive only', 'Findings come from public sources rather than authenticated checks.'],
+                ['Point-in-time', 'A clean result today does not guarantee the vendor will remain clean later.'],
+                ['Recommended', 'Scan again periodically to catch newly disclosed issues.'],
+              ].map(([title, body]) => (
+                <div
+                  key={title}
+                  className="rounded-lg px-3 py-2.5"
+                  style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.05)' }}
+                >
+                  <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-1" style={{ color: 'var(--lo)' }}>
+                    {title}
+                  </p>
+                  <p className="text-[11px] leading-relaxed" style={{ color: 'var(--mid)' }}>
+                    {body}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
     )
 
@@ -187,7 +235,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
               <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 mb-1.5">
                 <span
                   className="text-[13px] font-medium leading-snug flex-1 min-w-0"
-                  style={{ color: '#f0f0ff' }}
+                  style={{ color: 'var(--hi)' }}
                 >
                   {cveLink ? (
                     <a
@@ -212,9 +260,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                         <button
                           onClick={() => onRevoke(acceptance.id)}
                           className="text-[9px] px-1.5 py-0.5 rounded transition-colors duration-150"
-                          style={{ color: '#8080aa', background: 'transparent' }}
-                          onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                          onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+                          style={{ color: 'var(--lo)', background: 'transparent' }}
+                          onMouseEnter={(e) => e.currentTarget.style.color = 'var(--risk-high)'}
+                          onMouseLeave={(e) => e.currentTarget.style.color = 'var(--lo)'}
                           title="Revoke acceptance"
                         >
                           ✕
@@ -231,7 +279,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                           style={{
                             background: isExpanded ? 'rgba(251,191,36,0.1)' : 'rgba(255,255,255,0.04)',
                             border: isExpanded ? '1px solid rgba(251,191,36,0.3)' : '1px solid rgba(255,255,255,0.07)',
-                            color: isExpanded ? '#fbbf24' : '#8080aa',
+                            color: isExpanded ? '#fbbf24' : 'var(--lo)',
                           }}
                           onMouseEnter={(e) => {
                             if (!isExpanded) {
@@ -241,7 +289,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                           }}
                           onMouseLeave={(e) => {
                             if (!isExpanded) {
-                              e.currentTarget.style.color = '#8080aa'
+                              e.currentTarget.style.color = 'var(--lo)'
                               e.currentTarget.style.borderColor = 'rgba(255,255,255,0.07)'
                             }
                           }}
@@ -256,17 +304,17 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
 
               {/* Description */}
               {evt.description && (
-                <p className="text-xs leading-relaxed line-clamp-2 mb-1.5" style={{ color: '#b8b8d0' }}>
+                <p className="text-xs leading-relaxed line-clamp-2 mb-1.5" style={{ color: 'var(--mid)' }}>
                   {evt.description}
                 </p>
               )}
 
               {/* Meta: source · date */}
-              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono" style={{ color: '#8080aa' }}>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono" style={{ color: 'var(--lo)' }}>
                 <span>{evt.source}</span>
-                <span style={{ color: '#44445a' }}>·</span>
+                <span style={{ color: 'var(--border)' }}>·</span>
                 <span>
-                  {new Date(evt.detected_at).toLocaleDateString([], {
+                  {formatApiDate(evt.detected_at, [], {
                     month: 'short', day: 'numeric', year: 'numeric',
                   })}
                 </span>
@@ -277,8 +325,8 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
             {isExpanded && (
               <div
                 style={{
-                  background: '#0d0d1c',
-                  borderTop: '1px solid #1e1e35',
+                  background: 'var(--bg)',
+                  borderTop: '1px solid var(--line)',
                   animation: 'fade-up 200ms cubic-bezier(0.16,1,0.3,1) both',
                 }}
                 className="p-3.5"
@@ -295,9 +343,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   maxLength={2000}
                   className="w-full rounded-lg px-3 py-2 text-xs resize-none mb-2"
                   style={{
-                    background: '#141425',
-                    border: '1px solid #2a2a4a',
-                    color: '#f0f0ff',
+                    background: 'var(--elevated)',
+                    border: '1px solid var(--border)',
+                    color: 'var(--hi)',
                     outline: 'none',
                   }}
                 />
@@ -311,14 +359,14 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                     maxLength={100}
                     className="rounded-lg px-3 py-2 text-xs"
                     style={{
-                      background: '#141425',
-                      border: '1px solid #2a2a4a',
-                      color: '#f0f0ff',
+                      background: 'var(--elevated)',
+                      border: '1px solid var(--border)',
+                      color: 'var(--hi)',
                       outline: 'none',
                     }}
                   />
                   <div className="flex items-center gap-2">
-                    <label className="text-[10px] shrink-0" style={{ color: '#8080aa' }}>Expires</label>
+                    <label className="text-[10px] shrink-0" style={{ color: 'var(--lo)' }}>Expires</label>
                     <input
                       type="date"
                       value={form.expires_at}
@@ -326,9 +374,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                       min={new Date().toISOString().split('T')[0]}
                       className="flex-1 rounded-lg px-2 py-2 text-xs"
                       style={{
-                        background: '#141425',
-                        border: '1px solid #2a2a4a',
-                        color: '#f0f0ff',
+                        background: 'var(--elevated)',
+                        border: '1px solid var(--border)',
+                        color: 'var(--hi)',
                         outline: 'none',
                         colorScheme: 'dark',
                       }}
@@ -350,9 +398,9 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   <button
                     onClick={() => setExpandedEvent(null)}
                     className="px-3 py-2 rounded-lg text-xs transition-all duration-150"
-                    style={{ color: '#8080aa', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+                    style={{ color: 'var(--lo)', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--mid)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--lo)'}
                   >
                     Cancel
                   </button>

@@ -1,14 +1,15 @@
 import { useId, useMemo, useState } from 'react'
+import { parseApiDate } from '../utils/datetime'
 
 const SVG_WIDTH = 640
-const SVG_HEIGHT = 200
-const PADDING = { top: 8, right: 10, bottom: 28, left: 10 }
+const SVG_HEIGHT = 160
+const PADDING = { top: 8, right: 10, bottom: 24, left: 10 }
 const CHART_WIDTH = SVG_WIDTH - PADDING.left - PADDING.right
 const CHART_HEIGHT = SVG_HEIGHT - PADDING.top - PADDING.bottom
 const HIGH_RISK_Y = 70
 const MEDIUM_RISK_Y = 40
 
-const riskHex = (score) => (score >= HIGH_RISK_Y ? '#f97316' : score >= MEDIUM_RISK_Y ? '#eab308' : '#22c55e')
+const riskHex = (score) => (score >= HIGH_RISK_Y ? 'var(--risk-high)' : score >= MEDIUM_RISK_Y ? 'var(--risk-medium)' : 'var(--risk-low)')
 
 function clampScore(score) {
   return Math.max(0, Math.min(100, Number(score) || 0))
@@ -50,15 +51,15 @@ function ChartTooltip({ point }) {
       style={{ left }}
     >
       <div style={{
-        background: '#141425',
-        border: '1px solid #2a2a4a',
+        background: 'var(--elevated)',
+        border: '1px solid var(--border)',
         borderRadius: 10,
         padding: '10px 14px',
         boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
       }}>
-        <p style={{ color: '#8080aa', fontSize: 10, marginBottom: 4 }}>{point.date}</p>
+        <p style={{ color: 'var(--lo)', fontSize: 10, marginBottom: 4 }}>{point.date}</p>
         <p style={{ color, fontSize: 24, fontWeight: 700, lineHeight: 1 }}>{point.score}</p>
-        <p style={{ color: '#8080aa', fontSize: 10, marginTop: 3 }}>risk score</p>
+        <p style={{ color: 'var(--lo)', fontSize: 10, marginTop: 3 }}>risk score</p>
       </div>
     </div>
   )
@@ -69,7 +70,7 @@ export default function ScoreChart({ history }) {
   const [hoveredIndex, setHoveredIndex] = useState(null)
 
   const data = useMemo(() => history.map((item) => ({
-    date: new Date(item.recorded_at).toLocaleDateString([], { month: 'short', day: 'numeric' }),
+    date: parseApiDate(item.recorded_at)?.toLocaleDateString([], { month: 'short', day: 'numeric' }) ?? '—',
     score: clampScore(item.score),
   })), [history])
 
@@ -86,32 +87,32 @@ export default function ScoreChart({ history }) {
   }, [data])
 
   const latest = data[data.length - 1]?.score ?? null
-  const scoreColor = latest !== null ? riskHex(latest) : '#8888aa'
+  const scoreColor = latest !== null ? riskHex(latest) : 'var(--lo)'
   const activePoint = hoveredIndex == null ? points[points.length - 1] : points[hoveredIndex]
 
   const header = (
     <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 mb-5">
       <div>
-        <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
+        <h3 className="text-sm font-semibold" style={{ color: 'var(--hi)' }}>
           Risk Score Drift
         </h3>
         {latest !== null && (
-          <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>
+          <p className="text-xs mt-0.5" style={{ color: 'var(--lo)' }}>
             Latest:{' '}
             <span style={{ color: scoreColor, fontWeight: 600 }}>{latest}</span>
           </p>
         )}
       </div>
-      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] pt-0.5 select-none" style={{ color: '#8080aa' }}>
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-[10px] pt-0.5 select-none" style={{ color: 'var(--lo)' }}>
         <span className="flex items-center gap-1.5">
           <svg width="16" height="8" aria-hidden="true">
-            <line x1="0" y1="4" x2="16" y2="4" stroke="#f97316" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
+            <line x1="0" y1="4" x2="16" y2="4" stroke="var(--risk-high)" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
           </svg>
           High ≥70
         </span>
         <span className="flex items-center gap-1.5">
           <svg width="16" height="8" aria-hidden="true">
-            <line x1="0" y1="4" x2="16" y2="4" stroke="#eab308" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
+            <line x1="0" y1="4" x2="16" y2="4" stroke="var(--risk-medium)" strokeWidth="1.5" strokeDasharray="3 2" strokeOpacity="0.7" />
           </svg>
           Med ≥40
         </span>
@@ -120,18 +121,21 @@ export default function ScoreChart({ history }) {
   )
 
   const panelStyle = {
-    background: 'linear-gradient(160deg, #0f0f1e 0%, #0a0a15 100%)',
-    border: '1px solid #1e1e35',
+    background: 'var(--surface)',
+    border: '1px solid var(--line)',
     borderRadius: 12,
     padding: 16,
-    boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+    boxShadow: '0 2px 12px rgba(0,0,0,0.35)',
+    height: '100%',
+    display: 'flex',
+    flexDirection: 'column',
   }
 
   if (data.length === 0) {
     return (
       <div style={panelStyle}>
         {header}
-        <p className="text-sm py-8 text-center" style={{ color: '#8080aa' }}>
+        <p className="text-sm py-8 text-center" style={{ color: 'var(--lo)' }}>
           No history yet — run a scan to start tracking.
         </p>
       </div>
@@ -146,8 +150,8 @@ export default function ScoreChart({ history }) {
           <span className="text-5xl font-bold tabular-nums" style={{ color: scoreColor }}>
             {latest}
           </span>
-          <p className="text-sm" style={{ color: '#8080aa' }}>First scan recorded</p>
-          <p className="text-xs" style={{ color: '#8080aa' }}>Scan again to begin tracking drift</p>
+          <p className="text-sm" style={{ color: 'var(--lo)' }}>First scan recorded</p>
+          <p className="text-xs" style={{ color: 'var(--lo)' }}>Scan again to begin tracking drift</p>
         </div>
       </div>
     )
@@ -157,7 +161,7 @@ export default function ScoreChart({ history }) {
     <div style={panelStyle}>
       {header}
       <div
-        className="relative"
+        className="relative flex-1"
         onMouseLeave={() => setHoveredIndex(null)}
       >
         <ChartTooltip point={activePoint} />
@@ -183,7 +187,7 @@ export default function ScoreChart({ history }) {
               y1={scoreToY(threshold)}
               x2={PADDING.left + CHART_WIDTH}
               y2={scoreToY(threshold)}
-              stroke={threshold === HIGH_RISK_Y ? '#f97316' : '#eab308'}
+              stroke={threshold === HIGH_RISK_Y ? 'var(--risk-high)' : 'var(--risk-medium)'}
               strokeDasharray="4 3"
               strokeOpacity="0.4"
             />
@@ -196,7 +200,7 @@ export default function ScoreChart({ history }) {
               y1={PADDING.top + CHART_HEIGHT * fraction}
               x2={PADDING.left + CHART_WIDTH}
               y2={PADDING.top + CHART_HEIGHT * fraction}
-              stroke="#1e1e35"
+              stroke="var(--line)"
               strokeDasharray="3 3"
             />
           ))}
@@ -220,7 +224,7 @@ export default function ScoreChart({ history }) {
                   y1={PADDING.top}
                   x2={point.x}
                   y2={PADDING.top + CHART_HEIGHT}
-                  stroke="#2a2a4a"
+                  stroke="var(--border)"
                   strokeWidth="1"
                   opacity={isActive ? 1 : 0}
                 />
@@ -243,7 +247,7 @@ export default function ScoreChart({ history }) {
               key={`label-${point.date}-${index}`}
               x={point.x}
               y={SVG_HEIGHT - 8}
-              fill="#8080aa"
+              fill="var(--lo)"
               fontSize="10"
               textAnchor="middle"
             >

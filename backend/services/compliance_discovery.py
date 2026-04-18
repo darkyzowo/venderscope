@@ -4,7 +4,8 @@ import socket
 import ipaddress
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urljoin, unquote, urlparse
+from urllib.parse import urljoin, unquote, urlparse, urlunparse
+from services.quota import consume_search_units
 
 # ── SSRF protection ────────────────────────────────────────────────────────────
 BLOCKED_PATTERNS = [
@@ -137,6 +138,15 @@ CREDIBLE_DOMAINS = [
 # ── Security contact email prefixes ───────────────────────────────────────────
 SECURITY_EMAIL_PREFIXES = ["security", "privacy", "dpo", "compliance", "legal", "infosec", "gdpr"]
 
+RELEVANT_PAGE_HINTS = [
+    "trust", "security", "privacy", "legal", "compliance", "gdpr",
+    "dpa", "data-processing", "data-processing-agreement", "data-processing-addendum",
+    "subprocessor", "sub-processor", "terms", "cookie", "certificate", "certification",
+    "soc", "iso", "attestation",
+]
+
+MAX_DISCOVERY_PAGES = 8
+
 
 def _is_safe_domain(domain: str) -> bool:
     clean = domain.replace("https://", "").replace("http://", "").split("/")[0].split(":")[0]
@@ -202,13 +212,42 @@ def _fetch_page(url: str, timeout: int = 8) -> str | None:
     return None
 
 
+def _normalise_url(url: str) -> str:
+    parsed = urlparse(url)
+    clean = parsed._replace(query="", fragment="")
+    return urlunparse(clean).rstrip("/")
+
+
+def _is_same_vendor_site(url: str, base: str) -> bool:
+    host = urlparse(url).netloc.lower()
+    base = base.lower()
+    return host in {base, f"www.{base}"} or host.endswith(f".{base}")
+
+
+def _extract_relevant_links(html: str, base_url: str, base: str) -> list[str]:
+    soup = BeautifulSoup(html, "html.parser")
+    candidates = []
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+        text = link.get_text(" ", strip=True).lower()
+        full = _normalise_url(urljoin(base_url, href))
+        if not full.startswith("http"):
+            continue
+        if not _is_same_vendor_site(full, base):
+            continue
+        haystack = f"{href.lower()} {text}"
+        if any(hint in haystack for hint in RELEVANT_PAGE_HINTS):
+            candidates.append(full)
+    return candidates
+
+
 def _find_doc_links(html: str, base_url: str) -> dict:
     soup  = BeautifulSoup(html, "html.parser")
     found = {}
     for link in soup.find_all("a", href=True):
         href = link["href"].lower()
         text = link.get_text(strip=True).lower()
-        full = urljoin(base_url, link["href"])
+        full = _normalise_url(urljoin(base_url, link["href"]))
         for doc_type, patterns in DOC_PATTERNS.items():
             if doc_type in found:
                 continue
@@ -259,6 +298,43 @@ def _find_docs_in_sitemap(base: str, found: dict) -> dict:
                 if any(p.lstrip("/") in u_lower for p in patterns if p.startswith("/")):
                     result[doc_type] = u
     return result
+
+
+def _collect_discovery_pages(base: str, home_url: str, home_html: str | None, doc_links: dict, trust: dict | None) -> dict[str, str]:
+    pages: dict[str, str] = {}
+
+    def add_page(url: str | None, html: str | None = None):
+        if not url or len(pages) >= MAX_DISCOVERY_PAGES:
+            return
+        clean_url = _normalise_url(url)
+        if clean_url in pages:
+            return
+        if not _is_same_vendor_site(clean_url, base):
+            return
+        pages[clean_url] = html if html is not None else (_fetch_page(clean_url) or "")
+
+    add_page(home_url, home_html)
+    for url in doc_links.values():
+        add_page(url)
+    if trust:
+        add_page(trust.get("url"))
+
+    seed_pages = [(url, html) for url, html in pages.items() if html]
+    for source_url, source_html in seed_pages:
+        for link in _extract_relevant_links(source_html, source_url or home_url, base):
+            add_page(link)
+            if len(pages) >= MAX_DISCOVERY_PAGES:
+                break
+        if len(pages) >= MAX_DISCOVERY_PAGES:
+            break
+
+    return pages
+
+
+def _normalise_text(html: str) -> str:
+    soup = BeautifulSoup(html or "", "html.parser")
+    text = soup.get_text(" ", strip=True).lower()
+    return re.sub(r"\s+", " ", text)
 
 
 def _check_trust_centre(domain: str) -> dict | None:
@@ -324,8 +400,17 @@ def _scrape_stage(full_text: str) -> dict:
     return results
 
 
-def _google_search(query: str) -> list[dict]:
+def _google_search(query: str, quota_state: dict | None = None) -> list[dict]:
     """Fires a single Google Custom Search query. Returns [] on failure or missing keys."""
+    if quota_state is not None:
+        if not quota_state.get("enabled", True):
+            return []
+        if not consume_search_units(1):
+            quota_state["enabled"] = False
+            quota_state["exhausted"] = True
+            return []
+        quota_state["used"] = quota_state.get("used", 0) + 1
+
     api_key = os.getenv("GOOGLE_CSE_API_KEY")
     cse_id  = os.getenv("GOOGLE_CSE_ID")
     if not api_key or not cse_id:
@@ -358,7 +443,7 @@ def _result_is_credible(items: list[dict], cert_keywords: list[str]) -> dict | N
     return best
 
 
-def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict) -> dict:
+def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict, quota_state: dict | None = None) -> dict:
     """
     Stage 2 — Google search fallback.
     - "found"       → already confirmed on-site, skip search.
@@ -379,7 +464,7 @@ def _web_search_stage(vendor_name: str, domain: str, scrape_results: dict) -> di
         for q_template in queries:
             query = q_template.format(name=vendor_name, domain=base)
             print(f"[Compliance] Web search: {query}")
-            items = _google_search(query)
+            items = _google_search(query, quota_state)
             match = _result_is_credible(items, CERT_KEYWORDS[cert])
             if match:
                 break
@@ -445,6 +530,41 @@ def _find_security_contact(domain: str, scraped_pages: list[str], use_web_search
     return None
 
 
+def _find_security_contact_with_quota(
+    domain: str,
+    scraped_pages: list[str],
+    quota_state: dict | None = None,
+) -> dict | None:
+    """
+    Same as _find_security_contact but consumes Google CSE quota incrementally when needed.
+    """
+    base = domain.replace("https://", "").replace("http://", "").rstrip("/")
+
+    for path in ["/.well-known/security.txt", "/security.txt"]:
+        content = _fetch_page(f"https://{base}{path}")
+        if content:
+            match = re.search(r"Contact:\s*(mailto:)?([^\s]+@[^\s]+)", content, re.IGNORECASE)
+            if match:
+                return {"email": match.group(2).strip(), "verified": True, "source": "security.txt"}
+
+    combined = " ".join(filter(None, scraped_pages)).lower()
+    for prefix in SECURITY_EMAIL_PREFIXES:
+        pattern = rf"{prefix}@(?:www\.)?{re.escape(base)}"
+        if re.search(pattern, combined, re.IGNORECASE):
+            return {"email": f"{prefix}@{base}", "verified": True, "source": "site"}
+
+    if quota_state is not None and quota_state.get("enabled", True):
+        for prefix in SECURITY_EMAIL_PREFIXES:
+            query = f'"{prefix}@{base}"'
+            items = _google_search(query, quota_state)
+            for item in items:
+                text = (item.get("title", "") + " " + item.get("snippet", "")).lower()
+                if f"{prefix}@{base}" in text:
+                    return {"email": f"{prefix}@{base}", "verified": True, "source": "web_search"}
+
+    return None
+
+
 def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search: bool = True) -> dict:
     """
     Main entry point. Two-stage cert discovery:
@@ -474,20 +594,17 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
     if len(doc_links) < len(DOC_PATTERNS):
         doc_links = _find_docs_in_sitemap(base, doc_links)
 
-    security_html = _fetch_page(doc_links["security"])        if "security"       in doc_links else None
-    privacy_html  = _fetch_page(doc_links["privacy_policy"])  if "privacy_policy" in doc_links else None
-
-    # Trust centre fetched before cert check so its HTML feeds into stage 1
     trust      = _check_trust_centre(base)
-    trust_html = _fetch_page(trust["url"]) if trust else None
+    pages      = _collect_discovery_pages(base, home_url, home_html, doc_links, trust)
+    quota_state = {"enabled": use_web_search, "used": 0, "exhausted": False}
 
     # ── Stage 1: scrape ──────────────────────────────────────────────────────
-    full_text      = " ".join(filter(None, [home_html, security_html, privacy_html, trust_html])).lower()
+    full_text      = " ".join(_normalise_text(html) for html in pages.values() if html)
     scrape_results = _scrape_stage(full_text)
 
     # ── Stage 2: web search fallback (skipped if quota exhausted) ────────────
     if use_web_search:
-        certifications = _web_search_stage(name, base, scrape_results)
+        certifications = _web_search_stage(name, base, scrape_results, quota_state)
     else:
         print(f"[Compliance] Standard Scan — skipping web search for {base}")
         certifications = {
@@ -496,15 +613,15 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
         }
 
     # ── Security contact ─────────────────────────────────────────────────────
-    scraped_pages = [home_html, security_html, privacy_html, trust_html]
-    contact       = _find_security_contact(base, scraped_pages, use_web_search)
+    scraped_pages = list(pages.values())
+    contact       = _find_security_contact_with_quota(base, scraped_pages, quota_state)
 
     found_count = sum(1 for v in certifications.values() if v["status"] == "found")
     tp_count    = sum(1 for v in certifications.values() if v["status"] == "third_party")
     ext_count   = sum(1 for v in certifications.values() if v.get("source") == "external")
-    print(f"[Compliance] Done — {len(doc_links)} docs, "
+    print(f"[Compliance] Done — {len(doc_links)} docs, {len(pages)} pages checked, "
           f"{found_count} certs direct, {tp_count} via infra partners "
-          f"({ext_count} via web search), "
+          f"({ext_count} via web search), {quota_state['used']} search unit(s) used, "
           f"trust centre: {'yes' if trust else 'no'}, "
           f"contact: {'verified' if contact else 'none'}")
 
@@ -513,4 +630,5 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
         "trust_centre":     trust,
         "certifications":   certifications,
         "security_contact": contact,
+        "search_units_used": quota_state["used"],
     }

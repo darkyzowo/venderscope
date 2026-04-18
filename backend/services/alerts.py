@@ -48,6 +48,11 @@ def _is_non_deliverable_test_address(address: str) -> bool:
     if "@" not in email:
         return True
     domain = email.split("@", 1)[1]
+    return _is_reserved_test_domain(domain)
+
+
+def _is_reserved_test_domain(domain: str) -> bool:
+    domain = domain.strip().lower()
     return (
         domain in _RESERVED_TEST_DOMAINS
         or domain.endswith(".example")
@@ -156,9 +161,12 @@ def send_alert_email(
     if score < ALERT_THRESHOLD:
         return
 
-    to = recipient_email or GMAIL_ADDRESS
+    to = recipient_email
     if not to:
-        print("[Alerts] No recipient — skipping alert email.")
+        print(f"[Alerts] No vendor owner recipient for {vendor_name} — skipping alert email.")
+        return
+    if _is_reserved_test_domain(domain):
+        print(f"[Alerts] Reserved/test vendor domain for {vendor_name} ({domain}) — skipping alert email.")
         return
 
     print(f"[Alerts] Sending alert for {vendor_name} (score: {score}) → {to}")
@@ -170,20 +178,26 @@ def send_alert_email(
     safe_domain      = _html_escape(domain)
 
     sev_order  = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
-    top_events = sorted(events, key=lambda e: sev_order.get(e.severity, 4))[:10]
+    def _event_value(evt, key: str, default: str = ""):
+        if isinstance(evt, dict):
+            return evt.get(key, default)
+        return getattr(evt, key, default)
+
+    top_events = sorted(events, key=lambda e: sev_order.get(_event_value(e, "severity", "LOW"), 4))[:10]
 
     label_color = "#dc2626" if score >= 85 else "#ea580c"
     risk_label  = "HIGH RISK" if score >= 70 else "MEDIUM RISK"
 
     event_rows = ""
     for evt in top_events:
+        severity = _event_value(evt, "severity", "LOW")
         color = {"CRITICAL": "#dc2626", "HIGH": "#ea580c",
-                 "MEDIUM": "#ca8a04", "LOW": "#16a34a"}.get(evt.severity, "#6b7280")
+                 "MEDIUM": "#ca8a04", "LOW": "#16a34a"}.get(severity, "#6b7280")
         event_rows += f"""
         <tr>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#94a3b8;">{_html_escape(evt.source)}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#e2e8f0;">{_html_escape(evt.title)}</td>
-          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;font-weight:bold;color:{color};">{_html_escape(evt.severity)}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#94a3b8;">{_html_escape(_event_value(evt, "source"))}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;color:#e2e8f0;">{_html_escape(_event_value(evt, "title"))}</td>
+          <td style="padding:8px 12px;border-bottom:1px solid #2d3748;font-weight:bold;color:{color};">{_html_escape(severity)}</td>
         </tr>"""
 
     html = f"""

@@ -5,11 +5,32 @@
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
-[![Version](https://img.shields.io/badge/version-v3.7-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases/tag/v3)
+[![Version](https://img.shields.io/badge/version-v4.0-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases)
 
 > **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time — with full user authentication, production-grade security hardening, and a cloud PostgreSQL backend.
+
+---
+
+## What's New in v4.0 — Scan Efficiency, Persistent Quota, and UX Polish
+
+v4.0 is a full product-quality release that improves scan economics, persistence, compliance discovery coverage, and the day-to-day UX of the dashboard and vendor analysis flow.
+
+- **Database-backed search quota enforcement** — Google Custom Search usage no longer lives in a local `quota.json` file. Quota is now persisted in PostgreSQL/SQLite via a dedicated `SearchQuotaUsage` model, so it survives Render restarts and redeploys
+- **Incremental quota charging** — full scans no longer burn a worst-case fixed quota cost up front. Search quota is consumed only when an actual external compliance/contact web search is performed, which materially increases practical daily scan capacity on the free tier
+- **Broader compliance discovery** — the compliance engine now does a bounded crawl of high-signal same-site trust, legal, privacy, DPA, and security pages instead of relying on just the homepage plus a small set of direct probes. This improves detection of obvious vendor-owned compliance evidence
+- **Safer standard-mode fallback** — when search quota is exhausted, scans still run and fall back cleanly to standard discovery instead of blocking the user-facing scan action
+- **Frontend vendor logos** — vendor cards and vendor detail headers now attempt to load the vendor site's favicon/logo client-side and gracefully fall back to the original gradient avatar, with zero backend cost and no impact on scan latency
+- **Vendor detail redesign** — the old drift/gauge-heavy top area was replaced with a denser overview panel covering score, exposure basis, scoring model, sensitivity controls, and review scheduling with significantly cleaner hierarchy
+- **Time handling fixes** — API timestamps are now normalized consistently in the frontend so a freshly completed scan no longer appears as if it happened an hour earlier due to naive UTC parsing
+- **Risk-events empty state** — vendors with no public findings now show a proper informational panel explaining what "no events detected" means, instead of a bare empty state
+- **Consent/settings polish** — cookie settings actions now match the hover behavior of the rest of the UI
+
+Verification after this release:
+
+- `python -m pytest` → `70 passed`
+- `npm run build` → passed
 
 ---
 
@@ -220,6 +241,7 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 - **Two-Stage Compliance Discovery** — Scrapes vendor pages for ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS evidence; Google CSE fallback when direct scraping is insufficient
 - **Verified Security Contacts** — Finds security/privacy contacts via RFC 9116 `security.txt`, page scraping, and web search
 - **Scan Quota Tracker** — Live banner showing remaining Google CSE quota with automatic daily reset
+- **Client-side Vendor Logos** — Vendor avatars attempt to load the vendor site's favicon/logo before falling back to the deterministic gradient monogram
 
 ### GRC Workflow (v3.6)
 - **Analyst Notes** — Timestamped evidence log per vendor; included in PDF export; append-only for audit integrity
@@ -277,7 +299,7 @@ VenderScope/
 │   │   ├── intelligence.py       # Scan trigger endpoints
 │   │   ├── dashboard.py          # Aggregate stats, needs attention, overdue reviews
 │   │   ├── export.py             # PDF export (Content-Disposition sanitised)
-│   │   └── quota.py              # Google CSE quota status
+│   │   └── quota.py              # Global search quota status
 │   └── services/
 │       ├── scanner.py            # Concurrent scan orchestrator + caching
 │       ├── auth_service.py       # JWT encode/decode, password hash, get_current_user
@@ -285,7 +307,7 @@ VenderScope/
 │       ├── alerts.py             # Resend HTTP API + Gmail SMTP dispatcher
 │       ├── compliance_discovery.py  # Two-stage compliance + cert discovery
 │       ├── vendor_profile.py     # Passive vendor description, auth & 2FA discovery
-│       ├── quota.py              # Google CSE daily quota tracker
+│       ├── quota.py              # DB-backed global Google CSE quota tracker
 │       ├── hibp.py               # HIBP breach intelligence
 │       ├── nvd.py                # NVD CVE intelligence
 │       ├── companies_house.py    # UK governance checks
@@ -451,9 +473,9 @@ Top 5 events by severity are averaged, multiplied by a count factor (up to 1.4×
 
 ## Compliance Discovery
 
-**Stage 1 — Page scrape (free):** Fetches the vendor homepage, security page, privacy policy, and trust centre. Searches for evidence of ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS, and Data Processing Agreements.
+**Stage 1 — Page discovery + scrape (free):** Fetches the vendor homepage, probes known legal/security paths, inspects sitemap URLs, follows relevant same-site trust/legal/privacy/DPA links, and searches the collected vendor-owned pages for ISO 27001, SOC 2, GDPR, Cyber Essentials, PCI DSS, and Data Processing Agreement evidence.
 
-**Stage 2 — Web search fallback (costs Google CSE quota):** For any certification not found on the vendor's own pages, fires targeted Google Custom Search queries to find external evidence.
+**Stage 2 — Web search fallback (costs Google CSE quota):** For certifications or security contacts not confirmed on the vendor's own pages, fires targeted Google Custom Search queries to find external evidence. Quota is consumed incrementally per actual query rather than per scan.
 
 ### Third-Party Attribution Detection
 
@@ -468,7 +490,7 @@ VenderScope detects a common false positive — vendors referencing their *infra
 
 ### Scan Quota
 
-Google Custom Search allows 100 free queries/day. Each Full Intelligence Scan uses up to 14 units (~7 full scans/day at no cost). When quota is exhausted, scans automatically fall back to Standard Scan (page scrape only). Quota resets at midnight UTC.
+Google Custom Search allows 100 free queries/day. VenderScope now tracks this quota in the database and consumes units only when an external web search actually happens. In practice, that means many scans cost far less than the old worst-case model. When quota is exhausted, scans automatically fall back to Standard Scan (vendor-site discovery only). Quota resets at midnight UTC.
 
 ---
 

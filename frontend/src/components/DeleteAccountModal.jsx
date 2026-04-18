@@ -44,7 +44,7 @@ export default function DeleteAccountModal({ onClose }) {
     >
       <div
         className="w-full max-w-md rounded-2xl p-4 sm:p-6 max-h-[calc(100dvh-2rem)] overflow-y-auto"
-        style={{ background: '#0f1117', border: '1px solid #2a2a4a', boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }}
+        style={{ background: 'var(--surface)', border: '1px solid var(--border)', boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }}
       >
         {step === 1 ? (
           <>
@@ -56,14 +56,14 @@ export default function DeleteAccountModal({ onClose }) {
               >
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                   <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"
-                    stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                  <line x1="12" y1="9" x2="12" y2="13" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
-                  <line x1="12" y1="17" x2="12.01" y2="17" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round"/>
+                    stroke="var(--risk-high)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                  <line x1="12" y1="9" x2="12" y2="13" stroke="var(--risk-high)" strokeWidth="2" strokeLinecap="round"/>
+                  <line x1="12" y1="17" x2="12.01" y2="17" stroke="var(--risk-high)" strokeWidth="2.5" strokeLinecap="round"/>
                 </svg>
               </div>
               <div>
-                <h2 className="font-bold text-base" style={{ color: '#f0f0ff' }}>Delete Account</h2>
-                <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>This action is permanent and cannot be undone.</p>
+                <h2 className="font-bold text-base" style={{ color: 'var(--hi)' }}>Delete Account</h2>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--lo)' }}>This action is permanent and cannot be undone.</p>
               </div>
             </div>
 
@@ -80,7 +80,7 @@ export default function DeleteAccountModal({ onClose }) {
               </ul>
             </div>
 
-            <p className="text-sm mb-5" style={{ color: '#b8b8d0' }}>
+            <p className="text-sm mb-5" style={{ color: 'var(--mid)' }}>
               Your account and all associated data will be permanently and immediately deleted, in accordance with our{' '}
               <a href="/privacy" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>Privacy Policy</a>.
             </p>
@@ -92,7 +92,7 @@ export default function DeleteAccountModal({ onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#b8b8d0',
+                  color: 'var(--mid)',
                 }}
               >
                 Cancel
@@ -112,9 +112,9 @@ export default function DeleteAccountModal({ onClose }) {
           <>
             {/* Step 2 — Type DELETE */}
             <div className="mb-5">
-              <h2 className="font-bold text-base mb-1" style={{ color: '#f0f0ff' }}>Confirm Deletion</h2>
-              <p className="text-sm" style={{ color: '#b8b8d0' }}>
-                Type <span style={{ color: '#ef4444', fontWeight: 700, fontFamily: 'monospace' }}>DELETE</span> in
+              <h2 className="font-bold text-base mb-1" style={{ color: 'var(--hi)' }}>Confirm Deletion</h2>
+              <p className="text-sm" style={{ color: 'var(--mid)' }}>
+                Type <span style={{ color: 'var(--risk-high)', fontWeight: 700, fontFamily: 'monospace' }}>DELETE</span> in
                 the field below to permanently delete your account.
               </p>
             </div>
@@ -127,15 +127,15 @@ export default function DeleteAccountModal({ onClose }) {
               autoFocus
               className="w-full px-4 py-3 rounded-xl text-sm mb-3 outline-none transition-all"
               style={{
-                background: '#141425',
-                border: `1px solid ${confirmed ? 'rgba(239,68,68,0.5)' : '#2a2a4a'}`,
-                color: confirmed ? '#ef4444' : '#e2e8f0',
+                background: 'var(--elevated)',
+                border: `1px solid ${confirmed ? 'rgba(240,68,56,0.5)' : 'var(--border)'}`,
+                color: confirmed ? 'var(--risk-high)' : 'var(--hi)',
                 fontFamily: 'monospace',
                 letterSpacing: '0.05em',
               }}
             />
 
-            <label className="block text-xs mb-1" style={{ color: '#8080aa' }}>
+            <label className="block text-xs mb-1" style={{ color: 'var(--lo)' }}>
               Enter your password to confirm
             </label>
             <input
@@ -145,8 +145,8 @@ export default function DeleteAccountModal({ onClose }) {
               placeholder="Your account password"
               className="w-full px-4 py-3 rounded-xl text-sm mb-4 outline-none transition-all"
               style={{
-                background: '#141425',
-                border: '1px solid #2a2a4a',
+                background: 'var(--elevated)',
+                border: '1px solid var(--border)',
                 color: '#e2e8f0',
               }}
             />
@@ -162,7 +162,7 @@ export default function DeleteAccountModal({ onClose }) {
                 style={{
                   background: 'rgba(255,255,255,0.04)',
                   border: '1px solid rgba(255,255,255,0.08)',
-                  color: '#b8b8d0',
+                  color: 'var(--mid)',
                 }}
               >
                 ← Back

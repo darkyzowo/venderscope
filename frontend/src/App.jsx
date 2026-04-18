@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import SiteConsentBanner from './components/SiteConsentBanner'
+import AppShell from './components/AppShell'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const VendorDetail = lazy(() => import('./pages/VendorDetail'))
@@ -80,10 +81,10 @@ function AppRouter() {
           <Route path="/register" element={<Register />} />
           <Route path="/guest"    element={<GuestScanPage />} />
           <Route path="/" element={
-            <ProtectedRoute><Dashboard /></ProtectedRoute>
+            <ProtectedRoute><AppShell><Dashboard /></AppShell></ProtectedRoute>
           } />
           <Route path="/vendor/:id" element={
-            <ProtectedRoute><VendorDetail /></ProtectedRoute>
+            <ProtectedRoute><AppShell><VendorDetail /></AppShell></ProtectedRoute>
           } />
           <Route path="/privacy"  element={<PrivacyDocPage />} />
           <Route path="/terms"    element={<TermsDocPage />} />

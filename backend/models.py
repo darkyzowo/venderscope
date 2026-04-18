@@ -83,6 +83,15 @@ class RevokedToken(Base):
     expires_at = Column(DateTime, nullable=False, index=True)  # used for cleanup
 
 
+class SearchQuotaUsage(Base):
+    """Authoritative daily Google CSE quota usage, persisted in the database."""
+    __tablename__ = "search_quota_usage"
+
+    quota_date = Column(String(10), primary_key=True)  # YYYY-MM-DD in UTC
+    used       = Column(Integer, nullable=False, default=0)
+    updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
 class VendorNote(Base):
     __tablename__ = "vendor_notes"
 

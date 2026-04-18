@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 
 const riskColor = (s) => {
-  if (s >= 70) return '#f97316'
-  if (s >= 35) return '#eab308'
-  return '#22c55e'
+  if (s >= 70) return 'var(--risk-high)'
+  if (s >= 35) return 'var(--risk-medium)'
+  return 'var(--risk-low)'
 }
 
 const riskLabel = (s) => {
@@ -38,7 +38,7 @@ export default function ScoreGauge({ score = 0 }) {
         <path
           d="M35,62 A55,55 0 0 1 145,62"
           fill="none"
-          stroke="#1e1e35"
+          stroke="var(--line)"
           strokeWidth="10"
           strokeLinecap="round"
         />
@@ -60,8 +60,8 @@ export default function ScoreGauge({ score = 0 }) {
         />
 
         {/* Scale labels */}
-        <text x="28"  y="78" fill="#2a2a4a" fontSize="9" fontFamily="monospace" textAnchor="middle">0</text>
-        <text x="152" y="78" fill="#2a2a4a" fontSize="9" fontFamily="monospace" textAnchor="middle">100</text>
+        <text x="28"  y="78" fill="var(--border)" fontSize="9" fontFamily="monospace" textAnchor="middle">0</text>
+        <text x="152" y="78" fill="var(--border)" fontSize="9" fontFamily="monospace" textAnchor="middle">100</text>
 
         {/* Score number — baseline at y=106, well below arc endpoints at y=62 */}
         <text

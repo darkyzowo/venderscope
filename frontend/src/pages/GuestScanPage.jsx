@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { guestScan, downloadGuestReport } from '../api/client'
 
-const riskColor = (s) => s >= 70 ? '#f97316' : s >= 35 ? '#eab308' : '#22c55e'
+const riskColor = (s) => s >= 70 ? 'var(--risk-high)' : s >= 35 ? 'var(--risk-medium)' : 'var(--risk-low)'
 const riskLabel = (s) => s >= 70 ? 'HIGH RISK' : s >= 35 ? 'MEDIUM RISK' : 'LOW RISK'
-const sevColor  = (s) => ({ CRITICAL: '#ef4444', HIGH: '#f97316', MEDIUM: '#eab308', LOW: '#22c55e' }[s] || '#8080aa')
+const sevColor  = (s) => ({ CRITICAL: 'var(--risk-crit)', HIGH: 'var(--risk-high)', MEDIUM: 'var(--risk-medium)', LOW: 'var(--risk-low)' }[s] || 'var(--lo)')
 
 export default function GuestScanPage() {
   const [domain,      setDomain]      = useState('')

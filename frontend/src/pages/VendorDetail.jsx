@@ -2,14 +2,13 @@ import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF, setVendorContext, getNotes, addNote, deleteNote, updateReview, getAcceptances, createAcceptance, revokeAcceptance } from '../api/client'
 import api from '../api/client'
-import ScoreChart from '../components/ScoreChart'
 import EventFeed from '../components/EventFeed'
 import CompliancePanel from '../components/CompliancePanel'
 import QuotaBanner from '../components/QuotaBanner'
-import ScoreGauge from '../components/ScoreGauge'
 import VendorAvatar from '../components/VendorAvatar'
-import VSLogo from '../components/VSLogo'
 import PageBackground from '../components/PageBackground'
+import RiskBadge from '../components/RiskBadge'
+import { formatApiDateTime, parseApiDate } from '../utils/datetime'
 
 const SEVERITY_ORDER = { CRITICAL: 0, HIGH: 1, MEDIUM: 2, LOW: 3 }
 const EVENTS_SHOWN = 10
@@ -35,14 +34,50 @@ const sortEvents = (evts) =>
     return d !== 0 ? d : parseEPSS(b.description) - parseEPSS(a.description)
   })
 
+const relativeTime = (iso) => {
+  const parsed = parseApiDate(iso)
+  if (!parsed) return '—'
+  const diff = Date.now() - parsed.getTime()
+  const m = Math.floor(diff / 60000)
+  if (m < 1) return 'Just now'
+  if (m < 60) return `${m}m ago`
+  const h = Math.floor(m / 60)
+  if (h < 24) return `${h}h ago`
+  const d = Math.floor(h / 24)
+  return `${d}d ago`
+}
+
+const formatScheduleStatus = (vendor) => {
+  if (!vendor.review_interval_days) {
+    return { text: 'No recurring review schedule configured yet.', tone: 'var(--lo)' }
+  }
+
+  const lastReviewed = parseApiDate(vendor.last_reviewed_at)
+  const dueAt = lastReviewed
+    ? new Date(lastReviewed.getTime() + vendor.review_interval_days * 86400000)
+    : null
+  const now = new Date()
+  const daysOverdue = dueAt ? Math.floor((now - dueAt) / 86400000) : null
+
+  if (!lastReviewed) {
+    return { text: 'Schedule active, but this vendor has never been marked reviewed.', tone: '#fbbf24' }
+  }
+  if (daysOverdue > 0) {
+    return { text: `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''}.`, tone: '#fbbf24' }
+  }
+  return {
+    text: `Next review due ${dueAt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}.`,
+    tone: 'var(--risk-low)',
+  }
+}
+
 // Reusable panel wrapper
 const Panel = ({ children, className = '', style: extraStyle }) => (
   <div
-    className={`rounded-xl p-4 sm:p-6 ${className}`}
+    className={`rounded-card p-4 sm:p-6 ${className}`}
     style={{
-      background: 'linear-gradient(160deg, #0f0f1e 0%, #0a0a15 100%)',
-      border: '1px solid #1e1e35',
-      boxShadow: '0 2px 16px rgba(0,0,0,0.4)',
+      background: 'var(--surface)',
+      border: '1px solid var(--line)',
       ...extraStyle,
     }}
   >
@@ -51,10 +86,10 @@ const Panel = ({ children, className = '', style: extraStyle }) => (
 )
 
 const PanelTitle = ({ children, meta }) => (
-  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: '#f0f0ff' }}>
+  <h3 className="text-sm font-semibold mb-4 flex items-center gap-2" style={{ color: 'var(--hi)' }}>
     {children}
     {meta && (
-      <span className="text-xs font-normal" style={{ color: '#8080aa' }}>{meta}</span>
+      <span className="text-xs font-normal" style={{ color: 'var(--lo)' }}>{meta}</span>
     )}
   </h3>
 )
@@ -182,13 +217,13 @@ export default function VendorDetail() {
 
   if (loadError)
     return (
-      <div className="app-page-shell min-h-screen" style={{ background: '#090911' }}>
+      <div className="app-page-shell min-h-screen" style={{ background: 'var(--bg)' }}>
         <PageBackground />
         <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-8 sm:py-10" style={{ position: 'relative', zIndex: 1 }}>
           <button
             onClick={() => nav('/')}
             className="inline-flex items-center gap-1.5 text-sm mb-6 transition-colors duration-150"
-            style={{ color: '#8080aa' }}
+            style={{ color: 'var(--lo)' }}
           >
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
@@ -198,7 +233,7 @@ export default function VendorDetail() {
 
           <Panel className="animate-page">
             <PanelTitle>Vendor Unavailable</PanelTitle>
-            <p className="text-sm" style={{ color: '#b8b8d0' }}>{loadError}</p>
+            <p className="text-sm" style={{ color: 'var(--mid)' }}>{loadError}</p>
           </Panel>
         </div>
       </div>
@@ -207,7 +242,7 @@ export default function VendorDetail() {
   // Skeleton loading state — matches actual page layout
   if (!vendor)
     return (
-      <div className="app-page-shell min-h-screen" style={{ background: '#090911' }}>
+      <div className="app-page-shell min-h-screen" style={{ background: 'var(--bg)' }}>
         <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-6 sm:py-8">
           {/* Back placeholder */}
           <div className="skeleton h-4 w-20 mb-6 rounded" />
@@ -241,25 +276,24 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div className="app-page-shell" style={{ background: '#090911' }}>
+    <div className="flex-1 flex flex-col" style={{ background: 'var(--bg)' }}>
       <PageBackground />
-      <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-6 sm:py-8" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-4 sm:py-6" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Back nav */}
-        <div className="flex items-center justify-between gap-3 mb-6">
+        <div className="mb-6">
           <button
             onClick={() => nav('/')}
             className="inline-flex items-center gap-1.5 text-sm transition-colors duration-150"
-            style={{ color: '#8080aa' }}
-            onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
-            onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+            style={{ color: 'var(--lo)' }}
+            onMouseEnter={(e) => e.currentTarget.style.color = 'var(--mid)'}
+            onMouseLeave={(e) => e.currentTarget.style.color = 'var(--lo)'}
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" aria-hidden="true">
               <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
             </svg>
             Dashboard
           </button>
-          <VSLogo height={24} />
         </div>
 
         {/* Quota */}
@@ -268,12 +302,12 @@ export default function VendorDetail() {
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between mb-8">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <VendorAvatar name={vendor.name} size={48} />
+            <VendorAvatar name={vendor.name} domain={vendor.domain} size={48} />
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: '#f0f0ff' }}>{vendor.name}</h1>
-              <p className="text-sm mt-0.5" style={{ color: '#8080aa' }}>{vendor.domain}</p>
+              <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'var(--hi)' }}>{vendor.name}</h1>
+              <p className="text-sm mt-0.5" style={{ color: 'var(--lo)' }}>{vendor.domain}</p>
               {vendor.company_number && (
-                <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>CH: {vendor.company_number}</p>
+                <p className="text-xs mt-0.5" style={{ color: 'var(--lo)' }}>CH: {vendor.company_number}</p>
               )}
             </div>
           </div>
@@ -281,12 +315,12 @@ export default function VendorDetail() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto shrink-0">
             <button
               onClick={handleScan}
-              disabled={scanning || quotaExhausted}
-              title={quotaExhausted ? 'Daily scan quota exhausted — resets at midnight UTC' : ''}
+              disabled={scanning}
+              title={quotaExhausted ? 'Search quota exhausted — this scan will still run, but compliance web search will be limited until reset.' : ''}
               className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-40"
               style={{ background: '#8b5cf6', color: '#fff' }}
               onMouseEnter={(e) => {
-                if (!scanning && !quotaExhausted) e.currentTarget.style.background = '#7c3aed'
+                if (!scanning) e.currentTarget.style.background = '#7c3aed'
               }}
               onMouseLeave={(e) => { e.currentTarget.style.background = '#8b5cf6' }}
             >
@@ -297,7 +331,7 @@ export default function VendorDetail() {
                   </svg>
                   Scanning…
                 </span>
-              ) : quotaExhausted ? 'Quota Exhausted' : 'Scan Now'}
+              ) : quotaExhausted ? 'Scan Now (Standard)' : 'Scan Now'}
             </button>
 
             <button
@@ -307,19 +341,19 @@ export default function VendorDetail() {
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#b8b8d0',
+                color: 'var(--mid)',
                 cursor: exporting ? 'not-allowed' : 'pointer',
                 opacity: exporting ? 0.5 : 1,
               }}
               onMouseEnter={(e) => {
                 if (!exporting) {
                   e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
-                  e.currentTarget.style.color = '#f0f0ff'
+                  e.currentTarget.style.color = 'var(--hi)'
                 }
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                e.currentTarget.style.color = '#b8b8d0'
+                e.currentTarget.style.color = 'var(--mid)'
               }}
             >
               {exporting ? 'Exporting…' : 'Export PDF'}
@@ -327,300 +361,441 @@ export default function VendorDetail() {
           </div>
         </div>
 
-        {/* Hero: gauge + chart */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) both' }}>
-          {/* Score gauge panel */}
-          <Panel className="md:col-span-2 flex flex-col items-center justify-center py-6">
-            <ScoreGauge score={vendor.effective_score ?? vendor.risk_score} />
-
-            {/* Effective vs technical scores */}
-            {vendor.effective_score != null && vendor.effective_score !== vendor.risk_score && (
-              <p className="text-[10px] mt-1 tabular-nums" style={{ color: '#8080aa' }}>
-                Technical: {vendor.risk_score} → Effective: {vendor.effective_score}
-              </p>
-            )}
-
-            <div className="mt-4 text-center">
-              <p className="text-[11px]" style={{ color: '#8080aa' }}>
-                {vendor.last_scanned
-                  ? `Last scanned · ${new Date(vendor.last_scanned).toLocaleString([], {
-                      month: 'short', day: 'numeric',
-                      hour: '2-digit', minute: '2-digit',
-                    })}`
-                  : 'Never scanned'}
-              </p>
-              {/* Score calculation tooltip */}
-              <div className="group relative inline-block mt-1">
-                <span
-                  className="text-[11px] cursor-help"
-                  style={{ color: '#8080aa', borderBottom: '1px dotted #44445a' }}
-                >
-                  How is this calculated?
-                </span>
+        {/* Risk overview */}
+        {(() => {
+          const displayScore = vendor.effective_score ?? vendor.risk_score
+          const scoreColor = displayScore >= 70 ? 'var(--risk-high)' : displayScore >= 40 ? 'var(--risk-medium)' : 'var(--risk-low)'
+          const scheduleStatus = formatScheduleStatus(vendor)
+          const hasTrend = history.length >= 2
+          const scoreDelta = vendor.score_delta ?? 0
+          const riskBand = displayScore >= 70 ? 'High Risk' : displayScore >= 40 ? 'Medium Risk' : 'Low Risk'
+          const monitorState = vendor.last_scanned ? 'Actively tracked' : 'Awaiting first scan'
+          return (
+            <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) both' }}>
+              <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.25fr)_minmax(0,1fr)] gap-6">
                 <div
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[min(20rem,calc(100vw-2rem))] rounded-xl p-4 text-xs hidden group-hover:block z-50"
+                  className="rounded-2xl p-4 sm:p-5 self-start h-full flex flex-col"
                   style={{
-                    background: '#141425',
-                    border: '1px solid #2a2a4a',
-                    color: '#b8b8d0',
-                    boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
+                    background: 'linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.01))',
+                    border: '1px solid rgba(255,255,255,0.05)',
+                    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.03)',
                   }}
                 >
-                  <p className="font-semibold mb-1.5" style={{ color: '#f0f0ff' }}>Technical Score</p>
-                  <p className="mb-3">
-                    Top 10 CVEs weighted by severity (CRITICAL=25, HIGH=15, MEDIUM=7, LOW=2),
-                    plus breach data from HIBP, Companies House signals, and Shodan exposure. Capped at 100.
-                  </p>
-                  <p className="font-semibold mb-1.5" style={{ color: '#f0f0ff' }}>Effective Exposure</p>
-                  <p className="mb-2">
-                    Applies a business context multiplier based on what data this vendor can access.
-                    A payment processor with a CRITICAL CVE poses far more risk than a marketing tool with the same CVE.
-                  </p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 pt-2" style={{ borderTop: '1px solid #2a2a4a' }}>
-                    {[
-                      ['No Data Access', '×0.8'],
-                      ['PII / Personal', '×1.4'],
-                      ['Financial', '×1.6'],
-                      ['Auth / SSO', '×1.6'],
-                      ['Health / Medical', '×1.8'],
-                      ['Critical Infra', '×2.0'],
-                    ].map(([lbl, mult]) => (
-                      <div key={lbl} className="flex justify-between">
-                        <span>{lbl}</span>
-                        <span style={{ color: '#a78bfa' }}>{mult}</span>
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-2" style={{ color: 'var(--lo)' }}>
+                        Risk Score
+                      </p>
+                      <div className="flex items-center gap-2.5 flex-wrap">
+                        <span className="text-5xl sm:text-6xl font-bold tabular-nums leading-none" style={{ color: scoreColor }}>
+                          {displayScore}
+                        </span>
+                        <div className="pt-1">
+                          <RiskBadge score={displayScore} size="md" />
+                        </div>
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="text-right shrink-0">
+                      <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-2" style={{ color: 'var(--lo)' }}>
+                        Score Delta
+                      </p>
+                      <p className="text-[10px] mb-2" style={{ color: 'var(--lo)' }}>
+                        vs previous scan
+                      </p>
+                      {hasTrend && scoreDelta !== 0 ? (
+                        <div>
+                          <div
+                            className="text-2xl font-bold tabular-nums leading-none"
+                            style={{ color: scoreDelta > 0 ? 'var(--risk-high)' : 'var(--risk-low)' }}
+                          >
+                            {scoreDelta > 0 ? `+${scoreDelta}` : scoreDelta}
+                          </div>
+                          <div className="text-[11px] mt-1" style={{ color: scoreDelta > 0 ? 'var(--risk-high)' : 'var(--risk-low)' }}>
+                            {scoreDelta > 0 ? 'Rising' : 'Falling'}
+                          </div>
+                        </div>
+                      ) : hasTrend ? (
+                        <div>
+                          <div className="text-2xl font-bold leading-none tabular-nums" style={{ color: 'var(--lo)' }}>0</div>
+                          <div className="text-[11px] mt-1" style={{ color: 'var(--lo)' }}>Stable</div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-2xl font-bold leading-none" style={{ color: 'var(--lo)' }}>—</div>
+                          <div className="text-[11px] mt-1" style={{ color: 'var(--lo)' }}>Need 2 scans</div>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                  <p className="mt-2.5" style={{ color: '#a78bfa' }}>Full PDF contains all detected events.</p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
+                    <div
+                      className="rounded-xl px-3.5 py-3"
+                      style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
+                    >
+                      <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
+                        Last Scan
+                      </p>
+                      <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--hi)' }}>
+                        {vendor.last_scanned ? relativeTime(vendor.last_scanned) : '—'}
+                      </p>
+                      {vendor.last_scanned && (
+                        <p className="text-[10px] mt-1" style={{ color: 'var(--lo)' }}>
+                          {formatApiDateTime(vendor.last_scanned, [], {
+                            month: 'short',
+                            day: 'numeric',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      )}
+                    </div>
+
+                    <div
+                      className="rounded-xl px-3.5 py-3"
+                      style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
+                    >
+                      <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
+                        Exposure Basis
+                      </p>
+                      <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--hi)' }}>
+                        {vendor.effective_score != null && vendor.effective_score !== vendor.risk_score ? 'Context adjusted' : 'Technical only'}
+                      </p>
+                      <p className="text-[10px] mt-1 tabular-nums" style={{ color: 'var(--lo)' }}>
+                        Technical {vendor.risk_score}
+                        {vendor.effective_score != null && vendor.effective_score !== vendor.risk_score ? ` -> Effective ${vendor.effective_score}` : ''}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div
+                    className="mt-5 pt-4"
+                    style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+                  >
+                    <div
+                      className="rounded-xl px-3.5 py-3 mb-4"
+                      style={{
+                        background: 'rgba(255,255,255,0.02)',
+                        border: '1px solid rgba(255,255,255,0.045)',
+                      }}
+                    >
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <p className="text-[9px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'var(--lo)' }}>
+                            Current Posture
+                          </p>
+                          <p className="text-[12px] font-semibold" style={{ color: scoreColor }}>
+                            {riskBand}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'var(--lo)' }}>
+                            Monitoring
+                          </p>
+                          <p className="text-[12px] font-semibold" style={{ color: 'var(--mid)' }}>
+                            {monitorState}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-[9px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'var(--lo)' }}>
+                            Scan History
+                          </p>
+                          <p className="text-[12px] font-semibold" style={{ color: 'var(--mid)' }}>
+                            {history.length} recorded{history.length === 1 ? '' : ' scans'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between gap-3 mb-2">
+                      <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--lo)' }}>
+                        Scoring Model
+                      </p>
+                      <div className="group relative inline-block">
+                        <span
+                          className="text-[11px] cursor-help"
+                          style={{ color: 'var(--lo)', borderBottom: '1px dotted #44445a' }}
+                        >
+                          How is this calculated?
+                        </span>
+                        <div
+                          className="absolute right-0 bottom-full mb-3 w-[min(22rem,calc(100vw-2rem))] rounded-xl p-4 text-xs hidden group-hover:block z-50"
+                          style={{
+                            background: 'var(--elevated)',
+                            border: '1px solid var(--border)',
+                            color: 'var(--mid)',
+                            boxShadow: '0 12px 40px rgba(0,0,0,0.8)',
+                          }}
+                        >
+                          <p className="font-semibold mb-1.5" style={{ color: 'var(--hi)' }}>Technical Score</p>
+                          <p className="mb-3">
+                            Top CVEs are weighted by severity, then combined with breach data, Companies House signals, and Shodan exposure. Final score is capped at 100.
+                          </p>
+                          <p className="font-semibold mb-1.5" style={{ color: 'var(--hi)' }}>Effective Exposure</p>
+                          <p className="mb-2">
+                            Business context multiplies the technical score based on the type of access this vendor has to your environment or data.
+                          </p>
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 pt-2" style={{ borderTop: '1px solid var(--border)' }}>
+                            {[
+                              ['No Data Access', '×0.8'],
+                              ['PII / Personal', '×1.4'],
+                              ['Financial', '×1.6'],
+                              ['Auth / SSO', '×1.6'],
+                              ['Health / Medical', '×1.8'],
+                              ['Critical Infra', '×2.0'],
+                            ].map(([lbl, mult]) => (
+                              <div key={lbl} className="flex justify-between">
+                                <span>{lbl}</span>
+                                <span style={{ color: 'var(--accent-l)' }}>{mult}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <p className="text-[11px] leading-relaxed" style={{ color: 'var(--lo)' }}>
+                      Technical findings set the baseline. Business context then adjusts exposure based on the type of access this vendor has.
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mt-3">
+                      {[
+                        { label: 'Signals', value: 'CVEs, breaches, infra' },
+                        { label: 'Context', value: 'Sensitivity multiplier' },
+                        { label: 'Output', value: '0-100 capped score' },
+                      ].map(({ label, value }) => (
+                        <div
+                          key={label}
+                          className="rounded-xl px-3 py-2.5"
+                          style={{
+                            background: 'rgba(255,255,255,0.02)',
+                            border: '1px solid rgba(255,255,255,0.05)',
+                          }}
+                        >
+                          <p className="text-[9px] font-bold tracking-[0.14em] uppercase mb-1" style={{ color: 'var(--lo)' }}>
+                            {label}
+                          </p>
+                          <p className="text-[11px] leading-snug" style={{ color: 'var(--mid)' }}>
+                            {value}
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-5 content-start">
+                  <div style={{ opacity: updatingContext ? 0.5 : 1, transition: 'opacity 200ms ease', pointerEvents: updatingContext ? 'none' : 'auto' }}>
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div>
+                        <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--lo)' }}>
+                          Data Sensitivity
+                        </p>
+                        <p className="text-[11px] mt-1" style={{ color: 'var(--lo)' }}>
+                          Adjust the score based on what this vendor can actually touch.
+                        </p>
+                      </div>
+                      {updatingContext && (
+                        <span className="text-[10px]" style={{ color: 'var(--lo)' }}>saving…</span>
+                      )}
+                    </div>
+
+                    {(() => {
+                      const current = vendor.data_sensitivity || 'standard'
+                      const isDefault = current === 'standard'
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleContextChange('standard')}
+                            className="w-full mb-2 py-2 px-3 rounded-lg text-[11px] flex items-center justify-between"
+                            style={{
+                              background: isDefault ? 'rgba(139,92,246,0.1)' : 'transparent',
+                              border: isDefault ? '1px solid rgba(139,92,246,0.3)' : '1px dashed var(--border)',
+                              color: isDefault ? 'var(--accent-l)' : 'var(--lo)',
+                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                              cursor: isDefault ? 'default' : 'pointer',
+                            }}
+                          >
+                            <span className="font-medium">No adjustment</span>
+                            <span style={{ opacity: 0.7, fontSize: '10px' }}>default · 1.0×</span>
+                          </button>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                            {SENSITIVITY_OPTIONS.filter((o) => o.value !== 'standard').map(({ value, label, hint }) => {
+                              const isSelected = current === value
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => handleContextChange(value)}
+                                  className="py-2.5 px-3 rounded-lg text-left"
+                                  style={{
+                                    background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
+                                    border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
+                                    color: isSelected ? 'var(--accent-l)' : 'var(--lo)',
+                                    cursor: isSelected ? 'default' : 'pointer',
+                                    transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                                      e.currentTarget.style.color = 'var(--mid)'
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
+                                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
+                                      e.currentTarget.style.color = 'var(--lo)'
+                                    }
+                                  }}
+                                >
+                                  <div className="text-[11px] font-medium leading-tight">{label}</div>
+                                  <div className="text-[10px] mt-1" style={{ color: isSelected ? 'rgba(167,139,250,0.72)' : 'var(--border)' }}>{hint}</div>
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )
+                    })()}
+                  </div>
+
+                  <div
+                    style={{
+                      opacity: updatingReview ? 0.5 : 1,
+                      transition: 'opacity 200ms ease',
+                      pointerEvents: updatingReview ? 'none' : 'auto',
+                    }}
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <div>
+                        <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--lo)' }}>
+                          Review Schedule
+                        </p>
+                        <p className="text-[11px] mt-1" style={{ color: scheduleStatus.tone }}>
+                          {scheduleStatus.text}
+                        </p>
+                      </div>
+                      {updatingReview && (
+                        <span className="text-[10px]" style={{ color: 'var(--lo)' }}>saving…</span>
+                      )}
+                    </div>
+
+                    {(() => {
+                      const current = vendor.review_interval_days ?? null
+                      const isNone = current === null
+                      return (
+                        <>
+                          <button
+                            onClick={() => handleReviewUpdate({ interval_days: null })}
+                            className="w-full mb-2 py-2 px-3 rounded-lg text-[11px] flex items-center justify-between"
+                            style={{
+                              background: isNone ? 'rgba(139,92,246,0.1)' : 'transparent',
+                              border: isNone ? '1px solid rgba(139,92,246,0.3)' : '1px dashed var(--border)',
+                              color: isNone ? 'var(--accent-l)' : 'var(--lo)',
+                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                              cursor: isNone ? 'default' : 'pointer',
+                            }}
+                          >
+                            <span className="font-medium">No schedule</span>
+                            <span style={{ opacity: 0.7, fontSize: '10px' }}>default</span>
+                          </button>
+
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2">
+                            {[
+                              { value: 30,  label: '30 days' },
+                              { value: 60,  label: '60 days' },
+                              { value: 90,  label: '90 days' },
+                              { value: 180, label: '180 days' },
+                              { value: 365, label: 'Annually' },
+                            ].map(({ value, label }) => {
+                              const isSelected = current === value
+                              return (
+                                <button
+                                  key={value}
+                                  onClick={() => handleReviewUpdate({ interval_days: value })}
+                                  className="py-2.5 px-2 rounded-lg text-center"
+                                  style={{
+                                    background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
+                                    border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
+                                    color: isSelected ? 'var(--accent-l)' : 'var(--lo)',
+                                    cursor: isSelected ? 'default' : 'pointer',
+                                    transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
+                                    fontSize: '10px',
+                                    fontWeight: isSelected ? 600 : 400,
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
+                                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
+                                      e.currentTarget.style.color = 'var(--mid)'
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
+                                      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
+                                      e.currentTarget.style.color = 'var(--lo)'
+                                    }
+                                  }}
+                                >
+                                  {label}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </>
+                      )
+                    })()}
+
+                    {vendor.review_interval_days && (
+                      <div className="flex justify-end">
+                        <button
+                          onClick={() => handleReviewUpdate({ mark_reviewed: true })}
+                          className="text-[10px] px-2.5 py-1 rounded-lg transition-all duration-150"
+                          style={{
+                            background: 'rgba(34,197,94,0.08)',
+                            border: '1px solid rgba(34,197,94,0.2)',
+                            color: 'var(--risk-low)',
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.15)'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.08)'}
+                        >
+                          Mark Reviewed
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-
-            {/* Data sensitivity selector */}
-            <div className="mt-5 w-full" style={{ opacity: updatingContext ? 0.5 : 1, transition: 'opacity 200ms ease', pointerEvents: updatingContext ? 'none' : 'auto' }}>
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
-                  Data Sensitivity
-                </p>
-                {updatingContext && (
-                  <span className="text-[9px]" style={{ color: '#8080aa' }}>saving…</span>
-                )}
-              </div>
-
-              {/* Reset / default option — full width, dashed when unset */}
-              {(() => {
-                const current = vendor.data_sensitivity || 'standard'
-                const isDefault = current === 'standard'
-                return (
-                  <>
-                    <button
-                      onClick={() => handleContextChange('standard')}
-                      className="w-full mb-2 py-1.5 px-3 rounded-lg text-[11px] flex items-center justify-between"
-                      style={{
-                        background: isDefault ? 'rgba(139,92,246,0.1)' : 'transparent',
-                        border: isDefault ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
-                        color: isDefault ? '#a78bfa' : '#8080aa',
-                        transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
-                        cursor: isDefault ? 'default' : 'pointer',
-                      }}
-                    >
-                      <span className="font-medium">No adjustment</span>
-                      <span style={{ opacity: 0.6, fontSize: '10px' }}>default · 1.0×</span>
-                    </button>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                      {SENSITIVITY_OPTIONS.filter((o) => o.value !== 'standard').map(({ value, label, hint }) => {
-                        const isSelected = current === value
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => handleContextChange(value)}
-                            className="py-2 px-2.5 rounded-lg text-left"
-                            style={{
-                              background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
-                              border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
-                              color: isSelected ? '#a78bfa' : '#8080aa',
-                              cursor: isSelected ? 'default' : 'pointer',
-                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.color = '#b8b8d0'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.color = '#8080aa'
-                              }
-                            }}
-                          >
-                            <div className="text-[10px] font-medium leading-tight">{label}</div>
-                            <div className="text-[9px] mt-0.5" style={{ color: isSelected ? 'rgba(167,139,250,0.6)' : '#44445a' }}>{hint}</div>
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )
-              })()}
-            </div>
-
-            {/* Review Scheduling */}
-            <div
-              className="mt-5 w-full"
-              style={{
-                opacity: updatingReview ? 0.5 : 1,
-                transition: 'opacity 200ms ease',
-                pointerEvents: updatingReview ? 'none' : 'auto',
-              }}
-            >
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-[9px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
-                  Review Schedule
-                </p>
-                {updatingReview && (
-                  <span className="text-[9px]" style={{ color: '#8080aa' }}>saving…</span>
-                )}
-              </div>
-
-              {/* No-schedule reset pill */}
-              {(() => {
-                const current = vendor.review_interval_days ?? null
-                const isNone = current === null
-                return (
-                  <>
-                    <button
-                      onClick={() => handleReviewUpdate({ interval_days: null })}
-                      className="w-full mb-2 py-1.5 px-3 rounded-lg text-[11px] flex items-center justify-between"
-                      style={{
-                        background: isNone ? 'rgba(139,92,246,0.1)' : 'transparent',
-                        border: isNone ? '1px solid rgba(139,92,246,0.3)' : '1px dashed #2a2a4a',
-                        color: isNone ? '#a78bfa' : '#8080aa',
-                        transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
-                        cursor: isNone ? 'default' : 'pointer',
-                      }}
-                    >
-                      <span className="font-medium">No schedule</span>
-                      <span style={{ opacity: 0.6, fontSize: '10px' }}>default</span>
-                    </button>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2">
-                      {[
-                        { value: 30,  label: '30 days' },
-                        { value: 60,  label: '60 days' },
-                        { value: 90,  label: '90 days' },
-                        { value: 180, label: '180 days' },
-                        { value: 365, label: 'Annually' },
-                      ].map(({ value, label }) => {
-                        const isSelected = current === value
-                        return (
-                          <button
-                            key={value}
-                            onClick={() => handleReviewUpdate({ interval_days: value })}
-                            className="py-2 px-2 rounded-lg text-center"
-                            style={{
-                              background: isSelected ? 'rgba(139,92,246,0.15)' : 'rgba(255,255,255,0.02)',
-                              border: isSelected ? '1px solid rgba(139,92,246,0.35)' : '1px solid rgba(255,255,255,0.05)',
-                              color: isSelected ? '#a78bfa' : '#8080aa',
-                              cursor: isSelected ? 'default' : 'pointer',
-                              transition: 'background 200ms ease, border-color 200ms ease, color 200ms ease',
-                              fontSize: '10px',
-                              fontWeight: isSelected ? 600 : 400,
-                            }}
-                            onMouseEnter={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.1)'
-                                e.currentTarget.style.color = '#b8b8d0'
-                              }
-                            }}
-                            onMouseLeave={(e) => {
-                              if (!isSelected) {
-                                e.currentTarget.style.background = 'rgba(255,255,255,0.02)'
-                                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.05)'
-                                e.currentTarget.style.color = '#8080aa'
-                              }
-                            }}
-                          >
-                            {label}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </>
-                )
-              })()}
-
-              {vendor.review_interval_days && (() => {
-                const lastReviewed = vendor.last_reviewed_at ? new Date(vendor.last_reviewed_at) : null
-                const dueAt = lastReviewed
-                  ? new Date(lastReviewed.getTime() + vendor.review_interval_days * 86400000)
-                  : null
-                const now = new Date()
-                const daysOverdue = dueAt ? Math.floor((now - dueAt) / 86400000) : null
-
-                return (
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <p className="text-[10px]" style={{
-                      color: daysOverdue > 0 ? '#fbbf24' : dueAt ? '#22c55e' : '#8080aa',
-                    }}>
-                      {!lastReviewed
-                        ? 'Never reviewed'
-                        : daysOverdue > 0
-                        ? `Overdue by ${daysOverdue} day${daysOverdue !== 1 ? 's' : ''}`
-                        : `Next: ${dueAt.toLocaleDateString([], { month: 'short', day: 'numeric', year: 'numeric' })}`}
-                    </p>
-                    <button
-                      onClick={() => handleReviewUpdate({ mark_reviewed: true })}
-                      className="text-[10px] px-2.5 py-1 rounded-lg transition-all duration-150"
-                      style={{
-                        background: 'rgba(34,197,94,0.08)',
-                        border: '1px solid rgba(34,197,94,0.2)',
-                        color: '#22c55e',
-                      }}
-                      onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.15)'}
-                      onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(34,197,94,0.08)'}
-                    >
-                      Mark Reviewed
-                    </button>
-                  </div>
-                )
-              })()}
-            </div>
-          </Panel>
-
-          {/* Score history chart */}
-          <div className="md:col-span-3">
-            <ScoreChart history={history} />
-          </div>
-        </div>
+            </Panel>
+          )
+        })()}
 
         {/* Vendor Profile */}
         {(vendor.description || vendor.auth_method || vendor.two_factor) && (
           <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 50ms both' }}>
             <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
             {vendor.description && (
-              <p className="text-sm leading-relaxed mb-5" style={{ color: '#b8b8d0' }}>
+              <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--mid)' }}>
                 {vendor.description}
               </p>
             )}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#8080aa' }}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
                   Auth Method
                 </p>
-                <p className="text-sm" style={{ color: '#b8b8d0' }}>
+                <p className="text-sm" style={{ color: 'var(--mid)' }}>
                   {vendor.auth_method || (
-                    <span style={{ color: '#8080aa' }}>Not detected</span>
+                    <span style={{ color: 'var(--lo)' }}>Not detected</span>
                   )}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#8080aa' }}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
                   2FA Support
                 </p>
                 {vendor.two_factor === 'Yes' ? (
@@ -629,13 +804,13 @@ export default function VendorDetail() {
                     style={{
                       background: 'rgba(34,197,94,0.08)',
                       border: '1px solid rgba(34,197,94,0.2)',
-                      color: '#22c55e',
+                      color: 'var(--risk-low)',
                     }}
                   >
                     Yes
                   </span>
                 ) : (
-                  <span className="text-sm" style={{ color: '#8080aa' }}>Not detected</span>
+                  <span className="text-sm" style={{ color: 'var(--lo)' }}>Not detected</span>
                 )}
               </div>
             </div>
@@ -651,9 +826,9 @@ export default function VendorDetail() {
         {/* Risk Events */}
         <Panel style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 150ms both' }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
-            <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--hi)' }}>
               Risk Events{' '}
-              <span className="font-normal" style={{ color: '#8080aa' }}>
+              <span className="font-normal" style={{ color: 'var(--lo)' }}>
                 (top {displayedEvents.length} of {events.length})
               </span>
             </h3>
@@ -665,7 +840,7 @@ export default function VendorDetail() {
                 style={{
                   background: 'rgba(139,92,246,0.1)',
                   border: '1px solid rgba(139,92,246,0.2)',
-                  color: '#a78bfa',
+                  color: 'var(--accent-l)',
                   cursor: exporting ? 'not-allowed' : 'pointer',
                 }}
                 onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(139,92,246,0.18)'}
@@ -681,13 +856,13 @@ export default function VendorDetail() {
         {/* Analyst Notes */}
         <Panel className="mt-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 200ms both' }}>
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
-            <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
+            <h3 className="text-sm font-semibold" style={{ color: 'var(--hi)' }}>
               Analyst Notes{' '}
               {notes.length > 0 && (
-                <span className="font-normal text-xs" style={{ color: '#8080aa' }}>({notes.length})</span>
+                <span className="font-normal text-xs" style={{ color: 'var(--lo)' }}>({notes.length})</span>
               )}
             </h3>
-            <p className="text-[10px]" style={{ color: '#8080aa' }}>Included in PDF export</p>
+            <p className="text-[10px]" style={{ color: 'var(--lo)' }}>Included in PDF export</p>
           </div>
 
           {/* Composer */}
@@ -701,10 +876,10 @@ export default function VendorDetail() {
           >
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
               <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: 'var(--lo)' }}>
                   Add Evidence Note
                 </p>
-                <p className="text-[11px] mt-1" style={{ color: '#8080aa' }}>
+                <p className="text-[11px] mt-1" style={{ color: 'var(--lo)' }}>
                   Capture rationale, follow-up actions, or review context for the vendor file.
                 </p>
               </div>
@@ -713,7 +888,7 @@ export default function VendorDetail() {
                 style={{
                   background: 'rgba(139,92,246,0.08)',
                   border: '1px solid rgba(139,92,246,0.18)',
-                  color: '#a78bfa',
+                  color: 'var(--accent-l)',
                 }}
               >
                 {noteInput.trim().length}/1000
@@ -732,9 +907,9 @@ export default function VendorDetail() {
               disabled={addingNote}
               className="w-full rounded-xl px-3.5 py-3 text-sm resize-y min-h-[120px]"
               style={{
-                background: '#141425',
-                border: '1px solid #2a2a4a',
-                color: '#f0f0ff',
+                background: 'var(--elevated)',
+                border: '1px solid var(--border)',
+                color: 'var(--hi)',
                 outline: 'none',
                 opacity: addingNote ? 0.5 : 1,
                 transition: 'opacity 200ms ease, border-color 200ms ease, box-shadow 200ms ease',
@@ -743,8 +918,8 @@ export default function VendorDetail() {
             />
 
             <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <p className="text-[11px]" style={{ color: '#8080aa' }}>
-                Submit with <span style={{ color: '#b8b8d0' }}>Ctrl+Enter</span> or use the action button.
+              <p className="text-[11px]" style={{ color: 'var(--lo)' }}>
+                Submit with <span style={{ color: 'var(--mid)' }}>Ctrl+Enter</span> or use the action button.
               </p>
 
               <button
@@ -798,8 +973,8 @@ export default function VendorDetail() {
                   <rect x="4.75" y="4.75" width="14.5" height="14.5" rx="2.5" stroke="#2a2a4a" strokeWidth="1.5" />
                 </svg>
               </div>
-              <p className="text-sm font-medium" style={{ color: '#b8b8d0' }}>No analyst notes yet</p>
-              <p className="text-xs mt-1" style={{ color: '#8080aa' }}>
+              <p className="text-sm font-medium" style={{ color: 'var(--mid)' }}>No analyst notes yet</p>
+              <p className="text-xs mt-1" style={{ color: 'var(--lo)' }}>
                 Notes you add here are saved with the vendor record and included in PDF exports.
               </p>
             </div>
@@ -816,9 +991,9 @@ export default function VendorDetail() {
                   }}
                 >
                   <div className="flex-1 min-w-0">
-                    <p className="text-xs leading-relaxed" style={{ color: '#f0f0ff' }}>{note.content}</p>
-                    <p className="text-[10px] mt-1 font-mono" style={{ color: '#8080aa' }}>
-                      {new Date(note.created_at).toLocaleString([], {
+                    <p className="text-xs leading-relaxed" style={{ color: 'var(--hi)' }}>{note.content}</p>
+                    <p className="text-[10px] mt-1 font-mono" style={{ color: 'var(--lo)' }}>
+                      {formatApiDateTime(note.created_at, [], {
                         month: 'short', day: 'numeric', year: 'numeric',
                         hour: '2-digit', minute: '2-digit',
                       })}
@@ -827,9 +1002,9 @@ export default function VendorDetail() {
                   <button
                     onClick={() => handleDeleteNote(note.id)}
                     className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all duration-150 shrink-0"
-                    style={{ color: '#8080aa', background: 'rgba(255,255,255,0.03)' }}
-                    onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
-                    onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+                    style={{ color: 'var(--lo)', background: 'rgba(255,255,255,0.03)' }}
+                    onMouseEnter={(e) => e.currentTarget.style.color = 'var(--risk-high)'}
+                    onMouseLeave={(e) => e.currentTarget.style.color = 'var(--lo)'}
                     title="Delete note"
                   >
                     ✕

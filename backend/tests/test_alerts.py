@@ -33,3 +33,35 @@ def test_send_email_skips_reserved_test_domains(monkeypatch):
     alerts._send_email("testuser_999@example.com", "Welcome", "<p>hi</p>")
 
     assert calls == []
+
+
+def test_send_alert_email_skips_without_owner_recipient(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(alerts, "_send_email", lambda *args, **kwargs: calls.append("sent"))
+
+    alerts.send_alert_email(
+        vendor_name="Real Vendor",
+        domain="company.com",
+        score=87.0,
+        events=[],
+        recipient_email=None,
+    )
+
+    assert calls == []
+
+
+def test_send_alert_email_skips_reserved_vendor_domain(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(alerts, "_send_email", lambda *args, **kwargs: calls.append("sent"))
+
+    alerts.send_alert_email(
+        vendor_name="Debug Vendor",
+        domain="debug-a2a9f867.example",
+        score=87.0,
+        events=[],
+        recipient_email="owner@company.com",
+    )
+
+    assert calls == []

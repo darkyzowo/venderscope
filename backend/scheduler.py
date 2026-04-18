@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 from apscheduler.schedulers.background import BackgroundScheduler
 from database import SessionLocal
 from models import Vendor, RevokedToken
+from services.alerts import _is_reserved_test_domain
 from services.scanner import run_full_scan
 
 RENDER_URL = "https://venderscope-api.onrender.com"
@@ -11,13 +12,29 @@ def scheduled_scan():
     """Nightly job — force fresh scans for all vendors."""
     db = SessionLocal()
     try:
-        vendors = db.query(Vendor).all()
-        for vendor in vendors:
+        vendor_ids = [vendor_id for (vendor_id,) in db.query(Vendor.id).filter(Vendor.user_id.isnot(None)).all()]
+        scanned = 0
+        skipped = 0
+        for vendor_id in vendor_ids:
+            vendor_db = SessionLocal()
+            vendor = None
             try:
-                run_full_scan(vendor, db, force=True)
+                vendor = vendor_db.get(Vendor, vendor_id)
+                if not vendor or not vendor.user_id:
+                    skipped += 1
+                    continue
+                if _is_reserved_test_domain(vendor.domain):
+                    print(f"[Scheduler] Skipping reserved/test vendor {vendor.name} ({vendor.domain})")
+                    skipped += 1
+                    continue
+                run_full_scan(vendor, vendor_db, force=True)
+                scanned += 1
             except Exception as e:
-                print(f"[Scheduler] Error scanning {vendor.name}: {e}")
-        print(f"[Scheduler] Nightly scan complete — {len(vendors)} vendors refreshed")
+                vendor_label = vendor.name if vendor else vendor_id
+                print(f"[Scheduler] Error scanning {vendor_label}: {e}")
+            finally:
+                vendor_db.close()
+        print(f"[Scheduler] Nightly scan complete — scanned {scanned}, skipped {skipped}")
     finally:
         db.close()
 

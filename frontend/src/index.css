@@ -11,34 +11,37 @@
 @tailwind utilities;
 
 :root {
-  /* Surfaces */
-  --bg:       #090911;
-  --surface:  #0e0e1a;
-  --elevated: #141425;
-  --input:    #1a1a2e;
+  /* Surfaces — neutral cool-dark (not blue-tinted) */
+  --bg:       #0B0B10;
+  --surface:  #15161C;
+  --elevated: #1C1D24;
+  --input:    #20212A;
   /* Borders */
-  --line:     #1e1e35;
-  --border:   #2a2a4a;
-  /* Accent — violet */
-  --accent:      #8b5cf6;
-  --accent-h:    #7c3aed;
-  --accent-l:    #a78bfa;
-  --accent-bg:   rgba(139,92,246,0.1);
+  --line:     #23242C;
+  --border:   #2A2B34;
+  /* Accent — violet (unchanged) */
+  --accent:      #8B5CF6;
+  --accent-h:    #7C3AED;
+  --accent-l:    #A78BFA;
+  --accent-bg:   rgba(139,92,246,0.10);
   --accent-ring: rgba(139,92,246,0.25);
-  /* Text — contrast ratios against #090911 background:
-     --hi  14:1  primary headings & key values
-     --mid  6.5:1 body text, descriptions, secondary labels
-     --lo   4.8:1 metadata, timestamps, hints
-     --lo2  1.8:1 borders & decorative separators ONLY — never readable text */
-  --hi:  #f0f0ff;
-  --mid: #b8b8d0;
-  --lo:  #8080aa;
-  --lo2: #2a2a4a;
-  /* Risk */
-  --risk-high:   #f97316;
-  --risk-medium: #eab308;
-  --risk-low:    #22c55e;
-  --risk-crit:   #ff4444;
+  /* Text — contrast ratios against #0B0B10 background:
+     --hi  ~15:1  primary headings & key values
+     --mid  ~6.5:1 body text, descriptions, secondary labels
+     --lo   ~4.5:1 metadata, timestamps, hints
+     --lo2  decorative separators ONLY — never readable text */
+  --hi:  #F5F6FA;
+  --mid: #B4B6C2;
+  --lo:  #8A8C98;
+  --lo2: #2A2B34;
+  /* Risk — semantic traffic-light (high = red, not orange) */
+  --risk-high:        #F04438;
+  --risk-high-tint:   rgba(240,68,56,0.12);
+  --risk-medium:      #F59E0B;
+  --risk-medium-tint: rgba(245,158,11,0.12);
+  --risk-low:         #10B981;
+  --risk-low-tint:    rgba(16,185,129,0.12);
+  --risk-crit:        #F04438;
 }
 
 *, *::before, *::after { box-sizing: border-box; }
@@ -92,7 +95,7 @@ html {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #3a3a5a; }
+::-webkit-scrollbar-thumb:hover { background: #3A3B46; }
 
 /* Focus ring */
 :focus-visible {
@@ -343,7 +346,7 @@ html {
   100% { background-position:  200% center; }
 }
 .skeleton {
-  background: linear-gradient(90deg, #1e1e35 25%, #2a2a4a 50%, #1e1e35 75%);
+  background: linear-gradient(90deg, var(--line) 25%, var(--border) 50%, var(--line) 75%);
   background-size: 200% auto;
   animation: shimmer 1.6s linear infinite;
   border-radius: 6px;

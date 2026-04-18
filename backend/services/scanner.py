@@ -8,10 +8,10 @@ from services.hibp import check_domain_breaches
 from services.nvd import check_vendor_cves
 from services.companies_house import check_company_health
 from services.shodan_service import check_shodan_exposure
-from services.alerts import send_alert_email
+from services.alerts import ALERT_THRESHOLD, send_alert_email
 from services.compliance_discovery import run_compliance_discovery
 from services.vendor_profile import discover_vendor_profile
-from services.quota import check_and_consume
+from services.quota import get_quota_status
 
 # Severity weights for scoring
 SEVERITY_WEIGHTS = {"CRITICAL": 25, "HIGH": 15, "MEDIUM": 7, "LOW": 2}
@@ -43,11 +43,11 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
 
     print(f"[Scanner] Scanning {vendor.name}...")
     start = datetime.now(timezone.utc)
+    previous_score = vendor.risk_score or 0.0
 
-    # Check quota before firing compliance web searches
-    quota_ok = check_and_consume()
-    if not quota_ok:
-        print(f"[Scanner] Quota exhausted — {vendor.name} will run Standard Scan (no web search).")
+    quota_status = get_quota_status()
+    if quota_status["exhausted"]:
+        print(f"[Scanner] Search quota exhausted — {vendor.name} will skip external compliance search.")
 
     # Run all intelligence sources concurrently
     tasks = {
@@ -65,7 +65,7 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
 
         # Compliance submitted separately — needs two args + quota flag
         compliance_future = ex.submit(
-            run_compliance_discovery, vendor.domain, vendor.name, quota_ok
+            run_compliance_discovery, vendor.domain, vendor.name, not quota_status["exhausted"]
         )
         futures[compliance_future] = "compliance"
 
@@ -85,8 +85,10 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     for e in raw.get("ch",     []): all_events.append({**e, "source": "CompaniesHouse"})
 
     # Deduplicate against DB — match on CVE ID prefix only
-    stored = {e.title.split()[0] for e in
-              db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()}
+    stored = {
+        title.split()[0]
+        for (title,) in db.query(RiskEvent.title).filter(RiskEvent.vendor_id == vendor.id).all()
+    }
     new_events = [e for e in all_events if e["title"].split()[0] not in stored]
 
     for evt in new_events:
@@ -118,11 +120,18 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     db.add(RiskScoreHistory(vendor_id=vendor.id, score=score))
     db.commit()
 
-    all_stored = db.query(RiskEvent).filter(RiskEvent.vendor_id == vendor.id).all()
     owner_email = vendor.owner.email if vendor.owner else None
-    send_alert_email(vendor.name, vendor.domain, score, all_stored, vendor_id=vendor.id, recipient_email=owner_email)
+    if previous_score < score and previous_score < ALERT_THRESHOLD <= score:
+        send_alert_email(
+            vendor.name,
+            vendor.domain,
+            score,
+            all_events,
+            vendor_id=vendor.id,
+            recipient_email=owner_email,
+        )
 
-    scan_type = "Full Intelligence" if quota_ok else "Standard"
+    scan_type = "Full Intelligence" if compliance_data.get("search_units_used", 0) > 0 else "Standard"
     elapsed   = (datetime.now(timezone.utc) - start).seconds
     print(f"[Scanner] {vendor.name} → {score} ({scan_type} Scan) | "
           f"+{len(new_events)} new events | {elapsed}s")

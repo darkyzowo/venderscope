@@ -57,7 +57,7 @@ export default function Login() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px 16px',
-        background: '#090911',
+        background: 'var(--bg)',
         position: 'relative',
         overflowX: 'clip',
       }}
@@ -89,7 +89,7 @@ export default function Login() {
         <p style={{
           textAlign: 'center',
           fontSize: 12,
-          color: '#8080aa',
+          color: 'var(--lo)',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           marginBottom: 16,
@@ -231,24 +231,24 @@ export default function Login() {
 
         {/* Footer links */}
         <div style={{ marginTop: 12, textAlign: 'center', ...reveal(720) }}>
-          <p style={{ fontSize: 13, color: '#8080aa', marginBottom: 8 }}>
+          <p style={{ fontSize: 13, color: 'var(--lo)', marginBottom: 8 }}>
             Don't have an account?{' '}
             <Link
               to="/register"
-              style={{ color: '#a78bfa', fontWeight: 500, textDecoration: 'none' }}
+              style={{ color: 'var(--accent-l)', fontWeight: 500, textDecoration: 'none' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
               Create one
             </Link>
           </p>
-          <p style={{ fontSize: 13, color: '#8080aa' }}>
+          <p style={{ fontSize: 13, color: 'var(--lo)' }}>
             Just browsing?{' '}
             <Link
               to="/guest"
-              style={{ color: '#8080aa', fontWeight: 500, textDecoration: 'none' }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = '#b8b8d0')}
-              onMouseLeave={(e) => (e.currentTarget.style.color = '#8080aa')}
+              style={{ color: 'var(--lo)', fontWeight: 500, textDecoration: 'none' }}
+              onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--mid)')}
+              onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lo)')}
             >
               Try as Guest →
             </Link>
@@ -260,7 +260,7 @@ export default function Login() {
           marginTop: 14,
           textAlign: 'center',
           fontSize: 10,
-          color: '#8080aa',
+          color: 'var(--lo)',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           ...reveal(820),
@@ -284,7 +284,7 @@ function LoginField({ label, type, value, onChange, placeholder, autoComplete, i
         fontWeight: 700,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        color: focused ? '#a78bfa' : '#8080aa',
+        color: focused ? 'var(--accent-l)' : 'var(--lo)',
         marginBottom: 7,
         transition: 'color 180ms ease',
       }}>
@@ -309,7 +309,7 @@ function LoginField({ label, type, value, onChange, placeholder, autoComplete, i
           background: focused
             ? 'rgba(139,92,246,0.06)'
             : 'rgba(255,255,255,0.03)',
-          color: '#f0f0ff',
+          color: 'var(--hi)',
           fontSize: 14,
           outline: 'none',
           transition: 'all 180ms ease',

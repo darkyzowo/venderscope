@@ -62,7 +62,7 @@ export default function Register() {
         alignItems: 'center',
         justifyContent: 'center',
         padding: '20px 16px',
-        background: '#090911',
+        background: 'var(--bg)',
         position: 'relative',
         overflowX: 'clip',
       }}
@@ -94,7 +94,7 @@ export default function Register() {
         <p style={{
           textAlign: 'center',
           fontSize: 12,
-          color: '#8080aa',
+          color: 'var(--lo)',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           marginBottom: 16,
@@ -240,11 +240,11 @@ export default function Register() {
 
         {/* Footer link */}
         <div style={{ marginTop: 12, textAlign: 'center', ...reveal(800) }}>
-          <p style={{ fontSize: 13, color: '#8080aa' }}>
+          <p style={{ fontSize: 13, color: 'var(--lo)' }}>
             Already have an account?{' '}
             <Link
               to="/login"
-              style={{ color: '#a78bfa', fontWeight: 500, textDecoration: 'none' }}
+              style={{ color: 'var(--accent-l)', fontWeight: 500, textDecoration: 'none' }}
               onMouseEnter={(e) => (e.currentTarget.style.textDecoration = 'underline')}
               onMouseLeave={(e) => (e.currentTarget.style.textDecoration = 'none')}
             >
@@ -257,7 +257,7 @@ export default function Register() {
           marginTop: 14,
           textAlign: 'center',
           fontSize: 10,
-          color: '#8080aa',
+          color: 'var(--lo)',
           letterSpacing: '0.1em',
           textTransform: 'uppercase',
           ...reveal(880),
@@ -281,7 +281,7 @@ function LoginField({ label, type, value, onChange, placeholder, autoComplete, i
         fontWeight: 700,
         letterSpacing: '0.1em',
         textTransform: 'uppercase',
-        color: focused ? '#a78bfa' : '#8080aa',
+        color: focused ? 'var(--accent-l)' : 'var(--lo)',
         marginBottom: 7,
         transition: 'color 180ms ease',
       }}>
@@ -306,7 +306,7 @@ function LoginField({ label, type, value, onChange, placeholder, autoComplete, i
           background: focused
             ? 'rgba(139,92,246,0.06)'
             : 'rgba(255,255,255,0.03)',
-          color: '#f0f0ff',
+          color: 'var(--hi)',
           fontSize: 14,
           outline: 'none',
           transition: 'all 180ms ease',

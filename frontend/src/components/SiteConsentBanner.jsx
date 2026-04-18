@@ -64,7 +64,7 @@ export default function SiteConsentBanner() {
             >
               Privacy Settings
             </p>
-            <h2 className="text-base font-semibold" style={{ color: '#f0f0ff' }}>
+            <h2 className="text-base font-semibold" style={{ color: 'var(--hi)' }}>
               Cookie preferences
             </h2>
           </div>
@@ -75,7 +75,15 @@ export default function SiteConsentBanner() {
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.07)',
-                color: '#8080aa',
+                color: 'var(--lo)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+                e.currentTarget.style.color = 'var(--mid)'
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+                e.currentTarget.style.color = 'var(--lo)'
               }}
             >
               Close
@@ -90,10 +98,10 @@ export default function SiteConsentBanner() {
             border: '1px solid rgba(255,255,255,0.05)',
           }}
         >
-          <p className="text-sm leading-relaxed" style={{ color: '#f0f0ff' }}>
+          <p className="text-sm leading-relaxed" style={{ color: 'var(--hi)' }}>
             VenderScope uses one strictly necessary authentication cookie for secure sign-in and silent session refresh.
           </p>
-          <p className="text-xs mt-2 leading-relaxed" style={{ color: '#8080aa' }}>
+          <p className="text-xs mt-2 leading-relaxed" style={{ color: 'var(--lo)' }}>
             Optional cookies are reserved for future non-essential features. We do not use advertising or analytics cookies.
           </p>
         </div>
@@ -137,10 +145,10 @@ export default function SiteConsentBanner() {
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-sm font-medium" style={{ color: '#f0f0ff' }}>
+                <p className="text-sm font-medium" style={{ color: 'var(--hi)' }}>
                   Optional cookies
                 </p>
-                <p className="text-[11px] mt-1 leading-relaxed" style={{ color: '#8080aa' }}>
+                <p className="text-[11px] mt-1 leading-relaxed" style={{ color: 'var(--lo)' }}>
                   For future non-essential features only.
                 </p>
               </div>
@@ -167,7 +175,15 @@ export default function SiteConsentBanner() {
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.08)',
-              color: '#b8b8d0',
+              color: 'var(--mid)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.08)'
+              e.currentTarget.style.color = 'var(--hi)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              e.currentTarget.style.color = 'var(--mid)'
             }}
           >
             Decline Optional
@@ -180,13 +196,21 @@ export default function SiteConsentBanner() {
               color: '#fff',
               boxShadow: '0 10px 24px rgba(139,92,246,0.2)',
             }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#7c3aed'
+              e.currentTarget.style.boxShadow = '0 12px 28px rgba(139,92,246,0.28)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#8b5cf6'
+              e.currentTarget.style.boxShadow = '0 10px 24px rgba(139,92,246,0.2)'
+            }}
           >
             Accept Optional
           </button>
         </div>
 
         {!hasConsented && (
-          <p className="text-[11px] text-center mt-3" style={{ color: '#8080aa' }}>
+          <p className="text-[11px] text-center mt-3" style={{ color: 'var(--lo)' }}>
             Please choose whether optional cookies can be used.
           </p>
         )}

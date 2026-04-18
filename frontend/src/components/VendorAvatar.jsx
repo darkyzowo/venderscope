@@ -1,3 +1,5 @@
+import { useEffect, useMemo, useState } from 'react'
+
 // Deterministic gradient avatar using first letter of vendor name
 const GRADIENTS = [
   ['#7c3aed', '#4f46e5'],
@@ -15,10 +17,31 @@ const getGradient = (name = '') => {
   return GRADIENTS[idx]
 }
 
-export default function VendorAvatar({ name = 'V', size = 36 }) {
+const cleanDomain = (domain = '') =>
+  domain.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0].trim().toLowerCase()
+
+const getLogoCandidates = (domain = '') => {
+  const base = cleanDomain(domain)
+  if (!base) return []
+  return [
+    `https://${base}/favicon.ico`,
+    `https://www.${base}/favicon.ico`,
+    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(base)}&sz=64`,
+  ]
+}
+
+export default function VendorAvatar({ name = 'V', domain = '', size = 36 }) {
   const [from, to] = getGradient(name)
   const letter = name[0].toUpperCase()
   const fontSize = Math.round(size * 0.42)
+  const logoCandidates = useMemo(() => getLogoCandidates(domain), [domain])
+  const [logoIndex, setLogoIndex] = useState(0)
+
+  useEffect(() => {
+    setLogoIndex(0)
+  }, [domain])
+
+  const activeLogo = logoCandidates[logoIndex] || null
 
   return (
     <div
@@ -36,10 +59,31 @@ export default function VendorAvatar({ name = 'V', size = 36 }) {
         flexShrink: 0,
         letterSpacing: '-0.02em',
         userSelect: 'none',
+        overflow: 'hidden',
+        border: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04)',
       }}
       aria-hidden="true"
     >
-      {letter}
+      {activeLogo ? (
+        <img
+          src={activeLogo}
+          alt=""
+          width={size}
+          height={size}
+          loading="lazy"
+          referrerPolicy="no-referrer"
+          style={{
+            width: size,
+            height: size,
+            objectFit: 'cover',
+            background: 'rgba(255,255,255,0.03)',
+          }}
+          onError={() => setLogoIndex((idx) => idx + 1)}
+        />
+      ) : (
+        letter
+      )}
     </div>
   )
 }

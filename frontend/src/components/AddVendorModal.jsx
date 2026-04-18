@@ -56,8 +56,8 @@ export default function AddVendorModal({ onAdd, onClose }) {
       <div
         className="w-full max-w-md rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto"
         style={{
-          background: 'linear-gradient(160deg, #111128 0%, #0d0d1f 100%)',
-          border: '1px solid #2a2a4a',
+          background: 'var(--surface)',
+          border: '1px solid var(--border)',
           boxShadow: '0 24px 64px rgba(0,0,0,0.8), 0 0 0 1px rgba(139,92,246,0.1)',
           transform: visible ? 'scale(1) translateY(0)' : 'scale(0.96) translateY(8px)',
           opacity: visible ? 1 : 0,
@@ -68,15 +68,15 @@ export default function AddVendorModal({ onAdd, onClose }) {
         <div className="p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-lg font-bold" style={{ color: '#f0f0ff' }}>
+            <h2 className="text-lg font-bold" style={{ color: 'var(--hi)' }}>
               Add Vendor
             </h2>
             <button
               onClick={close}
               className="w-7 h-7 rounded-lg flex items-center justify-center transition-colors duration-150"
-              style={{ background: 'rgba(255,255,255,0.05)', color: '#8080aa' }}
-              onMouseEnter={(e) => { e.currentTarget.style.color = '#b8b8d0' }}
-              onMouseLeave={(e) => { e.currentTarget.style.color = '#8080aa' }}
+              style={{ background: 'rgba(255,255,255,0.05)', color: 'var(--lo)' }}
+              onMouseEnter={(e) => { e.currentTarget.style.color = 'var(--mid)' }}
+              onMouseLeave={(e) => { e.currentTarget.style.color = 'var(--lo)' }}
               aria-label="Close"
             >
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
@@ -136,15 +136,15 @@ export default function AddVendorModal({ onAdd, onClose }) {
               style={{
                 background: 'rgba(255,255,255,0.04)',
                 border: '1px solid rgba(255,255,255,0.08)',
-                color: '#b8b8d0',
+                color: 'var(--mid)',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.07)'
-                e.currentTarget.style.color = '#f0f0ff'
+                e.currentTarget.style.color = 'var(--hi)'
               }}
               onMouseLeave={(e) => {
                 e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
-                e.currentTarget.style.color = '#b8b8d0'
+                e.currentTarget.style.color = 'var(--mid)'
               }}
             >
               Cancel
@@ -181,10 +181,10 @@ function Field({ label, hint, required, placeholder, value, onChange }) {
 
   return (
     <div>
-      <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: '#b8b8d0' }}>
+      <label className="text-xs font-medium mb-1.5 flex items-center gap-1.5" style={{ color: 'var(--mid)' }}>
         {label}
         {required && <span style={{ color: '#8b5cf6' }}>*</span>}
-        {hint && <span style={{ color: '#8080aa', fontWeight: 400 }}>({hint})</span>}
+        {hint && <span style={{ color: 'var(--lo)', fontWeight: 400 }}>({hint})</span>}
       </label>
       <input
         className="w-full rounded-xl px-4 py-2.5 text-sm transition-all duration-150 outline-none"
@@ -195,8 +195,8 @@ function Field({ label, hint, required, placeholder, value, onChange }) {
         onBlur={() => setFocused(false)}
         style={{
           background: 'rgba(255,255,255,0.04)',
-          border: `1px solid ${focused ? 'rgba(139,92,246,0.5)' : '#1e1e35'}`,
-          color: '#f0f0ff',
+          border: `1px solid ${focused ? 'rgba(139,92,246,0.5)' : 'var(--line)'}`,
+          color: 'var(--hi)',
           boxShadow: focused ? '0 0 0 3px rgba(139,92,246,0.1)' : 'none',
         }}
       />
