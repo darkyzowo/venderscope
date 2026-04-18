@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import DeleteAccountModal from './DeleteAccountModal'
 import VSLogo from './VSLogo'
+import { CONSENT_SETTINGS_EVENT } from '../consent/siteConsent'
 
 const FooterLink = ({ to, children, external }) =>
   external ? (
@@ -26,6 +27,9 @@ const FooterLink = ({ to, children, external }) =>
 
 export default function Footer() {
   const [showDelete, setShowDelete] = useState(false)
+  const openCookieSettings = () => {
+    window.dispatchEvent(new Event(CONSENT_SETTINGS_EVENT))
+  }
 
   return (
     <>
@@ -44,6 +48,15 @@ export default function Footer() {
               <FooterLink to="/privacy">Privacy Policy</FooterLink>
               <FooterLink to="/terms">Terms of Service</FooterLink>
               <FooterLink to="/security">Security</FooterLink>
+              <button
+                onClick={openCookieSettings}
+                className="transition-colors duration-150"
+                style={{ background: 'none', border: 'none', padding: 0, color: '#8080aa', cursor: 'pointer' }}
+                onMouseEnter={(e) => e.currentTarget.style.color = '#a78bfa'}
+                onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
+              >
+                Cookie Settings
+              </button>
             </nav>
           </div>
 

@@ -23,6 +23,7 @@ This repo has had a full cleanup and stabilization pass across backend safety, f
 - **Email/test safeguards** — `EMAIL_ENABLED=0` can disable outbound email, reserved test domains are suppressed, and backend tests are pinned to a dedicated SQLite test database so destructive test setup cannot touch production Neon data
 - **Scan and dashboard logic fixes** — `Scan All` now uses the real bulk endpoint, dashboard risk thresholds are aligned with backend logic, and missing-vendor detail pages fail gracefully instead of hanging in a loading state
 - **Frontend cleanup** — route-level lazy loading and vendor chunking reduced the entry bundle, unused dependencies were removed, `follow-redirects` was pinned above the vulnerable range, and the audit/build/lint path is clean
+- **Cookie consent without auth degradation** — the site now exposes a real cookie-settings flow that lets users decline optional cookies while keeping the strictly necessary auth refresh cookie active so login/session continuity remains intact
 
 Verification after this pass:
 

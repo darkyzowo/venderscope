@@ -49,11 +49,18 @@ We ask that you:
 - Passwords hashed with bcrypt (minimum 12 rounds)
 - JWT access tokens are short-lived (15 minutes) and stored in memory only — never in localStorage
 - Refresh tokens are 7-day single-use tokens stored in httpOnly, Secure, SameSite=None cookies — inaccessible to JavaScript
+- The refresh cookie is treated as a **strictly necessary security cookie**; optional-cookie consent does not disable authentication
 - Used refresh tokens are immediately invalidated (JTI blacklist) — each token can only be used once
 - Password reconfirmation required before permanent account deletion — protects against an attacker with a briefly obtained access token
 - CSRF origin validation on all cookie-consuming endpoints (refresh, logout, account deletion)
 - Brute force protection on all authentication endpoints
 - Account enumeration prevention — login errors never reveal whether an email exists
+
+### Cookie Consent
+- VenderScope presents a cookie consent banner and a footer-level **Cookie Settings** control
+- Users may accept or decline **optional** cookies without degrading core platform use
+- Declining optional cookies clears optional client-side storage namespaces while keeping strictly necessary auth cookies active
+- The platform currently does not use advertising, tracking, or third-party analytics cookies
 
 ### Authorisation
 - All authenticated endpoints require a valid JWT access token

@@ -1,6 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
+import SiteConsentBanner from './components/SiteConsentBanner'
 
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const VendorDetail = lazy(() => import('./pages/VendorDetail'))
@@ -95,9 +96,10 @@ function AppRouter() {
 
 export default function App() {
   return (
-    <AuthProvider>
+      <AuthProvider>
       <BrowserRouter>
         <AppRouter />
+        <SiteConsentBanner />
       </BrowserRouter>
     </AuthProvider>
   )

@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 26 March 2026
+**Last updated:** 18 April 2026
 **Effective date:** 23 March 2026
 
 This Privacy Policy explains how VenderScope ("we", "us", "our") collects, uses, stores, and protects your information when you use our vendor risk intelligence platform.
@@ -173,14 +173,34 @@ If you are in the EU, contact your local Data Protection Authority.
 
 ## 8. Cookies
 
-VenderScope uses minimal cookies:
+VenderScope uses minimal cookies and separates them into strictly necessary cookies and optional cookies.
 
-| Cookie | Purpose | Type | Duration |
-|--------|---------|------|---------|
-| `vs_refresh` | Stores your refresh token for silent re-authentication | httpOnly, Secure, SameSite=None (production) / Lax (local dev) | 7 days |
-| Session storage | Stores your access token in browser memory | Not a cookie — cleared on tab close | 15 minutes |
+### 8.1 Strictly Necessary Cookies
 
-We do not use advertising cookies, tracking cookies, or third-party analytics cookies.
+These cookies are required for core platform security and authentication. They cannot be disabled without breaking sign-in or secure session continuity.
+
+| Cookie / Storage | Purpose | Type | Duration |
+|------------------|---------|------|---------|
+| `vs_refresh` | Stores your refresh token for silent re-authentication and secure session continuity | httpOnly, Secure, SameSite=None (production) / Lax (local dev) | 7 days |
+| In-memory access token | Stores your short-lived access token used for authenticated API calls | Not a cookie — held in browser memory only | Up to 15 minutes |
+
+### 8.2 Optional Cookies
+
+Optional cookies are reserved for future non-essential features. They are not required to use the VenderScope platform today.
+
+- You can **accept** or **decline optional cookies** using the cookie banner or the **Cookie Settings** control in the site footer
+- If you decline optional cookies, VenderScope keeps strictly necessary authentication cookies active but blocks optional cookie/storage use
+- If optional client-side storage has been used for a non-essential feature, it is cleared when you decline optional cookies
+
+### 8.3 What We Do Not Use
+
+We do not use:
+- Advertising cookies
+- Cross-site tracking cookies
+- Third-party analytics cookies
+- Social media tracking pixels
+
+Declining optional cookies does **not** prevent you from logging in, using the dashboard, viewing vendor details, or exporting reports, because those flows rely only on strictly necessary security cookies.
 
 ---
 
