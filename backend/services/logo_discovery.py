@@ -45,11 +45,13 @@ def _icon_score(url: str, rel: str = "", sizes: str = "") -> tuple[int, int, int
     sizes = (sizes or "").lower()
 
     primary = 0
-    if "apple-touch-icon" in rel:
-        primary = 4
-    elif rel.strip() == "icon":
-        primary = 3
+    if rel.strip() == "icon":
+        primary = 5
     elif "shortcut icon" in rel:
+        primary = 4
+    elif "manifest" in rel:
+        primary = 3
+    elif "apple-touch-icon" in rel:
         primary = 2
     elif "mask-icon" in rel:
         primary = 1
@@ -65,7 +67,8 @@ def _icon_score(url: str, rel: str = "", sizes: str = "") -> tuple[int, int, int
             continue
 
     extension_bias = 1 if url.endswith(".png") else 0
-    return (primary, size_value, extension_bias)
+    penalty = -1 if "apple-touch" in url else 0
+    return (primary, size_value, extension_bias + penalty)
 
 
 def _extract_icon_links(base: str, home_url: str, html: str) -> list[str]:

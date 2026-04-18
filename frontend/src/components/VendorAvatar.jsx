@@ -116,10 +116,10 @@ export default function VendorAvatar({ id = '', name = 'V', domain = '', size = 
           loading="lazy"
           referrerPolicy="no-referrer"
           style={{
-            width: size,
-            height: size,
-            objectFit: 'cover',
-            background: 'rgba(255,255,255,0.03)',
+            width: Math.round(size * 0.72),
+            height: Math.round(size * 0.72),
+            objectFit: 'contain',
+            background: 'transparent',
           }}
           onError={() => setLogoIndex((idx) => idx + 1)}
         />

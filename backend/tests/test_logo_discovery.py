@@ -37,7 +37,7 @@ def test_discover_logo_candidates_prefers_same_site_metadata(monkeypatch):
 
     candidates = logos.discover_logo_candidates("vendor.com")
 
-    assert candidates[0] == "https://vendor.com/apple-touch-icon.png"
+    assert candidates[0] == "https://vendor.com/favicon-32x32.png"
 
 
 def test_discover_logo_candidates_adds_manifest_icons(monkeypatch):
