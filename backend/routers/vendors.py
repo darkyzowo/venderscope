@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
@@ -8,6 +8,7 @@ from database import get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote
 from services.auth_service import get_current_user
 from services.audit import audit
+from services.logo_discovery import fetch_vendor_logo_asset
 from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
 from services.untrusted_text import normalize_untrusted_text
 from services.vendor_profile import discover_vendor_profile
@@ -248,6 +249,31 @@ def get_score_history(
                 .filter(RiskScoreHistory.vendor_id == vendor_id)\
                 .order_by(RiskScoreHistory.recorded_at.asc()).all()
     return history
+
+
+@router.get("/{vendor_id}/logo")
+def get_vendor_logo(
+    vendor_id: str,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    vendor = db.query(Vendor).filter(
+        Vendor.id == vendor_id,
+        Vendor.user_id == current_user.id,
+    ).first()
+    if not vendor:
+        raise HTTPException(status_code=404, detail="Vendor not found")
+
+    asset = fetch_vendor_logo_asset(vendor.domain)
+    if not asset:
+        raise HTTPException(status_code=404, detail="Logo not found")
+
+    content, content_type = asset
+    return Response(
+        content=content,
+        media_type=content_type,
+        headers={"Cache-Control": "private, max-age=86400"},
+    )
 
 
 # --- Notes ---

@@ -302,7 +302,7 @@ export default function VendorDetail() {
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between mb-8">
           <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-            <VendorAvatar name={vendor.name} domain={vendor.domain} logoUrl={vendor.logo_url} size={48} />
+            <VendorAvatar id={vendor.id} name={vendor.name} domain={vendor.domain} logoUrl={vendor.logo_url} size={48} />
             <div className="min-w-0">
               <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'var(--hi)' }}>{vendor.name}</h1>
               <p className="text-sm mt-0.5" style={{ color: 'var(--lo)' }}>{vendor.domain}</p>
