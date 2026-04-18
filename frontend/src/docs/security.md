@@ -4,9 +4,10 @@
 
 | Version | Supported |
 |---------|-----------|
-| v3.5 (current) | ✅ |
+| v4.0 (current) | ✅ |
+| v3.5 | ✅ Security patches only |
 | v3.1 | ✅ Security patches only |
-| v3.0 | ❌ Upgrade to v3.5 |
+| v3.0 | ❌ Upgrade to v4.0 |
 | v2.x | ❌ No longer maintained |
 | v1.x | ❌ No longer maintained |
 
@@ -89,6 +90,7 @@ Guest mode was introduced in v3.5 with security as the primary design constraint
 - Database encrypted at rest (PostgreSQL on Neon)
 - No sensitive data stored in application logs
 - Secrets managed via environment variables — never committed to source code
+- Google Custom Search quota usage is persisted in the database and survives restarts/redeploys
 
 ### Server-Side Request Forgery (SSRF) Protection
 All outbound HTTP requests to user-supplied or externally-sourced domains are validated against:
@@ -100,9 +102,20 @@ All outbound HTTP requests to user-supplied or externally-sourced domains are va
 - URL-encoding bypass prevention (e.g. `127%2E0%2E0%2E1`)
 - Decimal and octal IP notation detection
 
-Redirect chains are followed manually (max 3 hops) — each intermediate destination is independently validated before following.
+Redirect chains are followed manually (max 3 hops) — each intermediate destination is resolved relative to the current URL and independently validated before following.
 
 DNS resolution is performed and the resolved IP is checked, not just the hostname — prevents DNS rebinding attacks.
+
+### Search Quota Enforcement
+- Google Custom Search usage is capped to the configured free-tier budget
+- Quota state is stored in the database, not local disk, so it survives Render restarts
+- Quota consumption is serialized against the daily row to reduce concurrent oversubscription risk
+- Search units are refunded when a Google CSE request fails before a successful 200 response
+- When search quota is exhausted, scans fall back to vendor-site discovery rather than failing outright
+
+### Background Job Safety
+- Background jobs use a database-backed scheduler lease so only one app instance runs nightly scans, keep-alives, and token cleanup at a time
+- Lease heartbeats refresh every 2 minutes; instances without the active lease skip scheduled work
 
 ### Content Security Policy
 From v3.5, the Vercel-hosted frontend enforces a Content-Security-Policy response header:
@@ -135,6 +148,20 @@ This provides browser-level XSS mitigation in addition to React's built-in outpu
 ## Security Audits & Disclosures
 
 VenderScope undergoes a full white-box security audit before every significant release. All findings are disclosed below.
+
+---
+
+### v4.0 Audit Addendum — 18 April 2026 (Pre-Deploy Hardening)
+**Scope:** Quota persistence refactor, expanded compliance discovery, scheduler behavior, and vendor-logo UX additions.
+**Test result:** targeted regression coverage added for redirect handling, quota refund semantics, and scheduler lease ownership.
+
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| V4-01 | HIGH | **Concurrent quota oversubscription risk** — DB-backed quota persisted across restarts, but consumption still used a read-check-write flow that could overspend the daily cap under concurrent scans. | Added locked daily-row access for quota consumption/refunds so the app serializes quota mutations per day. |
+| V4-02 | MEDIUM | **Relative redirect handling broke same-site discovery** — manual redirect validation treated `Location: /security` as a host string and rejected it, causing missed compliance/profile evidence on valid vendor pages. | Redirects now resolve relative to the current URL before SSRF validation and follow-up fetches. |
+| V4-03 | MEDIUM | **Failed Google searches still burned quota** — missing credentials, timeouts, or non-200 Google CSE responses reduced the app-side quota even when no usable search result was retrieved. | Search units are now reserved only for configured search, and automatically refunded on failed requests/non-200 responses. |
+| V4-04 | MEDIUM | **Duplicate scheduler risk on multi-process deploys** — each app process could start its own APScheduler instance, duplicating scans and cleanup jobs. | Added a database-backed scheduler lease with heartbeat; only the lease owner runs scheduled jobs. |
+| V4-05 | LOW | **Client-side favicon fallback leaked vendor domains to Google** — the browser-based Google favicon service exposed viewed vendor domains to a third party. | Removed the Google favicon fallback; avatars now use only direct vendor favicons or a local monogram fallback. |
 
 ---
 
@@ -194,6 +221,7 @@ Full technical detail in `tasks/security-architecture.md`.
 
 - **Email alerts:** Currently use SMTP in development. Production deployments should configure Resend (HTTP API) via the `RESEND_API_KEY` environment variable once a verified sending domain is available.
 - **Rate limiting on Render free tier:** Rate limits are enforced per real client IP via `XFF[-1]`. Render free tier does not offer a fixed load balancer IP, so `--forwarded-allow-ips="*"` is required — a motivated attacker with control of an upstream proxy could theoretically influence the XFF chain. This is a known Render free-tier architectural constraint.
+- **Global search budget:** Google CSE quota is enforced globally for the app today, not per-user. Per-user daily budgets are planned as a future layer on top of the new DB-backed global quota.
 - **Self-hosted deployments:** Security of self-hosted instances is the responsibility of the operator.
 
 ---

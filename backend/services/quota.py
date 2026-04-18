@@ -1,5 +1,10 @@
+import os
 from datetime import datetime, timezone, timedelta
 
+from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
+
+from database import _is_sqlite
 from database import SessionLocal
 from models import SearchQuotaUsage
 
@@ -38,6 +43,29 @@ def _build_status(used: int) -> dict:
     }
 
 
+def _get_or_create_today_quota_for_update(db) -> SearchQuotaUsage:
+    quota_date = _today()
+    stmt = select(SearchQuotaUsage).where(SearchQuotaUsage.quota_date == quota_date)
+    if not _is_sqlite:
+        stmt = stmt.with_for_update()
+
+    quota = db.execute(stmt).scalar_one_or_none()
+    if quota:
+        return quota
+
+    quota = SearchQuotaUsage(quota_date=quota_date, used=0)
+    db.add(quota)
+    try:
+        db.flush()
+        return quota
+    except IntegrityError:
+        db.rollback()
+        retry_stmt = select(SearchQuotaUsage).where(SearchQuotaUsage.quota_date == quota_date)
+        if not _is_sqlite:
+            retry_stmt = retry_stmt.with_for_update()
+        return db.execute(retry_stmt).scalar_one()
+
+
 def get_quota_status() -> dict:
     """Returns current quota state from the database-backed daily usage row."""
     db = SessionLocal()
@@ -56,7 +84,7 @@ def consume_search_units(units: int = 1) -> bool:
 
     db = SessionLocal()
     try:
-        quota = _get_or_create_today_quota(db)
+        quota = _get_or_create_today_quota_for_update(db)
         if quota.used + units > DAILY_LIMIT:
             print(f"[Quota] Exhausted — {quota.used}/{DAILY_LIMIT} units used today.")
             db.rollback()
@@ -71,6 +99,26 @@ def consume_search_units(units: int = 1) -> bool:
         return True
     finally:
         db.close()
+
+
+def refund_search_units(units: int = 1) -> bool:
+    """Refund previously reserved search units after an external request failure."""
+    if units <= 0:
+        return True
+
+    db = SessionLocal()
+    try:
+        quota = _get_or_create_today_quota_for_update(db)
+        quota.used = max(0, quota.used - units)
+        db.commit()
+        print(f"[Quota] Refunded {units} unit(s) — {quota.used}/{DAILY_LIMIT} used today.")
+        return True
+    finally:
+        db.close()
+
+
+def search_is_configured() -> bool:
+    return bool(os.getenv("GOOGLE_CSE_API_KEY") and os.getenv("GOOGLE_CSE_ID"))
 
 
 def get_remaining_full_scans(data: dict = None) -> int:

@@ -1,8 +1,8 @@
 import uuid
 
-from scheduler import scheduled_scan
+from scheduler import _acquire_scheduler_lease, _has_scheduler_lease, scheduled_scan
 from database import Base, SessionLocal, engine
-from models import User, Vendor
+from models import SchedulerLease, User, Vendor
 
 
 def test_scheduled_scan_skips_orphan_and_reserved_vendors(monkeypatch):
@@ -10,6 +10,10 @@ def test_scheduled_scan_skips_orphan_and_reserved_vendors(monkeypatch):
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     try:
+        db.query(SchedulerLease).delete()
+        db.query(Vendor).delete()
+        db.query(User).delete()
+        db.commit()
         user = User(email=f"scheduler-owner-{suffix}@company.com", password_hash="hash")
         db.add(user)
         db.commit()
@@ -43,7 +47,28 @@ def test_scheduled_scan_skips_orphan_and_reserved_vendors(monkeypatch):
         return 0.0
 
     monkeypatch.setattr("scheduler.run_full_scan", fake_run_full_scan)
+    owner_id = str(uuid.uuid4())
+    assert _acquire_scheduler_lease(owner_id) is True
 
-    scheduled_scan()
+    scheduled_scan(owner_id)
 
     assert scanned == [("Real Vendor", "company.com", True)]
+
+
+def test_scheduler_lease_blocks_second_owner():
+    Base.metadata.create_all(bind=engine)
+    db = SessionLocal()
+    try:
+        db.query(SchedulerLease).delete()
+        db.query(Vendor).delete()
+        db.query(User).delete()
+        db.commit()
+    finally:
+        db.close()
+
+    owner_a = str(uuid.uuid4())
+    owner_b = str(uuid.uuid4())
+
+    assert _acquire_scheduler_lease(owner_a) is True
+    assert _has_scheduler_lease(owner_a) is True
+    assert _acquire_scheduler_lease(owner_b) is False

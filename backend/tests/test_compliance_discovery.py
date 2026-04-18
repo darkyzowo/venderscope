@@ -35,6 +35,53 @@ def test_compliance_discovery_finds_cert_on_linked_trust_page(monkeypatch):
     assert result["certifications"]["gdpr"]["status"] == "found"
 
 
+def test_fetch_page_allows_same_site_relative_redirect(monkeypatch):
+    class FakeResponse:
+        def __init__(self, status_code, location="", text=""):
+            self.status_code = status_code
+            self.headers = {"Location": location} if location else {}
+            self.text = text
+
+    responses = [
+        FakeResponse(302, location="/security"),
+        FakeResponse(200, text="<html>Security page</html>"),
+    ]
+
+    monkeypatch.setattr(compliance, "_is_safe_domain", lambda domain: domain == "vendor.com")
+    monkeypatch.setattr(
+        compliance.requests,
+        "get",
+        lambda url, **kwargs: responses.pop(0),
+    )
+
+    result = compliance._fetch_page("https://vendor.com")
+
+    assert result == "<html>Security page</html>"
+
+
+def test_google_search_does_not_consume_quota_when_search_fails(monkeypatch):
+    consumed = []
+    refunded = []
+
+    class FakeResponse:
+        status_code = 503
+
+    monkeypatch.setattr(compliance, "search_is_configured", lambda: True)
+    monkeypatch.setattr(compliance, "consume_search_units", lambda units=1: consumed.append(units) or True)
+    monkeypatch.setattr(compliance, "refund_search_units", lambda units=1: refunded.append(units) or True)
+    monkeypatch.setenv("GOOGLE_CSE_API_KEY", "key")
+    monkeypatch.setenv("GOOGLE_CSE_ID", "cx")
+    monkeypatch.setattr(compliance.requests, "get", lambda *args, **kwargs: FakeResponse())
+
+    quota_state = {"enabled": True, "used": 0, "exhausted": False}
+    result = compliance._google_search("vendor soc2", quota_state)
+
+    assert result == []
+    assert consumed == [1]
+    assert refunded == [1]
+    assert quota_state["used"] == 0
+
+
 def test_extract_relevant_links_stays_on_vendor_site():
     html = """
         <a href="/security">Security</a>

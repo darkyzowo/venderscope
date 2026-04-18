@@ -73,7 +73,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="VenderScope API",
     description="Continuous passive vendor risk intelligence platform",
-    version="3.5.0",
+    version="4.0.0",
     lifespan=lifespan,
 )
 

@@ -48,3 +48,21 @@ def test_quota_auto_resets_on_new_utc_day(monkeypatch):
     new_day = quota.get_quota_status()
     assert new_day["used"] == 0
     assert new_day["remaining"] == quota.DAILY_LIMIT
+
+
+def test_quota_refund_restores_units():
+    Base.metadata.create_all(bind=engine)
+
+    db = SessionLocal()
+    try:
+        db.query(SearchQuotaUsage).delete()
+        db.commit()
+    finally:
+        db.close()
+
+    assert quota.consume_search_units(5) is True
+    assert quota.refund_search_units(2) is True
+
+    status = quota.get_quota_status()
+    assert status["used"] == 3
+    assert status["remaining"] == quota.DAILY_LIMIT - 3

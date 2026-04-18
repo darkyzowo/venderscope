@@ -92,6 +92,15 @@ class SearchQuotaUsage(Base):
     updated_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
 
 
+class SchedulerLease(Base):
+    """Cross-process lease so only one app instance runs background jobs."""
+    __tablename__ = "scheduler_leases"
+
+    name         = Column(String(32), primary_key=True)
+    owner_id     = Column(String(36), nullable=False, index=True)
+    refreshed_at = Column(DateTime, default=_utcnow, onupdate=_utcnow, nullable=False)
+
+
 class VendorNote(Base):
     __tablename__ = "vendor_notes"
 

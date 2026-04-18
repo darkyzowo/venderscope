@@ -26,7 +26,6 @@ const getLogoCandidates = (domain = '') => {
   return [
     `https://${base}/favicon.ico`,
     `https://www.${base}/favicon.ico`,
-    `https://www.google.com/s2/favicons?domain=${encodeURIComponent(base)}&sz=64`,
   ]
 }
 

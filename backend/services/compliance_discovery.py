@@ -5,7 +5,7 @@ import ipaddress
 import requests
 from bs4 import BeautifulSoup
 from urllib.parse import urljoin, unquote, urlparse, urlunparse
-from services.quota import consume_search_units
+from services.quota import consume_search_units, refund_search_units, search_is_configured
 
 # ── SSRF protection ────────────────────────────────────────────────────────────
 BLOCKED_PATTERNS = [
@@ -201,10 +201,11 @@ def _fetch_page(url: str, timeout: int = 8) -> str | None:
                 location = r.headers.get("Location", "")
                 if not location:
                     return None
-                hop_host = urlparse(location).netloc or location
+                next_url = urljoin(current_url, location)
+                hop_host = urlparse(next_url).netloc
                 if not _is_safe_domain(hop_host):
                     return None
-                current_url = location
+                current_url = next_url
                 continue
             return None
         except Exception:
@@ -402,6 +403,10 @@ def _scrape_stage(full_text: str) -> dict:
 
 def _google_search(query: str, quota_state: dict | None = None) -> list[dict]:
     """Fires a single Google Custom Search query. Returns [] on failure or missing keys."""
+    if not search_is_configured():
+        return []
+
+    reserved_unit = False
     if quota_state is not None:
         if not quota_state.get("enabled", True):
             return []
@@ -409,12 +414,10 @@ def _google_search(query: str, quota_state: dict | None = None) -> list[dict]:
             quota_state["enabled"] = False
             quota_state["exhausted"] = True
             return []
-        quota_state["used"] = quota_state.get("used", 0) + 1
+        reserved_unit = True
 
     api_key = os.getenv("GOOGLE_CSE_API_KEY")
-    cse_id  = os.getenv("GOOGLE_CSE_ID")
-    if not api_key or not cse_id:
-        return []
+    cse_id = os.getenv("GOOGLE_CSE_ID")
     try:
         r = requests.get(
             "https://www.googleapis.com/customsearch/v1",
@@ -422,9 +425,13 @@ def _google_search(query: str, quota_state: dict | None = None) -> list[dict]:
             timeout=8,
         )
         if r.status_code == 200:
+            if quota_state is not None and reserved_unit:
+                quota_state["used"] = quota_state.get("used", 0) + 1
             return r.json().get("items", [])
     except Exception:
         pass
+    if reserved_unit:
+        refund_search_units(1)
     return []
 
 

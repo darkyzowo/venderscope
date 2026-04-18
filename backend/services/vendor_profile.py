@@ -1,6 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 from services.compliance_discovery import _is_safe_domain
 
 HEADERS = {"User-Agent": "VenderScope/1.0 Vendor Profile Bot (security research)"}
@@ -54,10 +54,11 @@ def _fetch(url: str, timeout: int = 7) -> str | None:
                 location = r.headers.get("Location", "")
                 if not location:
                     return None
-                hop_host = urlparse(location).netloc or location
+                next_url = urljoin(current_url, location)
+                hop_host = urlparse(next_url).netloc
                 if not _is_safe_domain(hop_host):
                     return None
-                current_url = location
+                current_url = next_url
                 continue
             return None
         except Exception:

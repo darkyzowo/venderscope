@@ -19,9 +19,12 @@ v4.0 is a full product-quality release that improves scan economics, persistence
 
 - **Database-backed search quota enforcement** — Google Custom Search usage no longer lives in a local `quota.json` file. Quota is now persisted in PostgreSQL/SQLite via a dedicated `SearchQuotaUsage` model, so it survives Render restarts and redeploys
 - **Incremental quota charging** — full scans no longer burn a worst-case fixed quota cost up front. Search quota is consumed only when an actual external compliance/contact web search is performed, which materially increases practical daily scan capacity on the free tier
+- **Quota hardening pass** — quota mutations are now database-backed, concurrency-aware, and failed Google CSE requests refund their reserved unit instead of silently burning the daily budget
 - **Broader compliance discovery** — the compliance engine now does a bounded crawl of high-signal same-site trust, legal, privacy, DPA, and security pages instead of relying on just the homepage plus a small set of direct probes. This improves detection of obvious vendor-owned compliance evidence
+- **Redirect-safe discovery** — same-site relative redirects are now resolved correctly during compliance and vendor-profile discovery, which closes a subtle quality gap on trust/security/legal pages
 - **Safer standard-mode fallback** — when search quota is exhausted, scans still run and fall back cleanly to standard discovery instead of blocking the user-facing scan action
-- **Frontend vendor logos** — vendor cards and vendor detail headers now attempt to load the vendor site's favicon/logo client-side and gracefully fall back to the original gradient avatar, with zero backend cost and no impact on scan latency
+- **Single-owner scheduler lease** — nightly scans, keep-alive pings, and revoked-token cleanup now run behind a database-backed lease so only one app instance owns background jobs at a time
+- **Frontend vendor logos** — vendor cards and vendor detail headers now attempt to load the vendor site's favicon/logo directly from the vendor domain and gracefully fall back to the original gradient avatar, with zero backend cost and no third-party favicon proxy
 - **Vendor detail redesign** — the old drift/gauge-heavy top area was replaced with a denser overview panel covering score, exposure basis, scoring model, sensitivity controls, and review scheduling with significantly cleaner hierarchy
 - **Time handling fixes** — API timestamps are now normalized consistently in the frontend so a freshly completed scan no longer appears as if it happened an hour earlier due to naive UTC parsing
 - **Risk-events empty state** — vendors with no public findings now show a proper informational panel explaining what "no events detected" means, instead of a bare empty state
@@ -490,7 +493,7 @@ VenderScope detects a common false positive — vendors referencing their *infra
 
 ### Scan Quota
 
-Google Custom Search allows 100 free queries/day. VenderScope now tracks this quota in the database and consumes units only when an external web search actually happens. In practice, that means many scans cost far less than the old worst-case model. When quota is exhausted, scans automatically fall back to Standard Scan (vendor-site discovery only). Quota resets at midnight UTC.
+Google Custom Search allows 100 free queries/day. VenderScope now tracks this quota in the database, consumes units only when an external web search actually happens, and refunds units when a Google request fails before a successful result is returned. In practice, that means many scans cost far less than the old worst-case model. When quota is exhausted, scans automatically fall back to Standard Scan (vendor-site discovery only). Quota resets at midnight UTC.
 
 ---
 
@@ -516,7 +519,7 @@ During every scan, VenderScope passively discovers three data points at no quota
 
 **Safe local/test runs:** Set `EMAIL_ENABLED=0` to hard-disable all outbound email. VenderScope also suppresses deliveries to reserved test domains such as `example.com`, `.test`, `.invalid`, and `localhost`, so automated tests and fake registrations do not generate bounce spam.
 
-**Scheduler scope:** The 24hr background scheduler scans all vendors. Per-user scheduler scoping (so users only get alerts for their own vendors) is on the roadmap.
+**Scheduler scope:** The 24hr background scheduler now uses a database-backed lease so only one app instance runs background jobs at a time. Per-user scheduler scoping (so users only get alerts for their own vendors) is still on the roadmap.
 
 ---
 
