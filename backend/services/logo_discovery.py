@@ -18,6 +18,7 @@ COMMON_ICON_PATHS = [
     "/favicon.png",
     "/favicon.ico",
 ]
+LOGO_HINTS = ("logo", "brand", "wordmark", "navbar", "header")
 
 
 def _is_same_vendor_site(url: str, base: str) -> bool:
@@ -113,6 +114,65 @@ def _extract_icon_links(base: str, home_url: str, html: str) -> list[str]:
     return [url for _, url in candidates]
 
 
+def _image_score(url: str, alt: str = "", class_name: str = "", width: int = 0, height: int = 0) -> tuple[int, int, int]:
+    alt = (alt or "").lower()
+    class_name = (class_name or "").lower()
+    url = (url or "").lower()
+
+    hint_score = 0
+    haystack = f"{alt} {class_name} {url}"
+    if "logo" in haystack:
+        hint_score += 4
+    if "brand" in haystack or "wordmark" in haystack:
+        hint_score += 2
+    if "header" in haystack or "nav" in haystack:
+        hint_score += 1
+
+    size_score = 0
+    if width and height:
+        min_edge = min(width, height)
+        max_edge = max(width, height)
+        if min_edge >= 24:
+            size_score += min(min_edge, 256)
+        if max_edge <= 800:
+            size_score += 10
+
+    extension_bias = 2 if url.endswith(".svg") else 1 if url.endswith(".png") else 0
+    return (hint_score, size_score, extension_bias)
+
+
+def _extract_logo_images(base: str, home_url: str, html: str) -> list[str]:
+    soup = BeautifulSoup(html or "", "html.parser")
+    candidates: list[tuple[tuple[int, int, int], str]] = []
+
+    for img in soup.find_all("img", src=True):
+        src = img.get("src")
+        full = urljoin(home_url, src)
+        parsed = urlparse(full)
+        if parsed.scheme not in ("http", "https") or not _is_same_vendor_site(full, base):
+            continue
+
+        alt = img.get("alt", "")
+        class_name = " ".join(img.get("class", [])) if isinstance(img.get("class"), list) else str(img.get("class") or "")
+        haystack = f"{alt} {class_name} {src}".lower()
+        if not any(hint in haystack for hint in LOGO_HINTS):
+            continue
+
+        try:
+            width = int(img.get("width", 0) or 0)
+        except ValueError:
+            width = 0
+        try:
+            height = int(img.get("height", 0) or 0)
+        except ValueError:
+            height = 0
+
+        candidates.append((_image_score(full, alt, class_name, width, height), full))
+
+    candidates.sort(key=lambda item: item[0], reverse=True)
+    return [url for _, url in candidates]
+
+
 def _probe_common_icon_paths(base: str) -> list[str]:
     return [f"https://{base}{path}" for path in COMMON_ICON_PATHS] + [
         f"https://www.{base}{path}" for path in COMMON_ICON_PATHS
@@ -142,6 +202,9 @@ def discover_logo_candidates(domain: str) -> list[str]:
     candidates: list[str] = []
     if html and home_url:
         candidates.extend(_extract_icon_links(base, home_url, html))
+        for url in _extract_logo_images(base, home_url, html):
+            if url not in candidates:
+                candidates.append(url)
 
     for url in _probe_common_icon_paths(base):
         if url not in candidates:
