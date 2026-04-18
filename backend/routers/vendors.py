@@ -1,20 +1,41 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException, Request, Response
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, field_validator, ConfigDict
 from typing import Optional
 from datetime import datetime, timezone
-from database import get_db
+from database import SessionLocal, get_db
 from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote
 from services.auth_service import get_current_user
 from services.audit import audit
-from services.logo_discovery import fetch_vendor_logo_asset
 from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
 from services.untrusted_text import normalize_untrusted_text
 from services.vendor_profile import discover_vendor_profile
 from limiter import limiter
 
 router = APIRouter()
+
+
+def _enrich_vendor_profile(vendor_id: str) -> None:
+    db = SessionLocal()
+    try:
+        vendor = db.get(Vendor, vendor_id)
+        if not vendor:
+            return
+        profile_data = discover_vendor_profile(vendor.domain)
+        if profile_data.get("description"):
+            vendor.description = profile_data["description"]
+        if profile_data.get("logo_url"):
+            vendor.logo_url = profile_data["logo_url"]
+        if profile_data.get("auth_method"):
+            vendor.auth_method = profile_data["auth_method"]
+        if profile_data.get("two_factor"):
+            vendor.two_factor = profile_data["two_factor"]
+        db.commit()
+    except Exception:
+        db.rollback()
+    finally:
+        db.close()
 
 
 # --- Schemas ---
@@ -140,6 +161,7 @@ def list_vendors(
 @limiter.limit("10/minute")
 def add_vendor(
     request: Request,
+    background_tasks: BackgroundTasks,
     payload: VendorCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -153,20 +175,8 @@ def add_vendor(
     vendor = Vendor(**payload.model_dump(), user_id=current_user.id)
     db.add(vendor)
     db.commit()
-    try:
-        profile_data = discover_vendor_profile(vendor.domain)
-        if profile_data.get("description"):
-            vendor.description = profile_data["description"]
-        if profile_data.get("logo_url"):
-            vendor.logo_url = profile_data["logo_url"]
-        if profile_data.get("auth_method"):
-            vendor.auth_method = profile_data["auth_method"]
-        if profile_data.get("two_factor"):
-            vendor.two_factor = profile_data["two_factor"]
-        db.commit()
-    except Exception:
-        db.rollback()
     db.refresh(vendor)
+    background_tasks.add_task(_enrich_vendor_profile, vendor.id)
     audit(db, "vendor.added", request, user_id=str(current_user.id), detail=vendor.domain)
     return vendor
 
@@ -249,31 +259,6 @@ def get_score_history(
                 .filter(RiskScoreHistory.vendor_id == vendor_id)\
                 .order_by(RiskScoreHistory.recorded_at.asc()).all()
     return history
-
-
-@router.get("/{vendor_id}/logo")
-def get_vendor_logo(
-    vendor_id: str,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
-):
-    vendor = db.query(Vendor).filter(
-        Vendor.id == vendor_id,
-        Vendor.user_id == current_user.id,
-    ).first()
-    if not vendor:
-        raise HTTPException(status_code=404, detail="Vendor not found")
-
-    asset = fetch_vendor_logo_asset(vendor.domain)
-    if not asset:
-        raise HTTPException(status_code=404, detail="Logo not found")
-
-    content, content_type = asset
-    return Response(
-        content=content,
-        media_type=content_type,
-        headers={"Cache-Control": "private, max-age=86400"},
-    )
 
 
 # --- Notes ---

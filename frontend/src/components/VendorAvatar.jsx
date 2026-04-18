@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useState } from 'react'
-import api from '../api/client'
-
-const logoCache = new Map()
 
 // Deterministic gradient avatar using first letter of vendor name
 const GRADIENTS = [
@@ -38,50 +35,20 @@ const getLogoCandidates = (domain = '') => {
   ]
 }
 
-export default function VendorAvatar({ id = '', name = 'V', domain = '', size = 36, logoUrl = '' }) {
+export default function VendorAvatar({ name = 'V', domain = '', size = 36, logoUrl = '' }) {
   const [from, to] = getGradient(name)
   const letter = name[0].toUpperCase()
   const fontSize = Math.round(size * 0.42)
-  const [proxiedLogoUrl, setProxiedLogoUrl] = useState('')
-
-  useEffect(() => {
-    let cancelled = false
-    if (!id) {
-      setProxiedLogoUrl('')
-      return
-    }
-
-    if (logoCache.has(id)) {
-      setProxiedLogoUrl(logoCache.get(id))
-      return
-    }
-
-    setProxiedLogoUrl('')
-    api.get(`/vendors/${id}/logo`, { responseType: 'blob' })
-      .then((response) => {
-        if (cancelled) return
-        const objectUrl = URL.createObjectURL(response.data)
-        logoCache.set(id, objectUrl)
-        setProxiedLogoUrl(objectUrl)
-      })
-      .catch(() => {
-        if (!cancelled) setProxiedLogoUrl('')
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [id])
 
   const logoCandidates = useMemo(() => {
     const directCandidates = getLogoCandidates(domain)
-    return [proxiedLogoUrl, logoUrl, ...directCandidates].filter(Boolean)
-  }, [domain, logoUrl, proxiedLogoUrl])
+    return [logoUrl, ...directCandidates].filter(Boolean)
+  }, [domain, logoUrl])
   const [logoIndex, setLogoIndex] = useState(0)
 
   useEffect(() => {
     setLogoIndex(0)
-  }, [domain, logoUrl, proxiedLogoUrl])
+  }, [domain, logoUrl])
 
   const activeLogo = logoCandidates[logoIndex] || null
 
