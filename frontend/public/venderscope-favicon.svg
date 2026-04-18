@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="18" fill="#090911"/>
+  <rect x="1" y="1" width="62" height="62" rx="17" stroke="#1e1e35" />
+  <line
+    x1="15"
+    y1="14"
+    x2="27"
+    y2="48"
+    stroke="#f0f0ff"
+    stroke-width="6.5"
+    stroke-linecap="round"
+  />
+  <line
+    x1="27"
+    y1="48"
+    x2="39"
+    y2="14"
+    stroke="#7F77DD"
+    stroke-width="6.5"
+    stroke-linecap="round"
+  />
+  <path
+    d="M45 22.5C45 18.1 41.6 15 37.2 15C32.9 15 29.7 18 29.7 21.9C29.7 25.9 32.8 28.2 37.1 28.2C41.2 28.2 44.2 30.6 44.2 34.3C44.2 38.1 41.1 41 37 41C32.9 41 29.9 38.3 29.8 34.5"
+    stroke="#6B63CC"
+    stroke-width="6.5"
+    stroke-linecap="round"
+  />
+</svg>
