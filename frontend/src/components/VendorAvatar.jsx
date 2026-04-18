@@ -24,21 +24,30 @@ const getLogoCandidates = (domain = '') => {
   const base = cleanDomain(domain)
   if (!base) return []
   return [
+    `https://${base}/apple-touch-icon.png`,
+    `https://${base}/favicon-32x32.png`,
+    `https://${base}/favicon.png`,
     `https://${base}/favicon.ico`,
+    `https://www.${base}/apple-touch-icon.png`,
+    `https://www.${base}/favicon-32x32.png`,
+    `https://www.${base}/favicon.png`,
     `https://www.${base}/favicon.ico`,
   ]
 }
 
-export default function VendorAvatar({ name = 'V', domain = '', size = 36 }) {
+export default function VendorAvatar({ name = 'V', domain = '', size = 36, logoUrl = '' }) {
   const [from, to] = getGradient(name)
   const letter = name[0].toUpperCase()
   const fontSize = Math.round(size * 0.42)
-  const logoCandidates = useMemo(() => getLogoCandidates(domain), [domain])
+  const logoCandidates = useMemo(() => {
+    const directCandidates = getLogoCandidates(domain)
+    return [logoUrl, ...directCandidates].filter(Boolean)
+  }, [domain, logoUrl])
   const [logoIndex, setLogoIndex] = useState(0)
 
   useEffect(() => {
     setLogoIndex(0)
-  }, [domain])
+  }, [domain, logoUrl])
 
   const activeLogo = logoCandidates[logoIndex] || null
 

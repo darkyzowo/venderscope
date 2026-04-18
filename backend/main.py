@@ -27,6 +27,7 @@ if _is_sqlite:
         _vendor_cols = {row[1] for row in _conn.execute(text("PRAGMA table_info(vendors)")).fetchall()}
         for _col, _ddl in [
             ("description",      "ALTER TABLE vendors ADD COLUMN description TEXT"),
+            ("logo_url",         "ALTER TABLE vendors ADD COLUMN logo_url VARCHAR"),
             ("auth_method",      "ALTER TABLE vendors ADD COLUMN auth_method VARCHAR"),
             ("two_factor",       "ALTER TABLE vendors ADD COLUMN two_factor VARCHAR"),
             ("user_id",          "ALTER TABLE vendors ADD COLUMN user_id VARCHAR(36)"),
@@ -42,6 +43,7 @@ if _is_sqlite:
 # Column-level migration for PostgreSQL (Neon) — create_all won't add columns to existing tables
 if not _is_sqlite:
     with engine.connect() as _conn:
+        _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS logo_url VARCHAR"))
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS data_sensitivity VARCHAR(20) DEFAULT 'standard'"))
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS review_interval_days INTEGER"))
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP"))

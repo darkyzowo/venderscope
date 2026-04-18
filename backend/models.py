@@ -37,6 +37,7 @@ class Vendor(Base):
     last_scanned   = Column(DateTime, nullable=True)
     compliance       = Column(Text, nullable=True)  # JSON stored as string
     description      = Column(Text,   nullable=True)
+    logo_url         = Column(String, nullable=True)
     auth_method      = Column(String, nullable=True)
     two_factor       = Column(String, nullable=True)
     data_sensitivity = Column(String(20), nullable=True, default='standard')

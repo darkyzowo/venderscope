@@ -41,6 +41,8 @@ LOGIN_PATHS = [
     "/auth/login", "/users/sign_in", "/app/login",
 ]
 
+ICON_REL_TOKENS = ("icon", "shortcut icon", "apple-touch-icon", "mask-icon")
+
 
 def _fetch(url: str, timeout: int = 7) -> str | None:
     max_hops = 3
@@ -81,6 +83,58 @@ def _meta_description(html: str) -> str | None:
     return None
 
 
+def _icon_score(rel: str, href: str, sizes: str) -> tuple[int, int, int]:
+    rel = (rel or "").lower()
+    href = (href or "").lower()
+    sizes = (sizes or "").lower()
+
+    primary = 0
+    if "apple-touch-icon" in rel:
+        primary = 4
+    elif rel.strip() == "icon":
+        primary = 3
+    elif "shortcut icon" in rel:
+        primary = 2
+    elif "mask-icon" in rel:
+        primary = 1
+
+    size_value = 0
+    for token in sizes.split():
+        if "x" not in token:
+            continue
+        try:
+            width, height = token.split("x", 1)
+            size_value = max(size_value, min(int(width), int(height)))
+        except ValueError:
+            continue
+
+    extension_bias = 1 if href.endswith(".png") else 0
+    return (primary, size_value, extension_bias)
+
+
+def _discover_logo_url(base: str, home_url: str, home_html: str) -> str | None:
+    soup = BeautifulSoup(home_html, "html.parser")
+    candidates: list[tuple[tuple[int, int, int], str]] = []
+
+    for link in soup.find_all("link", href=True):
+        rel_attr = link.get("rel") or []
+        rel = " ".join(rel_attr).strip().lower() if isinstance(rel_attr, list) else str(rel_attr).strip().lower()
+        if not any(token in rel for token in ICON_REL_TOKENS):
+            continue
+        full = urljoin(home_url, link["href"])
+        parsed = urlparse(full)
+        if parsed.scheme not in ("http", "https"):
+            continue
+        if parsed.netloc.lower() not in {base.lower(), f"www.{base.lower()}"} and not parsed.netloc.lower().endswith(f".{base.lower()}"):
+            continue
+        candidates.append((_icon_score(rel, full, link.get("sizes", "")), full))
+
+    if candidates:
+        candidates.sort(key=lambda item: item[0], reverse=True)
+        return candidates[0][1]
+    return None
+
+
 def _detect_auth(text: str) -> str | None:
     for label, keywords in AUTH_PATTERNS:
         if any(kw in text for kw in keywords):
@@ -102,18 +156,23 @@ def discover_vendor_profile(domain: str) -> dict:
     Never raises — returns partial results on any failure.
     """
     base   = domain.replace("https://", "").replace("http://", "").rstrip("/")
-    result = {"description": None, "auth_method": None, "two_factor": None}
+    result = {"description": None, "logo_url": None, "auth_method": None, "two_factor": None}
 
     if not _is_safe_domain(base):
         print(f"[Profile] Blocked unsafe domain: {base}")
         return result
     try:
-        home_html = _fetch(f"https://{base}") or _fetch(f"https://www.{base}")
+        home_url = f"https://{base}"
+        home_html = _fetch(home_url)
+        if not home_html:
+            home_url = f"https://www.{base}"
+            home_html = _fetch(home_url)
         if not home_html:
             print(f"[Profile] Could not fetch homepage for {base}")
             return result
 
         result["description"] = _meta_description(home_html)
+        result["logo_url"] = _discover_logo_url(base, home_url, home_html)
         home_text = _to_text(home_html)
 
         # Fetch login page — best source for auth method signals
@@ -134,7 +193,8 @@ def discover_vendor_profile(domain: str) -> dict:
         result["two_factor"]  = _detect_2fa(combined)
 
         print(f"[Profile] {base} → auth={result['auth_method']}, "
-              f"2fa={result['two_factor']}, desc={'yes' if result['description'] else 'no'}")
+              f"2fa={result['two_factor']}, desc={'yes' if result['description'] else 'no'}, "
+              f"logo={'yes' if result['logo_url'] else 'no'}")
 
     except Exception as e:
         print(f"[Profile] Error for {domain}: {e}")

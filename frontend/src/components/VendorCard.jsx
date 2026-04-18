@@ -89,7 +89,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
         {/* Header: avatar + name + score */}
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-3 min-w-0 flex-1">
-            <VendorAvatar name={vendor.name} domain={vendor.domain} size={36} />
+            <VendorAvatar name={vendor.name} domain={vendor.domain} logoUrl={vendor.logo_url} size={36} />
             <div className="min-w-0">
               <h3 className="font-semibold text-[15px] leading-tight truncate" style={{ color: 'var(--hi)' }}>
                 {vendor.name}

@@ -10,6 +10,7 @@ from services.auth_service import get_current_user
 from services.audit import audit
 from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
 from services.untrusted_text import normalize_untrusted_text
+from services.vendor_profile import discover_vendor_profile
 from limiter import limiter
 
 router = APIRouter()
@@ -53,6 +54,7 @@ class VendorOut(BaseModel):
     score_delta:      Optional[float]  = None
     compliance:       Optional[dict]   = None
     description:      Optional[str]    = None
+    logo_url:         Optional[str]    = None
     auth_method:          Optional[str]      = None
     two_factor:           Optional[str]      = None
     review_interval_days: Optional[int]      = None
@@ -150,6 +152,19 @@ def add_vendor(
     vendor = Vendor(**payload.model_dump(), user_id=current_user.id)
     db.add(vendor)
     db.commit()
+    try:
+        profile_data = discover_vendor_profile(vendor.domain)
+        if profile_data.get("description"):
+            vendor.description = profile_data["description"]
+        if profile_data.get("logo_url"):
+            vendor.logo_url = profile_data["logo_url"]
+        if profile_data.get("auth_method"):
+            vendor.auth_method = profile_data["auth_method"]
+        if profile_data.get("two_factor"):
+            vendor.two_factor = profile_data["two_factor"]
+        db.commit()
+    except Exception:
+        db.rollback()
     db.refresh(vendor)
     audit(db, "vendor.added", request, user_id=str(current_user.id), detail=vendor.domain)
     return vendor

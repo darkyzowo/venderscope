@@ -155,6 +155,7 @@ VenderScope undergoes a full white-box security audit before every significant r
 | V4-03 | MEDIUM | **Failed Google searches still burned quota** — missing credentials, timeouts, or non-200 Google CSE responses reduced the app-side quota even when no usable search result was retrieved. | Search units are now reserved only for configured search, and automatically refunded on failed requests/non-200 responses. |
 | V4-04 | MEDIUM | **Duplicate scheduler risk on multi-process deploys** — each app process could start its own APScheduler instance, duplicating scans and cleanup jobs. | Added a database-backed scheduler lease with heartbeat; only the lease owner runs scheduled jobs. |
 | V4-05 | LOW | **Client-side favicon fallback leaked vendor domains to Google** — the browser-based Google favicon service exposed viewed vendor domains to a third party. | Removed the Google favicon fallback; avatars now use only direct vendor favicons or a local monogram fallback. |
+| V4-06 | LOW | **Logo quality vs privacy tradeoff** — better icon discovery usually pushes apps toward third-party logo/favicon providers, which expose viewed vendor domains to external services. | Implemented same-site logo discovery from vendor homepage icon metadata and same-domain fallbacks only; no third-party logo service is used. |
 
 ---
 

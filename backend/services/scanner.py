@@ -109,6 +109,8 @@ def run_full_scan(vendor: Vendor, db: Session, force: bool = False) -> float:
     profile_data = raw.get("profile", {})
     if profile_data.get("description"):
         vendor.description = profile_data["description"]
+    if profile_data.get("logo_url"):
+        vendor.logo_url = profile_data["logo_url"]
     if profile_data.get("auth_method"):
         vendor.auth_method = profile_data["auth_method"]
     if profile_data.get("two_factor"):
