@@ -1,11 +1,11 @@
 import os
 import uuid
-from urllib.parse import urlparse
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Cookie, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
+from config import is_allowed_frontend_origin, is_production
 from database import get_db
 from datetime import datetime, timezone
 from models import User, RevokedToken
@@ -26,7 +26,7 @@ from services.auth_service import (
 router = APIRouter()
 
 # Detect production (Render sets RENDER=true)
-_IS_PROD = bool(os.getenv("RENDER"))
+_IS_PROD = is_production()
 
 
 class RegisterRequest(BaseModel):
@@ -100,18 +100,12 @@ def _verify_origin(request: Request) -> None:
     server-side check that covers edge cases where preflight is bypassed (e.g.
     same-origin redirects, non-standard clients, future endpoint changes).
 
-    Skipped when FRONTEND_URL is not set (local dev without env var).
+    Skipped when no Origin/Referer header is present.
     """
-    allowed = os.getenv("FRONTEND_URL", "").rstrip("/")
-    if not allowed:
-        return
     origin = request.headers.get("origin") or request.headers.get("referer", "")
     if not origin:
         return
-    parsed_allowed = urlparse(allowed)
-    parsed_origin  = urlparse(origin)
-    if not (parsed_origin.scheme == parsed_allowed.scheme and
-            parsed_origin.netloc == parsed_allowed.netloc):
+    if not is_allowed_frontend_origin(origin):
         raise HTTPException(status_code=403, detail="Origin not allowed")
 
 

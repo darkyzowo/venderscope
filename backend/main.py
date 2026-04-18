@@ -1,4 +1,3 @@
-import os
 import traceback
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -8,7 +7,8 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
-from database import engine, Base, DATABASE_URL, _is_sqlite
+from config import get_frontend_origins, is_production, validate_frontend_config
+from database import engine, Base, _is_sqlite
 import models
 from limiter import limiter
 from routers import vendors, intelligence, export, quota, auth
@@ -48,7 +48,7 @@ if not _is_sqlite:
         _conn.commit()
 
 # ── Security headers middleware ─────────────────────────────────────────────
-_IS_PROD = bool(os.getenv("RENDER"))
+_IS_PROD = is_production()
 
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -66,15 +66,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # T-FE-03 — Validate critical env vars at startup so misconfig is caught immediately
-    _frontend_url = os.getenv("FRONTEND_URL", "")
-    if not _frontend_url:
-        raise RuntimeError("FRONTEND_URL environment variable is required — set it in .env")
-    if _IS_PROD and "localhost" in _frontend_url:
-        raise RuntimeError(
-            f"FRONTEND_URL is set to '{_frontend_url}' but this is a production deployment. "
-            "Set FRONTEND_URL to your Vercel URL in Render environment variables."
-        )
+    validate_frontend_config()
     start_scheduler()
     yield
 
@@ -92,12 +84,7 @@ app.add_middleware(SecurityHeadersMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "https://venderscope.vercel.app",
-        "https://venderscope-3466b3jpg-darkyzowos-projects.vercel.app",
-    ],
+    allow_origins=list(get_frontend_origins()),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type"],

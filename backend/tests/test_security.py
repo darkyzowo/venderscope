@@ -6,19 +6,18 @@
 import time
 import uuid
 import pytest
+import os
 from fastapi.testclient import TestClient
 import jwt
 
 # ── Bootstrap ────────────────────────────────────────────────────────────────
-# Set env vars BEFORE importing main — auth_service and limiter read them at import time
-import os
-os.environ.setdefault("JWT_SECRET", "test-secret-for-security-tests-only-not-production")
-os.environ.setdefault("DATABASE_URL", "sqlite:///./test_security.db")
-os.environ["RATE_LIMIT_ENABLED"] = "0"  # Disable rate limiting — tests share one IP
-
 from main import app
 from database import engine, Base
 from services.auth_service import JWT_SECRET, ALGORITHM
+
+# Never allow destructive test setup to run against a non-test database.
+if not str(engine.url).startswith("sqlite:///./test_security.db"):
+    raise RuntimeError(f"Refusing to run tests against non-test database: {engine.url}")
 
 # Use a fresh DB for tests
 Base.metadata.drop_all(bind=engine)
@@ -547,8 +546,10 @@ class TestGuestReport:
 
 def teardown_module():
     """Clean up test database."""
-    import os
+    engine.dispose()
     try:
         os.remove("test_security.db")
     except FileNotFoundError:
+        pass
+    except PermissionError:
         pass

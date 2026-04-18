@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getVendors, addVendor, deleteVendor, scanVendor, getDashboardSummary } from '../api/client'
+import { getVendors, addVendor, deleteVendor, scanVendor, scanAll, getDashboardSummary } from '../api/client'
 import VendorCard from '../components/VendorCard'
 import AddVendorModal from '../components/AddVendorModal'
 import QuotaBanner from '../components/QuotaBanner'
@@ -11,19 +11,19 @@ import PageBackground from '../components/PageBackground'
 
 const StatPill = ({ value, label, color }) => (
   <div
-    className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+    className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 sm:px-4"
     style={{
       background: 'rgba(255,255,255,0.03)',
       border: '1px solid rgba(255,255,255,0.06)',
     }}
   >
-    <span className="text-xl font-bold tabular-nums" style={{ color }}>{value}</span>
-    <span className="text-sm" style={{ color: '#8080aa' }}>{label}</span>
+    <span className="text-lg sm:text-xl font-bold tabular-nums" style={{ color }}>{value}</span>
+    <span className="text-xs sm:text-sm" style={{ color: '#8080aa' }}>{label}</span>
   </div>
 )
 
 const EmptyState = ({ onAdd }) => (
-  <div className="text-center py-32">
+  <div className="text-center py-20 sm:py-32">
     <div className="flex justify-center mb-4 opacity-15">
       <svg width="48" height="48" viewBox="0 0 32 32" fill="none">
         <path d="M16 2.5L27.5 9.25V22.75L16 29.5L4.5 22.75V9.25L16 2.5Z" stroke="#8b5cf6" strokeWidth="1.5" fill="none"/>
@@ -64,26 +64,34 @@ export default function Dashboard() {
   const [sortBy, setSortBy] = useState('risk')
   const [summary, setSummary] = useState(null)
 
-  const load = () => getVendors().then((r) => setVendors(r.data))
+  const refreshDashboard = async () => {
+    const [vendorsRes, summaryRes] = await Promise.all([
+      getVendors(),
+      getDashboardSummary().catch(() => null),
+    ])
+    setVendors(vendorsRes.data)
+    if (summaryRes) {
+      setSummary(summaryRes.data)
+    }
+  }
 
   useEffect(() => {
-    load()
-    getDashboardSummary().then((r) => setSummary(r.data)).catch(() => {})
+    refreshDashboard().catch(() => {})
     const t = setTimeout(() => setCardsVisible(true), 80)
     return () => clearTimeout(t)
   }, [])
 
-  const handleAdd = async (data) => { await addVendor(data); await load() }
+  const handleAdd = async (data) => { await addVendor(data); await refreshDashboard() }
 
   const handleDelete = async (id) => {
     if (!confirm('Remove this vendor?')) return
     await deleteVendor(id)
-    await load()
+    await refreshDashboard()
   }
 
   const handleScan = async (id) => {
     setScanning((s) => ({ ...s, [id]: true }))
-    try { await scanVendor(id); await load() }
+    try { await scanVendor(id); await refreshDashboard() }
     catch (e) { console.error('Scan failed:', e) }
     finally { setScanning((s) => ({ ...s, [id]: false })) }
   }
@@ -91,13 +99,10 @@ export default function Dashboard() {
   const handleScanAll = async () => {
     setScanAll(true)
     try {
-      const current = await getVendors()
-      for (const v of current.data) {
-        try { await scanVendor(v.id) }
-        catch (e) { console.error(`Scan failed for ${v.name}:`, e) }
-      }
+      await scanAll()
+      await refreshDashboard()
     } catch (e) { console.error('Scan all failed:', e) }
-    finally { setScanAll(false); window.location.reload() }
+    finally { setScanAll(false) }
   }
 
   const handleExportRegister = () => {
@@ -107,7 +112,7 @@ export default function Dashboard() {
       'Effective Exposure Score', 'Risk Band', 'Score Delta', 'Last Scanned',
       'Review Interval (days)', 'CVE Count', 'Breach Detected', 'Export Date',
     ]
-    const riskBand = (s) => s >= 70 ? 'HIGH' : s >= 35 ? 'MEDIUM' : 'LOW'
+    const riskBand = (s) => s >= 70 ? 'HIGH' : s >= 40 ? 'MEDIUM' : 'LOW'
     const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
     const rows = vendors.map((v) => {
       const score = v.effective_score ?? v.risk_score
@@ -138,8 +143,8 @@ export default function Dashboard() {
 
   const effScore = (v) => v.effective_score ?? v.risk_score
   const high    = vendors.filter((v) => effScore(v) >= 70).length
-  const medium  = vendors.filter((v) => effScore(v) >= 35 && effScore(v) < 70).length
-  const low     = vendors.filter((v) => effScore(v) < 35).length
+  const medium  = vendors.filter((v) => effScore(v) >= 40 && effScore(v) < 70).length
+  const low     = vendors.filter((v) => effScore(v) < 40).length
   const rising  = vendors.filter((v) => v.score_delta > 0).sort((a, b) => b.score_delta - a.score_delta)
 
   const sortedVendors = [...vendors].sort((a, b) => {
@@ -154,12 +159,13 @@ export default function Dashboard() {
   })
 
   return (
-    <div style={{ background: '#090911' }}>
+    <div className="app-page-shell min-h-screen flex flex-col" style={{ background: '#090911' }}>
       <PageBackground />
-      <div className="max-w-7xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
+      <main className="flex-1 w-full">
+      <div className="max-w-7xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-6 sm:py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Beta notice */}
-        <div className="flex items-center gap-2.5 mb-5 text-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 mb-5 text-xs">
           <span
             className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 font-semibold tracking-wide"
             style={{
@@ -178,7 +184,7 @@ export default function Dashboard() {
             href="https://github.com/darkyzowo/venderscope"
             target="_blank"
             rel="noreferrer"
-            className="ml-auto shrink-0 transition-colors duration-150"
+            className="sm:ml-auto shrink-0 transition-colors duration-150"
             style={{ color: '#8080aa' }}
             onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
             onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
@@ -191,23 +197,23 @@ export default function Dashboard() {
         <div className="mb-6"><QuotaBanner /></div>
 
         {/* Header */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-center gap-3">
+        <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between mb-8">
+          <div className="flex items-center gap-3 min-w-0">
             <VSLogo height={40} />
-            <div>
+            <div className="min-w-0">
               <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>
                 Vendor risk intelligence · continuous monitoring
               </p>
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="grid grid-cols-2 sm:flex sm:flex-wrap items-stretch gap-2 w-full lg:w-auto">
             {/* Scan All with tooltip */}
-            <div className="relative group">
+            <div className="relative group col-span-1">
               <button
                 onClick={handleScanAll}
                 disabled={scanningAll || vendors.length === 0}
-                className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
+                className="w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
                 style={{
                   background: 'rgba(255,255,255,0.05)',
                   border: '1px solid rgba(255,255,255,0.08)',
@@ -234,7 +240,7 @@ export default function Dashboard() {
                 ) : 'Scan All'}
               </button>
               <div
-                className="absolute right-0 top-11 w-72 rounded-xl p-3.5 text-xs hidden group-hover:block z-50"
+                className="absolute left-0 right-0 sm:left-auto sm:right-0 top-12 sm:w-72 rounded-xl p-3.5 text-xs hidden group-hover:block z-50"
                 style={{
                   background: '#141425',
                   border: '1px solid #2a2a4a',
@@ -251,7 +257,7 @@ export default function Dashboard() {
             <button
               onClick={handleExportRegister}
               disabled={vendors.length === 0}
-              className="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 disabled:opacity-40"
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -274,7 +280,7 @@ export default function Dashboard() {
 
             <button
               onClick={() => setShowModal(true)}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150"
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150"
               style={{ background: '#8b5cf6', color: '#fff' }}
               onMouseEnter={(e) => e.currentTarget.style.background = '#7c3aed'}
               onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
@@ -285,7 +291,7 @@ export default function Dashboard() {
             {/* Logout */}
             <button
               onClick={logout}
-              className="px-3 py-2 rounded-xl text-sm transition-all duration-150"
+              className="col-span-2 sm:col-span-1 px-3 py-2.5 rounded-xl text-sm transition-all duration-150 flex items-center justify-center"
               title="Sign out"
               style={{
                 background: 'rgba(255,255,255,0.04)',
@@ -310,9 +316,13 @@ export default function Dashboard() {
           </div>
         </div>
 
+        <p className="text-[11px] mb-6 sm:hidden" style={{ color: '#8080aa' }}>
+          Bulk scan works best with 1–2 vendors on the free tier. Use individual card scans for the most reliable mobile workflow.
+        </p>
+
         {/* Stats row */}
         {vendors.length > 0 && (
-          <div className="flex flex-wrap items-center gap-3 mb-8">
+          <div className="grid grid-cols-2 xl:flex xl:flex-wrap items-stretch gap-3 mb-8">
             <StatPill value={vendors.length} label="Total" color="#f0f0ff" />
             <StatPill value={high}           label="High Risk" color="#f97316" />
             <StatPill value={medium}         label="Medium" color="#eab308" />
@@ -322,7 +332,7 @@ export default function Dashboard() {
             )}
             {summary?.overdue_review_count > 0 && (
               <div
-                className="flex items-center gap-2.5 px-4 py-2.5 rounded-xl"
+                className="flex items-center gap-2.5 rounded-xl px-3.5 py-2.5 sm:px-4 col-span-2 xl:col-span-1"
                 title={`Overdue: ${summary.overdue_reviews?.map((v) => v.name).join(', ')}`}
                 style={{
                   background: 'rgba(251,191,36,0.06)',
@@ -349,7 +359,7 @@ export default function Dashboard() {
             background: 'rgba(239,68,68,0.04)',
             border: '1px solid rgba(239,68,68,0.15)',
           }}>
-            <div className="flex items-center gap-2 mb-3">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2 mb-3">
               <span className="text-xs font-bold tracking-widest" style={{ color: '#ef4444' }}>
                 NEEDS ATTENTION
               </span>
@@ -361,7 +371,7 @@ export default function Dashboard() {
               {rising.map((v) => (
                 <div
                   key={v.id}
-                  className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs cursor-pointer transition-colors duration-150"
+                  className="flex items-center justify-between sm:justify-start gap-2 w-full sm:w-auto px-3 py-2 rounded-lg text-xs cursor-pointer transition-colors duration-150"
                   style={{
                     background: 'rgba(239,68,68,0.08)',
                     border: '1px solid rgba(239,68,68,0.2)',
@@ -371,7 +381,7 @@ export default function Dashboard() {
                   onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.14)'}
                   onMouseLeave={(e) => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
                 >
-                  <span className="font-medium truncate max-w-[120px]">{v.name}</span>
+                  <span className="font-medium truncate">{v.name}</span>
                   <span className="font-bold shrink-0" style={{ color: '#ef4444' }}>
                     +{v.score_delta} ↑
                   </span>
@@ -387,7 +397,7 @@ export default function Dashboard() {
         ) : (
           <>
             {/* Sort controls */}
-            <div className="flex items-center gap-2 mb-4">
+            <div className="flex flex-wrap items-center gap-2 mb-4">
               <span className="text-xs" style={{ color: '#8080aa' }}>Sort:</span>
               {SORT_OPTIONS.map(({ key, label }) => (
                 <button
@@ -427,6 +437,7 @@ export default function Dashboard() {
           </>
         )}
       </div>
+      </main>
 
       {showModal && (
         <AddVendorModal onAdd={handleAdd} onClose={() => setShowModal(false)} />

@@ -9,6 +9,7 @@ from models import Vendor, RiskEvent, RiskScoreHistory, User, VendorNote
 from services.auth_service import get_current_user
 from services.audit import audit
 from services.risk_context import compute_effective_score, VALID_SENSITIVITIES
+from services.untrusted_text import normalize_untrusted_text
 from limiter import limiter
 
 router = APIRouter()
@@ -77,7 +78,9 @@ class NoteCreate(BaseModel):
     @field_validator('content')
     @classmethod
     def content_length(cls, v):
-        v = v.strip()
+        # Notes are stored as plain untrusted text and may be exported later.
+        # Never pass raw note content into AI prompts, SQL, shell commands, or tool inputs.
+        v = normalize_untrusted_text(v)
         if not v:
             raise ValueError('Note cannot be empty')
         if len(v) > 1000:

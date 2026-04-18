@@ -25,7 +25,7 @@ const SectionHeading = ({ children }) => (
 
 const Row = ({ label, children }) => (
   <div
-    className="flex items-center justify-between py-2.5"
+    className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 py-2.5"
     style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
   >
     <span className="text-sm" style={{ color: '#b8b8d0' }}>{label}</span>
@@ -251,7 +251,7 @@ export default function CompliancePanel({ compliance }) {
         <p className="text-[10px] mb-3" style={{ color: '#8080aa' }}>
           Based on public evidence only — not a verified audit. External = found via web search.
         </p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
           {Object.entries(CERT_LABELS).map(([key, label]) => (
             <CertCard
               key={key}

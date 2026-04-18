@@ -29,16 +29,18 @@ export default function Footer() {
 
   return (
     <>
-      <footer style={{ borderTop: '1px solid #0f0f1e' }} className="mt-16">
-        <div className="max-w-7xl mx-auto px-6 py-8">
+      <footer style={{ borderTop: '1px solid #0f0f1e' }} className="w-full">
+        <div className="max-w-7xl mx-auto page-safe-x px-4 sm:px-6 py-6 sm:py-8">
 
           {/* Main row */}
-          <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-4">
             {/* Brand */}
-            <VSLogo height={22} />
+            <div className="flex justify-center sm:justify-start">
+              <VSLogo height={22} />
+            </div>
 
             {/* Navigation links */}
-            <nav className="flex flex-wrap items-center gap-5 text-xs">
+            <nav className="flex flex-wrap items-center justify-center sm:justify-start gap-4 sm:gap-5 text-xs">
               <FooterLink to="/privacy">Privacy Policy</FooterLink>
               <FooterLink to="/terms">Terms of Service</FooterLink>
               <FooterLink to="/security">Security</FooterLink>
@@ -46,8 +48,8 @@ export default function Footer() {
           </div>
 
           {/* Bottom row */}
-          <div className="flex flex-wrap items-center justify-between gap-3 mt-4">
-            <p className="text-xs" style={{ color: '#8080aa' }}>
+          <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center sm:justify-between gap-3 mt-4 text-center sm:text-left">
+            <p className="text-xs leading-relaxed" style={{ color: '#8080aa' }}>
               © {new Date().getFullYear()} VenderScope · Continuous Passive Vendor Risk Intelligence · MIT Licence
             </p>
 

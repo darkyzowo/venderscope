@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import VendorAvatar from './VendorAvatar'
 
@@ -36,6 +37,7 @@ const SENSITIVITY_BADGES = {
 
 export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
   const nav = useNavigate()
+  const [nowTs] = useState(() => Date.now())
   const displayScore = vendor.effective_score ?? vendor.risk_score
   const cfg = riskConfig(displayScore)
   const domain = vendor.domain.split('?')[0].split('/')[0]
@@ -69,10 +71,10 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
       onMouseUp={(e) => { e.currentTarget.style.transform = 'translateY(-2px) scale(1)' }}
       onClick={() => nav(`/vendor/${vendor.id}`)}
     >
-      <div className="p-5">
+      <div className="p-4 sm:p-5">
         {/* Header: avatar + name + score */}
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-start justify-between gap-3 mb-4">
+          <div className="flex items-center gap-3 min-w-0 flex-1">
             <VendorAvatar name={vendor.name} size={36} />
             <div className="min-w-0">
               <h3
@@ -87,9 +89,9 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             </div>
           </div>
 
-          <div className="text-right shrink-0 ml-3">
+          <div className="text-right shrink-0 ml-1 sm:ml-3">
             <div
-              className="text-3xl font-bold tabular-nums leading-none"
+              className="text-2xl sm:text-3xl font-bold tabular-nums leading-none"
               style={{ color: cfg.color }}
             >
               {displayScore}
@@ -115,7 +117,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
         <div className="h-px mb-3" style={{ background: 'rgba(255,255,255,0.04)' }} />
 
         {/* Timestamp + sensitivity badge (inline — no layout shift) */}
-        <div className={`flex items-center justify-between ${vendor.review_interval_days ? 'mb-1.5' : 'mb-3'}`}>
+        <div className={`flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 ${vendor.review_interval_days ? 'mb-1.5' : 'mb-3'}`}>
           <p className="text-[11px]" style={{ color: '#8080aa' }}>
             {vendor.last_scanned
               ? new Date(vendor.last_scanned).toLocaleString([], {
@@ -127,7 +129,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
           {badge && (
             <span
               className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full shrink-0 ml-2"
-              style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}` }}
+              style={{ color: badge.color, background: badge.bg, border: `1px solid ${badge.border}`, marginLeft: 0 }}
             >
               {badge.label}
             </span>
@@ -137,7 +139,6 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
         {/* Review status line — only shown when a schedule is set */}
         {(() => {
           if (!vendor.review_interval_days) return null
-          const now = Date.now()
           if (!vendor.last_reviewed_at) {
             return (
               <p className="text-[10px] mb-2.5" style={{ color: '#fbbf24' }}>
@@ -146,7 +147,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
             )
           }
           const dueAt = new Date(vendor.last_reviewed_at).getTime() + vendor.review_interval_days * 86400000
-          const diffDays = Math.round((dueAt - now) / 86400000)
+          const diffDays = Math.round((dueAt - nowTs) / 86400000)
           if (diffDays < 0) {
             return (
               <p className="text-[10px] mb-2.5" style={{ color: '#fbbf24' }}>
@@ -166,7 +167,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
           <button
             onClick={() => onScan(vendor.id)}
             disabled={scanning}
-            className="flex-1 py-2 rounded-lg text-xs font-medium transition-colors duration-150 disabled:opacity-40"
+            className="flex-1 min-h-10 py-2 rounded-lg text-xs font-medium transition-colors duration-150 disabled:opacity-40"
             style={{
               background: 'rgba(139,92,246,0.1)',
               color: '#a78bfa',
@@ -198,7 +199,7 @@ export default function VendorCard({ vendor, onDelete, onScan, scanning }) {
 
           <button
             onClick={() => onDelete(vendor.id)}
-            className="py-2 px-3 rounded-lg text-xs transition-colors duration-150"
+            className="min-h-10 py-2 px-3.5 rounded-lg text-xs transition-colors duration-150"
             style={{
               background: 'rgba(255,255,255,0.04)',
               color: '#8080aa',

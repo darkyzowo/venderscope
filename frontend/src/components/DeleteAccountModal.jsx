@@ -43,7 +43,7 @@ export default function DeleteAccountModal({ onClose }) {
       onClick={(e) => { if (e.target === e.currentTarget) handleClose() }}
     >
       <div
-        className="w-full max-w-md rounded-2xl p-6"
+        className="w-full max-w-md rounded-2xl p-4 sm:p-6 max-h-[calc(100dvh-2rem)] overflow-y-auto"
         style={{ background: '#0f1117', border: '1px solid #2a2a4a', boxShadow: '0 24px 64px rgba(0,0,0,0.8)' }}
       >
         {step === 1 ? (
@@ -85,7 +85,7 @@ export default function DeleteAccountModal({ onClose }) {
               <a href="/privacy" target="_blank" style={{ color: '#8b5cf6', textDecoration: 'underline' }}>Privacy Policy</a>.
             </p>
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={handleClose}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"
@@ -155,7 +155,7 @@ export default function DeleteAccountModal({ onClose }) {
               <p className="text-xs mb-3" style={{ color: '#f87171' }}>{error}</p>
             )}
 
-            <div className="flex gap-3">
+            <div className="flex flex-col sm:flex-row gap-3">
               <button
                 onClick={() => { setStep(1); setInput(''); setPassword(''); setError('') }}
                 className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-all"

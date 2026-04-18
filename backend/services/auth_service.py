@@ -1,7 +1,7 @@
+import config  # Loads backend/.env once with process env precedence.
 import os
 import uuid
 import bcrypt
-from dotenv import load_dotenv
 from datetime import datetime, timedelta, timezone
 from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -10,8 +10,6 @@ import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from database import get_db
 from models import User
-
-load_dotenv()
 
 JWT_SECRET = os.getenv("JWT_SECRET")
 if not JWT_SECRET:

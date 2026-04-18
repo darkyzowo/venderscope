@@ -1,8 +1,6 @@
+import config  # Loads backend/.env once with process env precedence.
 import requests
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 NVD_API_KEY = os.getenv("NVD_API_KEY")
 NVD_URL     = "https://services.nvd.nist.gov/rest/json/cves/2.0"

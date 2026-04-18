@@ -1,10 +1,10 @@
 import io
 import re
-from datetime import datetime
+from datetime import datetime, timedelta, timezone
 from xml.sax.saxutils import escape as _xml_escape
 from services.risk_context import compute_effective_score, SENSITIVITY_LABELS
 from reportlab.lib.pagesizes import A4
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.units import mm
 from reportlab.lib import colors
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
@@ -22,6 +22,16 @@ DARK    = colors.HexColor("#1e293b")
 WHITE   = colors.white
 
 SEVERITY_ORDER = {"CRITICAL": 0, "HIGH": 1, "MEDIUM": 2, "LOW": 3}
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
+
+
+def _as_utc(dt: datetime | None) -> datetime | None:
+    if dt is None:
+        return None
+    return dt.replace(tzinfo=timezone.utc) if dt.tzinfo is None else dt.astimezone(timezone.utc)
 
 def sev_color(sev: str):
     return {"CRITICAL": RED, "HIGH": ORANGE, "MEDIUM": YELLOW, "LOW": GREEN}.get(sev, GREY)
@@ -72,7 +82,7 @@ def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None,
     # Header
     story.append(Paragraph("VenderScope — Vendor Risk Audit Report", title_s))
     story.append(Paragraph(
-        f"Generated: {datetime.utcnow().strftime('%d %B %Y, %H:%M UTC')}  |  "
+        f"Generated: {_utc_now().strftime('%d %B %Y, %H:%M UTC')}  |  "
         f"ISO 27001 Annex A / Cyber Essentials compliance review", meta_s))
     story.append(HRFlowable(width="100%", thickness=1, color=LIGHT, spaceAfter=8))
 
@@ -96,12 +106,12 @@ def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None,
             vendor.review_interval_days, f"Every {vendor.review_interval_days} days")
         rows.append(["Review Interval", interval_label])
         if vendor.last_reviewed_at:
-            rows.append(["Last Reviewed", vendor.last_reviewed_at.strftime('%d %B %Y')])
-            due_ts = vendor.last_reviewed_at.timestamp() + vendor.review_interval_days * 86400
-            due_dt = datetime.utcfromtimestamp(due_ts)
-            now_ts = datetime.utcnow().timestamp()
-            if due_ts < now_ts:
-                diff_days = int((now_ts - due_ts) / 86400)
+            reviewed_at_utc = _as_utc(vendor.last_reviewed_at)
+            rows.append(["Last Reviewed", reviewed_at_utc.strftime('%d %B %Y')])
+            due_dt = reviewed_at_utc + timedelta(days=vendor.review_interval_days)
+            now_utc = _utc_now()
+            if due_dt < now_utc:
+                diff_days = int((now_utc - due_dt).total_seconds() / 86400)
                 rows.append(["Review Status", f"OVERDUE by {diff_days} day(s)"])
             else:
                 rows.append(["Next Review Due", due_dt.strftime('%d %B %Y')])
@@ -179,8 +189,8 @@ def generate_vendor_pdf(vendor, events: list, history: list, notes: list = None,
                    ["Finding", "Type", "Justification", "Reviewer", "Expires", "Status"]]
         acc_data = [acc_hdr]
         for acc in acceptances:
-            exp_dt = acc.expires_at
-            is_active = exp_dt > datetime.utcnow() if exp_dt else False
+            exp_dt = _as_utc(acc.expires_at)
+            is_active = exp_dt > _utc_now() if exp_dt else False
             status_para = Paragraph(
                 "<b>ACTIVE</b>" if is_active else "<b>EXPIRED</b>",
                 ParagraphStyle("acc_st", fontSize=8, fontName="Helvetica-Bold",
@@ -272,7 +282,7 @@ def generate_guest_pdf(name: str, domain: str, score: float, events: list[dict])
     # Header
     story.append(Paragraph("VenderScope — Guest Risk Report (CVEs Only)", title_s))
     story.append(Paragraph(
-        f"Generated: {datetime.utcnow().strftime('%d %B %Y, %H:%M UTC')}  |  "
+        f"Generated: {_utc_now().strftime('%d %B %Y, %H:%M UTC')}  |  "
         f"Partial scan — CVE data only", meta_s))
     story.append(HRFlowable(width="100%", thickness=1, color=LIGHT, spaceAfter=8))
 

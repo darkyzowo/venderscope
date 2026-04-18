@@ -1,9 +1,7 @@
 # backend/services/companies_house.py
+import config  # Loads backend/.env once with process env precedence.
 import requests
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 CH_API_KEY = os.getenv("COMPANIES_HOUSE_API_KEY")
 CH_BASE    = "https://api.company-information.service.gov.uk"

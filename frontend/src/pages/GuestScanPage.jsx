@@ -69,7 +69,7 @@ export default function GuestScanPage() {
   }
 
   return (
-    <div className="min-h-screen px-4 py-10" style={{ background: 'var(--bg)' }}>
+    <div className="app-page-shell page-safe-x page-safe-y min-h-screen px-4 py-8 sm:py-10" style={{ background: 'var(--bg)' }}>
       <div style={{ maxWidth: 640, margin: '0 auto' }}>
 
         {/* Back link */}
@@ -85,7 +85,7 @@ export default function GuestScanPage() {
         </Link>
 
         {/* Heading */}
-        <h1 className="text-2xl font-bold mb-1" style={{ color: 'var(--hi)' }}>
+        <h1 className="text-2xl sm:text-3xl font-bold mb-1" style={{ color: 'var(--hi)' }}>
           Guest Scan
         </h1>
         <p className="text-sm mb-6" style={{ color: 'var(--mid)' }}>
@@ -95,7 +95,7 @@ export default function GuestScanPage() {
         {/* Scan form */}
         <form
           onSubmit={handleScan}
-          className="rounded-xl p-6 space-y-4 mb-6"
+          className="rounded-xl p-4 sm:p-6 space-y-4 mb-6"
           style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}
         >
           <Field label="Vendor name" value={name} onChange={setName} placeholder="e.g. Stripe" />
@@ -133,9 +133,9 @@ export default function GuestScanPage() {
             </div>
 
             {/* Score */}
-            <div className="rounded-xl p-6 mb-4 text-center"
+            <div className="rounded-xl p-5 sm:p-6 mb-4 text-center"
                  style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
-              <div className="text-6xl font-bold tabular-nums mb-1"
+              <div className="text-5xl sm:text-6xl font-bold tabular-nums mb-1"
                    style={{ color: riskColor(result.score) }}>
                 {result.score}
               </div>
@@ -149,7 +149,7 @@ export default function GuestScanPage() {
             </div>
 
             {/* Events */}
-            <div className="rounded-xl p-5 mb-4"
+            <div className="rounded-xl p-4 sm:p-5 mb-4"
                  style={{ background: 'var(--surface)', border: '1px solid var(--line)' }}>
               <h2 className="text-sm font-semibold mb-3" style={{ color: 'var(--hi)' }}>
                 CVE Findings ({result.events.length})
@@ -161,7 +161,7 @@ export default function GuestScanPage() {
                   {result.events.map((evt, i) => (
                     <div key={i} className="rounded-lg p-3"
                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}>
-                      <div className="flex items-center justify-between gap-2 mb-1">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-1">
                         <span className="text-xs font-semibold truncate" style={{ color: 'var(--hi)' }}>
                           {evt.title}
                         </span>

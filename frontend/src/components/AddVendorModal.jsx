@@ -45,7 +45,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 flex items-center justify-center z-50"
+      className="fixed inset-0 flex items-center justify-center z-50 p-4 sm:p-6"
       style={{
         background: visible ? 'rgba(0,0,0,0.75)' : 'rgba(0,0,0,0)',
         backdropFilter: visible ? 'blur(4px)' : 'blur(0px)',
@@ -54,7 +54,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
       onClick={(e) => { if (e.target === e.currentTarget) close() }}
     >
       <div
-        className="w-full max-w-md mx-4 rounded-2xl"
+        className="w-full max-w-md rounded-2xl max-h-[calc(100dvh-2rem)] overflow-y-auto"
         style={{
           background: 'linear-gradient(160deg, #111128 0%, #0d0d1f 100%)',
           border: '1px solid #2a2a4a',
@@ -65,7 +65,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
         }}
         onKeyDown={handleKey}
       >
-        <div className="p-6">
+        <div className="p-4 sm:p-6">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-lg font-bold" style={{ color: '#f0f0ff' }}>
@@ -129,7 +129,7 @@ export default function AddVendorModal({ onAdd, onClose }) {
           )}
 
           {/* Actions */}
-          <div className="flex gap-3 mt-6">
+          <div className="flex flex-col sm:flex-row gap-3 mt-6">
             <button
               onClick={close}
               className="flex-1 py-2.5 rounded-xl text-sm font-medium transition-colors duration-150"

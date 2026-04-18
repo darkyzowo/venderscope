@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 
 /**
@@ -11,7 +11,7 @@ import { createPortal } from 'react-dom'
  * position and animation are applied as inline styles here.
  */
 export default function PageBackground() {
-  const orbs = useMemo(() => {
+  const [orbs] = useState(() => {
     const rand   = (a, b) => Math.floor(Math.random() * (b - a + 1)) + a
     const drift  = () => ['pg-drift-a', 'pg-drift-b', 'pg-drift-c'][rand(0, 2)]
 
@@ -44,7 +44,7 @@ export default function PageBackground() {
         },
       },
     ]
-  }, []) // empty deps → computed once per mount, new values on every navigation
+  }) // computed once per mount, new values on every navigation
 
   return createPortal(
     <>

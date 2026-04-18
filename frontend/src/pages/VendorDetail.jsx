@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getVendors, getVendorEvents, getScoreHistory, scanVendor, exportPDF, setVendorContext, getNotes, addNote, deleteNote, updateReview, getAcceptances, createAcceptance, revokeAcceptance } from '../api/client'
 import api from '../api/client'
@@ -38,7 +38,7 @@ const sortEvents = (evts) =>
 // Reusable panel wrapper
 const Panel = ({ children, className = '', style: extraStyle }) => (
   <div
-    className={`rounded-xl p-6 ${className}`}
+    className={`rounded-xl p-4 sm:p-6 ${className}`}
     style={{
       background: 'linear-gradient(160deg, #0f0f1e 0%, #0a0a15 100%)',
       border: '1px solid #1e1e35',
@@ -74,32 +74,36 @@ export default function VendorDetail() {
   const [addingNote, setAddingNote] = useState(false)
   const [updatingReview, setUpdatingReview] = useState(false)
   const [acceptances, setAcceptances] = useState([])
+  const [loadError, setLoadError] = useState('')
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
+    setLoadError('')
     const [vRes, eRes, hRes, nRes, aRes] = await Promise.all([
-      getVendors(), getVendorEvents(id), getScoreHistory(id), getNotes(id), getAcceptances(id),
+      getVendors(),
+      getVendorEvents(id),
+      getScoreHistory(id),
+      getNotes(id),
+      getAcceptances(id),
     ])
-    setVendor(vRes.data.find((v) => v.id === id))
+    const currentVendor = vRes.data.find((v) => v.id === id)
+    if (!currentVendor) {
+      throw new Error('Vendor not found')
+    }
+    setVendor(currentVendor)
     setEvents(sortEvents(eRes.data))
     setHistory(hRes.data)
     setNotes(nRes.data)
     setAcceptances(aRes.data)
-  }
+  }, [id])
 
   useEffect(() => {
-    async function load() {
-      const [vRes, eRes, hRes, nRes, aRes] = await Promise.all([
-        getVendors(), getVendorEvents(id), getScoreHistory(id), getNotes(id), getAcceptances(id),
-      ])
-      setVendor(vRes.data.find((v) => v.id === id))
-      setEvents(sortEvents(eRes.data))
-      setHistory(hRes.data)
-      setNotes(nRes.data)
-      setAcceptances(aRes.data)
-    }
-    load()
+    setVendor(null)
+    fetchData().catch((e) => {
+      console.error('Vendor load failed:', e)
+      setLoadError('Vendor not found or failed to load.')
+    })
     api.get('/quota').then((r) => setQuotaEx(r.data.exhausted)).catch(() => {})
-  }, [id])
+  }, [id, fetchData])
 
   const handleScan = async () => {
     setScan(true)
@@ -176,15 +180,39 @@ export default function VendorDetail() {
     setAcceptances((a) => a.filter((x) => x.id !== accId))
   }
 
+  if (loadError)
+    return (
+      <div className="app-page-shell min-h-screen" style={{ background: '#090911' }}>
+        <PageBackground />
+        <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-8 sm:py-10" style={{ position: 'relative', zIndex: 1 }}>
+          <button
+            onClick={() => nav('/')}
+            className="inline-flex items-center gap-1.5 text-sm mb-6 transition-colors duration-150"
+            style={{ color: '#8080aa' }}
+          >
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+              <path d="M9 2L4 7L9 12" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+            Dashboard
+          </button>
+
+          <Panel className="animate-page">
+            <PanelTitle>Vendor Unavailable</PanelTitle>
+            <p className="text-sm" style={{ color: '#b8b8d0' }}>{loadError}</p>
+          </Panel>
+        </div>
+      </div>
+    )
+
   // Skeleton loading state — matches actual page layout
   if (!vendor)
     return (
-      <div className="min-h-screen" style={{ background: '#090911' }}>
-        <div className="max-w-5xl mx-auto px-6 py-8">
+      <div className="app-page-shell min-h-screen" style={{ background: '#090911' }}>
+        <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-6 sm:py-8">
           {/* Back placeholder */}
           <div className="skeleton h-4 w-20 mb-6 rounded" />
           {/* Header */}
-          <div className="flex items-start justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-8">
             <div className="flex items-center gap-4">
               <div className="skeleton w-12 h-12 rounded-xl" />
               <div>
@@ -192,7 +220,7 @@ export default function VendorDetail() {
                 <div className="skeleton h-4 w-24 rounded" />
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:flex">
               <div className="skeleton h-9 w-24 rounded-xl" />
               <div className="skeleton h-9 w-24 rounded-xl" />
             </div>
@@ -213,12 +241,12 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div style={{ background: '#090911' }}>
+    <div className="app-page-shell" style={{ background: '#090911' }}>
       <PageBackground />
-      <div className="max-w-5xl mx-auto px-6 py-8" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-6 sm:py-8" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* Back nav */}
-        <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center justify-between gap-3 mb-6">
           <button
             onClick={() => nav('/')}
             className="inline-flex items-center gap-1.5 text-sm transition-colors duration-150"
@@ -238,11 +266,11 @@ export default function VendorDetail() {
         <div className="mb-6"><QuotaBanner /></div>
 
         {/* Page header */}
-        <div className="flex items-start justify-between mb-8">
-          <div className="flex items-center gap-4">
+        <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between mb-8">
+          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
             <VendorAvatar name={vendor.name} size={48} />
-            <div>
-              <h1 className="text-2xl font-bold" style={{ color: '#f0f0ff' }}>{vendor.name}</h1>
+            <div className="min-w-0">
+              <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: '#f0f0ff' }}>{vendor.name}</h1>
               <p className="text-sm mt-0.5" style={{ color: '#8080aa' }}>{vendor.domain}</p>
               {vendor.company_number && (
                 <p className="text-xs mt-0.5" style={{ color: '#8080aa' }}>CH: {vendor.company_number}</p>
@@ -250,12 +278,12 @@ export default function VendorDetail() {
             </div>
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto shrink-0">
             <button
               onClick={handleScan}
               disabled={scanning || quotaExhausted}
               title={quotaExhausted ? 'Daily scan quota exhausted — resets at midnight UTC' : ''}
-              className="px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-40"
+              className="w-full px-4 py-2.5 rounded-xl text-sm font-semibold transition-all duration-150 disabled:opacity-40"
               style={{ background: '#8b5cf6', color: '#fff' }}
               onMouseEnter={(e) => {
                 if (!scanning && !quotaExhausted) e.currentTarget.style.background = '#7c3aed'
@@ -275,7 +303,7 @@ export default function VendorDetail() {
             <button
               onClick={handleExportPDF}
               disabled={exporting}
-              className="px-4 py-2 rounded-xl text-sm transition-all duration-150"
+              className="w-full px-4 py-2.5 rounded-xl text-sm transition-all duration-150"
               style={{
                 background: 'rgba(255,255,255,0.05)',
                 border: '1px solid rgba(255,255,255,0.08)',
@@ -330,7 +358,7 @@ export default function VendorDetail() {
                   How is this calculated?
                 </span>
                 <div
-                  className="absolute bottom-6 left-1/2 -translate-x-1/2 w-80 rounded-xl p-4 text-xs hidden group-hover:block z-50"
+                  className="absolute bottom-6 left-1/2 -translate-x-1/2 w-[min(20rem,calc(100vw-2rem))] rounded-xl p-4 text-xs hidden group-hover:block z-50"
                   style={{
                     background: '#141425',
                     border: '1px solid #2a2a4a',
@@ -348,7 +376,7 @@ export default function VendorDetail() {
                     Applies a business context multiplier based on what data this vendor can access.
                     A payment processor with a CRITICAL CVE poses far more risk than a marketing tool with the same CVE.
                   </p>
-                  <div className="grid grid-cols-2 gap-x-3 gap-y-1 pt-2" style={{ borderTop: '1px solid #2a2a4a' }}>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-3 gap-y-1 pt-2" style={{ borderTop: '1px solid #2a2a4a' }}>
                     {[
                       ['No Data Access', '×0.8'],
                       ['PII / Personal', '×1.4'],
@@ -400,7 +428,7 @@ export default function VendorDetail() {
                       <span style={{ opacity: 0.6, fontSize: '10px' }}>default · 1.0×</span>
                     </button>
 
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
                       {SENSITIVITY_OPTIONS.filter((o) => o.value !== 'standard').map(({ value, label, hint }) => {
                         const isSelected = current === value
                         return (
@@ -480,7 +508,7 @@ export default function VendorDetail() {
                       <span style={{ opacity: 0.6, fontSize: '10px' }}>default</span>
                     </button>
 
-                    <div className="grid grid-cols-3 gap-1.5 mb-2">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5 mb-2">
                       {[
                         { value: 30,  label: '30 days' },
                         { value: 60,  label: '60 days' },
@@ -536,7 +564,7 @@ export default function VendorDetail() {
                 const daysOverdue = dueAt ? Math.floor((now - dueAt) / 86400000) : null
 
                 return (
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                     <p className="text-[10px]" style={{
                       color: daysOverdue > 0 ? '#fbbf24' : dueAt ? '#22c55e' : '#8080aa',
                     }}>
@@ -580,7 +608,7 @@ export default function VendorDetail() {
                 {vendor.description}
               </p>
             )}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
               <div>
                 <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: '#8080aa' }}>
                   Auth Method
@@ -622,7 +650,7 @@ export default function VendorDetail() {
 
         {/* Risk Events */}
         <Panel style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 150ms both' }}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Risk Events{' '}
               <span className="font-normal" style={{ color: '#8080aa' }}>
@@ -652,7 +680,7 @@ export default function VendorDetail() {
 
         {/* Analyst Notes */}
         <Panel className="mt-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 200ms both' }}>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-4">
             <h3 className="text-sm font-semibold" style={{ color: '#f0f0ff' }}>
               Analyst Notes{' '}
               {notes.length > 0 && (
@@ -662,45 +690,119 @@ export default function VendorDetail() {
             <p className="text-[10px]" style={{ color: '#8080aa' }}>Included in PDF export</p>
           </div>
 
-          {/* Input */}
-          <div className="flex gap-2 mb-4">
+          {/* Composer */}
+          <div
+            className="mb-5 rounded-xl p-3 sm:p-4"
+            style={{
+              background: 'rgba(255,255,255,0.025)',
+              border: '1px solid rgba(255,255,255,0.05)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
+            }}
+          >
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3">
+              <div>
+                <p className="text-[10px] font-bold tracking-[0.14em] uppercase" style={{ color: '#8080aa' }}>
+                  Add Evidence Note
+                </p>
+                <p className="text-[11px] mt-1" style={{ color: '#8080aa' }}>
+                  Capture rationale, follow-up actions, or review context for the vendor file.
+                </p>
+              </div>
+              <div
+                className="shrink-0 rounded-full px-2.5 py-1 text-[10px] font-medium tabular-nums"
+                style={{
+                  background: 'rgba(139,92,246,0.08)',
+                  border: '1px solid rgba(139,92,246,0.18)',
+                  color: '#a78bfa',
+                }}
+              >
+                {noteInput.trim().length}/1000
+              </div>
+            </div>
+
             <textarea
               value={noteInput}
               onChange={(e) => setNoteInput(e.target.value)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) handleAddNote()
               }}
-              placeholder="Add a note — Ctrl+Enter to submit"
-              rows={2}
+              placeholder="Example: Accepted medium-risk exposure pending vendor remediation evidence by month-end."
+              rows={4}
               maxLength={1000}
               disabled={addingNote}
-              className="flex-1 rounded-lg px-3 py-2 text-xs resize-none"
+              className="w-full rounded-xl px-3.5 py-3 text-sm resize-y min-h-[120px]"
               style={{
                 background: '#141425',
                 border: '1px solid #2a2a4a',
                 color: '#f0f0ff',
                 outline: 'none',
                 opacity: addingNote ? 0.5 : 1,
-                transition: 'opacity 200ms ease',
+                transition: 'opacity 200ms ease, border-color 200ms ease, box-shadow 200ms ease',
+                boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.02)',
               }}
             />
-            <button
-              onClick={handleAddNote}
-              disabled={addingNote || !noteInput.trim()}
-              className="px-3 py-2 rounded-lg text-xs font-semibold self-end transition-all duration-150 disabled:opacity-40"
-              style={{ background: '#8b5cf6', color: '#fff' }}
-              onMouseEnter={(e) => { if (!addingNote && noteInput.trim()) e.currentTarget.style.background = '#7c3aed' }}
-              onMouseLeave={(e) => e.currentTarget.style.background = '#8b5cf6'}
-            >
-              {addingNote ? 'Saving…' : 'Add'}
-            </button>
+
+            <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+              <p className="text-[11px]" style={{ color: '#8080aa' }}>
+                Submit with <span style={{ color: '#b8b8d0' }}>Ctrl+Enter</span> or use the action button.
+              </p>
+
+              <button
+                onClick={handleAddNote}
+                disabled={addingNote || !noteInput.trim()}
+                className="inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-all duration-150 disabled:opacity-40 disabled:cursor-not-allowed"
+                style={{
+                  background: noteInput.trim() ? '#8b5cf6' : 'rgba(139,92,246,0.35)',
+                  color: '#fff',
+                  minWidth: '132px',
+                  boxShadow: noteInput.trim() ? '0 10px 24px rgba(139,92,246,0.22)' : 'none',
+                }}
+                onMouseEnter={(e) => {
+                  if (!addingNote && noteInput.trim()) e.currentTarget.style.background = '#7c3aed'
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = noteInput.trim() ? '#8b5cf6' : 'rgba(139,92,246,0.35)'
+                }}
+              >
+                {addingNote ? (
+                  <>
+                    <svg className="animate-spin" width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" />
+                    </svg>
+                    Saving…
+                  </>
+                ) : (
+                  <>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                    </svg>
+                    Add Note
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Notes list */}
           {notes.length === 0 ? (
-            <p className="text-xs py-4 text-center" style={{ color: '#8080aa' }}>
-              No notes yet. Notes are included in PDF exports.
-            </p>
+            <div
+              className="rounded-xl py-10 px-4 text-center"
+              style={{
+                background: 'rgba(255,255,255,0.02)',
+                border: '1px dashed rgba(255,255,255,0.07)',
+              }}
+            >
+              <div className="flex justify-center mb-3 opacity-60">
+                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M8 7h8M8 11h8M8 15h5" stroke="#8080aa" strokeWidth="1.6" strokeLinecap="round" />
+                  <rect x="4.75" y="4.75" width="14.5" height="14.5" rx="2.5" stroke="#2a2a4a" strokeWidth="1.5" />
+                </svg>
+              </div>
+              <p className="text-sm font-medium" style={{ color: '#b8b8d0' }}>No analyst notes yet</p>
+              <p className="text-xs mt-1" style={{ color: '#8080aa' }}>
+                Notes you add here are saved with the vendor record and included in PDF exports.
+              </p>
+            </div>
           ) : (
             <div className="space-y-2">
               {notes.map((note, i) => (
@@ -724,8 +826,8 @@ export default function VendorDetail() {
                   </div>
                   <button
                     onClick={() => handleDeleteNote(note.id)}
-                    className="opacity-0 group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all duration-150 shrink-0"
-                    style={{ color: '#8080aa', background: 'transparent' }}
+                    className="opacity-100 sm:opacity-0 sm:group-hover:opacity-100 text-xs px-2 py-1 rounded transition-all duration-150 shrink-0"
+                    style={{ color: '#8080aa', background: 'rgba(255,255,255,0.03)' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = '#ef4444'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}
                     title="Delete note"
@@ -739,6 +841,6 @@ export default function VendorDetail() {
         </Panel>
 
       </div>
-    </div>
-  )
+      </div>
+    )
 }

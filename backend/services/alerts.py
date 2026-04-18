@@ -4,28 +4,57 @@ import httpx
 from html import escape as _html_escape
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-from dotenv import load_dotenv
-
-load_dotenv()
+from email.utils import parseaddr
+from config import get_primary_frontend_url
 
 GMAIL_ADDRESS   = os.getenv("GMAIL_ADDRESS")
 GMAIL_APP_PASS  = os.getenv("GMAIL_APP_PASSWORD")
 ALERT_THRESHOLD = float(os.getenv("ALERT_THRESHOLD", 70))
-FRONTEND_URL    = os.getenv("FRONTEND_URL", "http://localhost:5173")
+FRONTEND_URL    = get_primary_frontend_url()
 RESEND_API_KEY  = os.getenv("RESEND_API_KEY")
 RESEND_FROM     = os.getenv("RESEND_FROM_EMAIL", "VenderScope <alerts@venderscope.app>")
+EMAIL_ENABLED   = os.getenv("EMAIL_ENABLED", "1") != "0"
+
+_RESERVED_TEST_DOMAINS = {
+    "example.com",
+    "example.net",
+    "example.org",
+    "test",
+    "invalid",
+    "localhost",
+}
 
 
 # ── Transport layer ──────────────────────────────────────────────────────────
 
 def _send_email(to: str, subject: str, html: str) -> None:
     """Dispatch via Resend if key + domain are configured, otherwise Gmail SMTP."""
+    if not EMAIL_ENABLED:
+        print(f"[Alerts] Email disabled — skipping '{subject}' to {to}")
+        return
+    if _is_non_deliverable_test_address(to):
+        print(f"[Alerts] Skipping reserved/test email address: {to}")
+        return
     if RESEND_API_KEY and _resend_domain_configured():
         _send_via_resend(to, subject, html)
     elif GMAIL_ADDRESS and GMAIL_APP_PASS:
         _send_via_gmail(to, subject, html)
     else:
         print("[Alerts] No email provider ready — skipping. (Add verified Resend domain or Gmail creds.)")
+
+
+def _is_non_deliverable_test_address(address: str) -> bool:
+    email = parseaddr(address)[1].strip().lower()
+    if "@" not in email:
+        return True
+    domain = email.split("@", 1)[1]
+    return (
+        domain in _RESERVED_TEST_DOMAINS
+        or domain.endswith(".example")
+        or domain.endswith(".invalid")
+        or domain.endswith(".test")
+        or domain.endswith(".localhost")
+    )
 
 
 def _resend_domain_configured() -> bool:

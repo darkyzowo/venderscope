@@ -1,51 +1,42 @@
-import { useRef, useLayoutEffect, useState } from 'react'
+import { Suspense, lazy } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
-import Dashboard from './pages/Dashboard'
-import VendorDetail from './pages/VendorDetail'
-import Login from './pages/Login'
-import Register from './pages/Register'
-import DocPage from './pages/DocPage'
-import GuestScanPage from './pages/GuestScanPage'
-import privacyMd from './docs/privacy.md?raw'
-import termsMd from './docs/terms.md?raw'
-import securityMd from './docs/security.md?raw'
 
-/**
- * PageTransition — coordinates fade between route changes.
- *
- * Uses useLayoutEffect (fires before paint) to guarantee the new page
- * starts at opacity 0 before the browser has a chance to render it,
- * eliminating the flash-of-content on navigation.
- *
- * Sequence on each navigation:
- *   1. useLayoutEffect fires synchronously → setShow(false)
- *   2. React re-renders the new route at opacity:0 — no flash
- *   3. Double rAF ensures browser paints the invisible state first
- *   4. setShow(true) → CSS transition plays (220ms spring)
- */
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const VendorDetail = lazy(() => import('./pages/VendorDetail'))
+const Login = lazy(() => import('./pages/Login'))
+const Register = lazy(() => import('./pages/Register'))
+const GuestScanPage = lazy(() => import('./pages/GuestScanPage'))
+const PrivacyDocPage = lazy(async () => {
+  const [{ default: DocPage }, { default: markdown }] = await Promise.all([
+    import('./pages/DocPage'),
+    import('./docs/privacy.md?raw'),
+  ])
+  return { default: () => <DocPage markdown={markdown} /> }
+})
+const TermsDocPage = lazy(async () => {
+  const [{ default: DocPage }, { default: markdown }] = await Promise.all([
+    import('./pages/DocPage'),
+    import('./docs/terms.md?raw'),
+  ])
+  return { default: () => <DocPage markdown={markdown} /> }
+})
+const SecurityDocPage = lazy(async () => {
+  const [{ default: DocPage }, { default: markdown }] = await Promise.all([
+    import('./pages/DocPage'),
+    import('./docs/security.md?raw'),
+  ])
+  return { default: () => <DocPage markdown={markdown} /> }
+})
+
 function PageTransition({ children }) {
   const location  = useLocation()
-  const frameRef  = useRef(null)
-  const [show, setShow] = useState(false)
-
-  useLayoutEffect(() => {
-    setShow(false)
-    cancelAnimationFrame(frameRef.current)
-    frameRef.current = requestAnimationFrame(() => {
-      frameRef.current = requestAnimationFrame(() => setShow(true))
-    })
-    return () => cancelAnimationFrame(frameRef.current)
-  }, [location.pathname])
 
   return (
     <div
+      key={location.pathname}
+      className="animate-page"
       style={{
-        opacity:    show ? 1 : 0,
-        transform:  show ? 'none' : 'translateY(10px)',
-        transition: show
-          ? 'opacity 220ms cubic-bezier(0.16,1,0.3,1), transform 220ms cubic-bezier(0.16,1,0.3,1)'
-          : 'none',
         willChange: 'opacity, transform',
       }}
     >
@@ -68,6 +59,10 @@ function LoadingScreen() {
   )
 }
 
+function RouteLoadingScreen() {
+  return <LoadingScreen />
+}
+
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <LoadingScreen />
@@ -78,20 +73,22 @@ function ProtectedRoute({ children }) {
 function AppRouter() {
   return (
     <PageTransition>
-      <Routes>
-        <Route path="/login"    element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/guest"    element={<GuestScanPage />} />
-        <Route path="/" element={
-          <ProtectedRoute><Dashboard /></ProtectedRoute>
-        } />
-        <Route path="/vendor/:id" element={
-          <ProtectedRoute><VendorDetail /></ProtectedRoute>
-        } />
-        <Route path="/privacy"  element={<DocPage title="Privacy Policy"  markdown={privacyMd} />} />
-        <Route path="/terms"    element={<DocPage title="Terms of Service" markdown={termsMd} />} />
-        <Route path="/security" element={<DocPage title="Security Policy" markdown={securityMd} />} />
-      </Routes>
+      <Suspense fallback={<RouteLoadingScreen />}>
+        <Routes>
+          <Route path="/login"    element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/guest"    element={<GuestScanPage />} />
+          <Route path="/" element={
+            <ProtectedRoute><Dashboard /></ProtectedRoute>
+          } />
+          <Route path="/vendor/:id" element={
+            <ProtectedRoute><VendorDetail /></ProtectedRoute>
+          } />
+          <Route path="/privacy"  element={<PrivacyDocPage />} />
+          <Route path="/terms"    element={<TermsDocPage />} />
+          <Route path="/security" element={<SecurityDocPage />} />
+        </Routes>
+      </Suspense>
     </PageTransition>
   )
 }

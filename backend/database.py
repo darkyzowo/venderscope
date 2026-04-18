@@ -1,15 +1,10 @@
 # backend/database.py
+import config  # Loads backend/.env once with process env precedence.
 import os
 import ssl
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-from dotenv import load_dotenv
-
-# Explicitly load backend/.env regardless of CWD, and override any existing env vars
-_env_path = os.path.join(os.path.dirname(__file__), ".env")
-load_dotenv(dotenv_path=_env_path, override=True)
+from sqlalchemy.orm import declarative_base, sessionmaker
 
 _default_db_path = os.path.join(os.path.dirname(__file__), "vendorscope.db")
 DATABASE_URL = os.getenv("DATABASE_URL", f"sqlite:///{_default_db_path}")

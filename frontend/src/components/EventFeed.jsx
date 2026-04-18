@@ -184,7 +184,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
               style={{ background: acceptance ? 'rgba(251,191,36,0.03)' : cfg.bg }}
             >
               {/* Title row */}
-              <div className="flex items-start justify-between gap-3 mb-1.5">
+              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2.5 mb-1.5">
                 <span
                   className="text-[13px] font-medium leading-snug flex-1 min-w-0"
                   style={{ color: '#f0f0ff' }}
@@ -204,7 +204,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   ) : evt.title}
                 </span>
 
-                <div className="flex items-center gap-2 shrink-0">
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
                   {acceptance ? (
                     <>
                       <AcceptedBadge acceptance={acceptance} />
@@ -262,7 +262,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
               )}
 
               {/* Meta: source · date */}
-              <div className="flex items-center gap-2 text-[10px] font-mono" style={{ color: '#8080aa' }}>
+              <div className="flex flex-wrap items-center gap-2 text-[10px] font-mono" style={{ color: '#8080aa' }}>
                 <span>{evt.source}</span>
                 <span style={{ color: '#44445a' }}>·</span>
                 <span>
@@ -302,7 +302,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   }}
                 />
 
-                <div className="grid grid-cols-2 gap-2 mb-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-2">
                   <input
                     type="text"
                     value={form.reviewer}
@@ -336,11 +336,11 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   </div>
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <button
                     onClick={() => handleAccept(evt)}
                     disabled={submitting || !form.justification.trim() || !form.reviewer.trim()}
-                    className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-150 disabled:opacity-40"
+                    className="px-3 py-2 rounded-lg text-xs font-semibold transition-all duration-150 disabled:opacity-40"
                     style={{ background: '#fbbf24', color: '#000' }}
                     onMouseEnter={(e) => { if (!submitting) e.currentTarget.style.background = '#f59e0b' }}
                     onMouseLeave={(e) => e.currentTarget.style.background = '#fbbf24'}
@@ -349,7 +349,7 @@ export default function EventFeed({ events, acceptances = [], onAccept, onRevoke
                   </button>
                   <button
                     onClick={() => setExpandedEvent(null)}
-                    className="px-3 py-1.5 rounded-lg text-xs transition-all duration-150"
+                    className="px-3 py-2 rounded-lg text-xs transition-all duration-150"
                     style={{ color: '#8080aa', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
                     onMouseEnter={(e) => e.currentTarget.style.color = '#b8b8d0'}
                     onMouseLeave={(e) => e.currentTarget.style.color = '#8080aa'}

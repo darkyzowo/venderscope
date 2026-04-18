@@ -13,6 +13,25 @@ VenderScope is a continuous, passive vendor risk intelligence platform built for
 
 ---
 
+## Latest Maintenance Update
+
+This repo has had a full cleanup and stabilization pass across backend safety, frontend logic, and responsive UX.
+
+- **Mobile-first responsive refactor** — Dashboard, Vendor Detail, auth screens, guest scan, cards, charts, modals, footer, and supporting layouts were rebuilt to behave cleanly on modern iPhone and Pixel widths using `100dvh`, safe-area-aware spacing, stacked action rows, and tighter mobile panel spacing
+- **Analyst notes redesign + hardening** — the notes section was rebuilt to match the existing product style, note input is now normalized as untrusted plain text on the backend, and regression tests cover control-character stripping plus SQL-looking payloads being treated as inert text
+- **Safer backend configuration** — environment loading is centralized, CORS/origin validation now uses shared config instead of drift-prone hardcoded values, and auth origin checks follow the same allowed-origin rules
+- **Email/test safeguards** — `EMAIL_ENABLED=0` can disable outbound email, reserved test domains are suppressed, and backend tests are pinned to a dedicated SQLite test database so destructive test setup cannot touch production Neon data
+- **Scan and dashboard logic fixes** — `Scan All` now uses the real bulk endpoint, dashboard risk thresholds are aligned with backend logic, and missing-vendor detail pages fail gracefully instead of hanging in a loading state
+- **Frontend cleanup** — route-level lazy loading and vendor chunking reduced the entry bundle, unused dependencies were removed, `follow-redirects` was pinned above the vulnerable range, and the audit/build/lint path is clean
+
+Verification after this pass:
+
+- `python -m pytest -q` → `63 passed`
+- `npm run lint` → passed
+- `npm run build` → passed
+
+---
+
 ## What's New in v3.7 — UI/UX Overhaul & Brand Identity
 
 v3.7 is a frontend-focused release centred on visual polish and brand identity ahead of a production demo. No backend changes.
@@ -31,7 +50,7 @@ Both auth pages were fully redesigned with a layered background system and stagg
 - **Dot-grid overlay** — a fixed radial-gradient dot grid covers the viewport as a subtle structural layer.
 - **Glassmorphism card** — `backdrop-filter: blur(28px)` with a semi-transparent background and violet border accent.
 - **Staggered entrance** — every element fades and lifts in sequentially using a double-`requestAnimationFrame` technique to guarantee clean paint timing.
-- **No scroll on auth pages** — `height: 100vh` + body scroll lock prevents any scrolling on login/register.
+- **Responsive auth shell** — login/register now use a scroll-safe `100dvh` layout instead of a fixed `100vh` shell, so mobile browser chrome and on-screen keyboards do not break the page.
 
 ### Text Color Standardization
 
@@ -217,7 +236,7 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 | Database      | PostgreSQL (Neon, production) / SQLite (local dev)                           |
 | DB Driver     | pg8000 (pure Python, Python 3.14+ compatible)                                |
 | Authentication| JWT (python-jose), bcrypt, httpOnly cookies                                  |
-| Frontend      | React 19, Vite 8, React Router 7, TailwindCSS 3, Recharts, Axios            |
+| Frontend      | React 19, Vite 8, React Router 7, TailwindCSS 3, Axios                      |
 | Intelligence  | HIBP API, NVD/NIST API, Companies House API, Shodan API                      |
 | Compliance    | Google Custom Search API, BeautifulSoup4, security.txt                       |
 | Email         | Resend HTTP API (production) / Gmail SMTP (local dev)                        |
@@ -281,7 +300,7 @@ VenderScope/
         │   └── DocPage.jsx           # Lightweight markdown renderer for /privacy, /terms, /security
         ├── components/
         │   ├── VendorCard.jsx        # Risk score card
-        │   ├── ScoreChart.jsx        # Drift timeline area chart
+        │   ├── ScoreChart.jsx        # Lightweight SVG drift timeline chart
         │   ├── EventFeed.jsx         # Risk events list
         │   ├── AddVendorModal.jsx    # Add vendor form
         │   ├── CompliancePanel.jsx   # Compliance posture with badge system
@@ -326,6 +345,8 @@ GOOGLE_CSE_ID=your_cse_id
 # Email (local: Gmail SMTP; production: Resend with verified domain)
 GMAIL_ADDRESS=your@gmail.com
 GMAIL_APP_PASSWORD=your_app_password
+EMAIL_ENABLED=1
+# Set EMAIL_ENABLED=0 for local test runs or anytime you want to hard-disable outbound email
 # RESEND_API_KEY=re_...           # Uncomment when you have a verified sending domain
 # RESEND_FROM_EMAIL=VenderScope <alerts@yourdomain.com>
 ALERT_THRESHOLD=70
@@ -470,6 +491,8 @@ During every scan, VenderScope passively discovers three data points at no quota
 
 **Email alerts in production:** Render's free tier blocks outbound SMTP. Resend HTTP API is wired up and ready — it activates automatically once a verified sending domain is configured in `RESEND_FROM_EMAIL`. Until then, alerts are skipped in production and delivered locally via Gmail SMTP.
 
+**Safe local/test runs:** Set `EMAIL_ENABLED=0` to hard-disable all outbound email. VenderScope also suppresses deliveries to reserved test domains such as `example.com`, `.test`, `.invalid`, and `localhost`, so automated tests and fake registrations do not generate bounce spam.
+
 **Scheduler scope:** The 24hr background scheduler scans all vendors. Per-user scheduler scoping (so users only get alerts for their own vendors) is on the roadmap.
 
 ---
@@ -547,6 +570,7 @@ GOOGLE_CSE_API_KEY
 GOOGLE_CSE_ID
 GMAIL_ADDRESS       (optional — local email fallback)
 GMAIL_APP_PASSWORD  (optional)
+EMAIL_ENABLED       1 (set to 0 to disable all outbound email)
 ALERT_THRESHOLD     70
 RENDER               true   (enables HSTS + SameSite=None cookies)
 ```

@@ -23,8 +23,6 @@ export default function Login() {
   useEffect(() => {
     requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)))
     emailRef.current?.focus()
-    document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = '' }
   }, [])
 
   const handleSubmit = async (e) => {
@@ -52,15 +50,16 @@ export default function Login() {
 
   return (
     <div
+      className="auth-page-shell page-safe-x page-safe-y"
       style={{
-        height: '100vh',
+        minHeight: '100dvh',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        padding: '12px 24px',
+        padding: '20px 16px',
         background: '#090911',
         position: 'relative',
-        overflow: 'hidden',
+        overflowX: 'clip',
       }}
     >
       {/* ── Background layers ────────────────────────────────── */}
@@ -79,7 +78,7 @@ export default function Login() {
       <div className="auth-orb auth-orb-c" aria-hidden="true" />
 
       {/* ── Content ──────────────────────────────────────────── */}
-      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 3 }}>
+      <div style={{ width: '100%', maxWidth: 400, position: 'relative', zIndex: 3, margin: 'auto' }}>
 
         {/* Logo — draws in on first paint */}
         <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16, ...reveal(0) }}>
@@ -121,7 +120,7 @@ export default function Login() {
           background: 'rgba(9,9,17,0.78)',
           border: '1px solid rgba(139,92,246,0.18)',
           borderRadius: 20,
-          padding: '24px 28px 20px',
+          padding: '22px 20px 18px',
           backdropFilter: 'blur(28px)',
           WebkitBackdropFilter: 'blur(28px)',
           boxShadow: [
@@ -195,6 +194,7 @@ export default function Login() {
                 disabled={loading}
                 style={{
                   width: '100%',
+                  minHeight: 46,
                   padding: '12px 20px',
                   borderRadius: 12,
                   border: 'none',

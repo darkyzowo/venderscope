@@ -61,6 +61,33 @@ html {
                        container or implicitly setting overflow-y, so vertical scroll is untouched */
 }
 
+#root {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.app-page-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.page-safe-x {
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+
+.page-safe-y {
+  padding-top: max(1rem, env(safe-area-inset-top));
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.auth-page-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* Custom scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: var(--surface); }
@@ -320,4 +347,29 @@ html {
   background-size: 200% auto;
   animation: shimmer 1.6s linear infinite;
   border-radius: 6px;
+}
+
+@media (max-width: 640px) {
+  .auth-pulse-ring {
+    width: 240px;
+    height: 240px;
+  }
+
+  .auth-orb-a,
+  .auth-orb-a-reg {
+    width: 300px;
+    height: 300px;
+  }
+
+  .auth-orb-b,
+  .auth-orb-b-reg {
+    width: 220px;
+    height: 220px;
+  }
+
+  .auth-orb-c,
+  .auth-orb-c-reg {
+    width: 160px;
+    height: 160px;
+  }
 }
