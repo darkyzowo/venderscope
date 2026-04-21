@@ -55,16 +55,11 @@ export default function Register() {
 
   return (
     <div
-      className="auth-page-shell page-safe-x page-safe-y"
+      className="auth-page-shell auth-page-form-shell page-safe-x page-safe-y"
       style={{
         minHeight: '100dvh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '20px 16px',
         background: 'var(--bg)',
         position: 'relative',
-        overflowX: 'clip',
       }}
     >
       {/* ── Background layers (variant positions for Register) ── */}
@@ -105,17 +100,11 @@ export default function Register() {
 
         {/* Glass card */}
         <div style={{
-          background: 'rgba(9,9,17,0.78)',
-          border: '1px solid rgba(139,92,246,0.18)',
-          borderRadius: 20,
-          padding: '22px 20px 18px',
-          backdropFilter: 'blur(28px)',
-          WebkitBackdropFilter: 'blur(28px)',
-          boxShadow: [
-            '0 0 0 1px rgba(139,92,246,0.06)',
-            '0 24px 64px rgba(0,0,0,0.55)',
-            'inset 0 1px 0 rgba(255,255,255,0.05)',
-          ].join(', '),
+          background: 'var(--elevated)',
+          border: '1px solid var(--border)',
+          borderRadius: 12,
+          padding: '24px 20px 20px',
+          boxShadow: '0 4px 24px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.04)',
           ...reveal(340),
         }}>
 
@@ -124,7 +113,7 @@ export default function Register() {
             fontWeight: 700,
             letterSpacing: '0.14em',
             textTransform: 'uppercase',
-            color: '#44445a',
+            color: 'var(--lo)',
             marginBottom: 20,
           }}>
             Create your account
@@ -169,7 +158,7 @@ export default function Register() {
             {/* Requirements hint */}
             <p style={{
               fontSize: 11,
-              color: '#44445a',
+              color: 'var(--lo)',
               lineHeight: 1.5,
               paddingLeft: 2,
               ...reveal(640),
@@ -184,7 +173,7 @@ export default function Register() {
                 gap: 8,
                 background: 'rgba(255,68,68,0.06)',
                 border: '1px solid rgba(255,68,68,0.18)',
-                borderRadius: 10,
+                borderRadius: 8,
                 padding: '10px 13px',
                 fontSize: 13,
                 color: '#ff6b6b',
@@ -299,13 +288,13 @@ function LoginField({ label, type, value, onChange, placeholder, autoComplete, i
         style={{
           width: '100%',
           padding: '11px 14px',
-          borderRadius: 10,
+          borderRadius: 8,
           border: focused
             ? '1px solid rgba(139,92,246,0.55)'
-            : '1px solid rgba(255,255,255,0.07)',
+            : '1px solid var(--line)',
           background: focused
             ? 'rgba(139,92,246,0.06)'
-            : 'rgba(255,255,255,0.03)',
+            : 'var(--input)',
           color: 'var(--hi)',
           fontSize: 14,
           outline: 'none',

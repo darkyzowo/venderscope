@@ -38,17 +38,22 @@ export default function TopNav() {
         top: 0,
         zIndex: 50,
         flexShrink: 0,
+        width: '100%',
+        maxWidth: '100vw',
+        overflowX: 'clip',
       }}
     >
       <div
         style={{
           maxWidth: '1400px',
+          width: '100%',
           margin: '0 auto',
           height: '100%',
           display: 'flex',
           alignItems: 'center',
           gap: '10px',
-          padding: '0 20px',
+          padding: '0 clamp(12px, 4vw, 20px)',
+          minWidth: 0,
         }}
       >
         {/* Logo + wordmark */}
@@ -61,6 +66,7 @@ export default function TopNav() {
             gap: '8px',
             textDecoration: 'none',
             flexShrink: 0,
+            minWidth: 0,
           }}
         >
           <VSLogo height={24} />
@@ -70,6 +76,7 @@ export default function TopNav() {
             color: 'var(--mid)',
             letterSpacing: '0.01em',
             userSelect: 'none',
+            whiteSpace: 'nowrap',
           }}>
             VenderScope
           </span>

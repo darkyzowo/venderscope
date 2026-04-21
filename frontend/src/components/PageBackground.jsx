@@ -47,11 +47,20 @@ export default function PageBackground() {
   }) // computed once per mount, new values on every navigation
 
   return createPortal(
-    <>
+    <div
+      aria-hidden="true"
+      style={{
+        position: 'fixed',
+        inset: 0,
+        overflow: 'clip',
+        pointerEvents: 'none',
+        zIndex: 0,
+      }}
+    >
       {orbs.map(({ cls, style }, i) => (
         <div key={i} className={`page-glow ${cls}`} style={style} aria-hidden="true" />
       ))}
-    </>,
+    </div>,
     document.body
   )
 }

@@ -32,6 +32,9 @@ const getLogoCandidates = (domain = '') => {
     `https://www.${base}/favicon-32x32.png`,
     `https://www.${base}/favicon.png`,
     `https://www.${base}/favicon.ico`,
+    // Public logo APIs as last resort — handles CDN-hosted favicons without crawling
+    `https://logo.clearbit.com/${base}`,
+    `https://icons.duckduckgo.com/ip3/${base}.ico`,
   ]
 }
 

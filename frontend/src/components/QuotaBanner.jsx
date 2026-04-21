@@ -35,8 +35,8 @@ export default function QuotaBanner() {
 
   return (
     <div
-      className="flex items-center gap-3 rounded-lg px-3 py-2 text-xs"
-      style={{ border: '1px solid', ...bgStyle, transition: 'all 200ms ease' }}
+      className="flex items-center gap-2 sm:gap-3 rounded-lg px-3 py-2 text-xs"
+      style={{ border: '1px solid', ...bgStyle, transition: 'all 200ms ease', overflow: 'hidden', width: '100%', maxWidth: '100%', minWidth: 0 }}
     >
       {/* Status dot */}
       <span
@@ -47,14 +47,14 @@ export default function QuotaBanner() {
         }}
       />
 
-      {/* Label */}
-      <span className="font-medium whitespace-nowrap" style={{ color: 'var(--mid)' }}>
+      {/* Label — desktop only */}
+      <span className="hidden sm:inline font-medium whitespace-nowrap" style={{ color: 'var(--mid)' }}>
         Search quota
       </span>
 
-      {/* Progress bar */}
+      {/* Progress bar — desktop only */}
       <div
-        className="flex-1 rounded-full h-1 min-w-[40px]"
+        className="hidden sm:block flex-1 rounded-full h-1 min-w-[40px]"
         style={{ background: 'var(--line)' }}
       >
         <div
@@ -63,27 +63,35 @@ export default function QuotaBanner() {
         />
       </div>
 
-      {/* Stats */}
-      <span className="whitespace-nowrap tabular-nums" style={{ color: 'var(--lo)' }}>
+      {/* Used/limit count — desktop only */}
+      <span className="hidden sm:inline whitespace-nowrap tabular-nums" style={{ color: 'var(--lo)' }}>
         {limit - remaining}/{limit}
       </span>
-      <span style={{ color: 'var(--border)' }}>·</span>
-      <span className="font-semibold whitespace-nowrap tabular-nums" style={{ color: textColor }}>
+      <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>·</span>
+
+      {/* Units left — always visible */}
+      <span className="font-semibold whitespace-nowrap tabular-nums min-w-0" style={{ color: textColor, overflow: 'hidden', textOverflow: 'ellipsis' }}>
         {search_units_remaining} units left
       </span>
-      <span style={{ color: 'var(--border)' }}>·</span>
-      <span className="whitespace-nowrap" style={{ color: 'var(--lo)' }}>
+
+      {/* Scans remaining — desktop only */}
+      <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>·</span>
+      <span className="hidden sm:inline whitespace-nowrap" style={{ color: 'var(--lo)' }}>
         ~{full_scans_remaining} scans
       </span>
+
       <span style={{ color: 'var(--border)' }}>·</span>
-      <span className="whitespace-nowrap" style={{ color: 'var(--lo)' }}>
+
+      {/* Reset time — always visible */}
+      <span className="whitespace-nowrap min-w-0" style={{ color: 'var(--lo)', overflow: 'hidden', textOverflow: 'ellipsis' }}>
         resets {resetTime} UTC
       </span>
 
+      {/* Status warnings — desktop only */}
       {exhausted && (
         <>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span className="whitespace-nowrap font-medium" style={{ color: '#f87171' }}>
+          <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>·</span>
+          <span className="hidden sm:inline whitespace-nowrap font-medium" style={{ color: '#f87171' }}>
             standard scans still available
           </span>
         </>
@@ -91,8 +99,8 @@ export default function QuotaBanner() {
 
       {!exhausted && search_units_remaining <= 12 && (
         <>
-          <span style={{ color: 'var(--border)' }}>·</span>
-          <span className="whitespace-nowrap font-medium" style={{ color: '#fbbf24' }}>
+          <span className="hidden sm:inline" style={{ color: 'var(--border)' }}>·</span>
+          <span className="hidden sm:inline whitespace-nowrap font-medium" style={{ color: '#fbbf24' }}>
             running low
           </span>
         </>
@@ -103,8 +111,8 @@ export default function QuotaBanner() {
         onClick={() => setDismissed(true)}
         className="ml-auto shrink-0 transition-colors duration-150"
         style={{ color: 'var(--lo)' }}
-        onMouseEnter={(e) => e.currentTarget.style.color = 'var(--mid)'}
-        onMouseLeave={(e) => e.currentTarget.style.color = 'var(--lo)'}
+        onMouseEnter={(e) => (e.currentTarget.style.color = 'var(--mid)')}
+        onMouseLeave={(e) => (e.currentTarget.style.color = 'var(--lo)')}
         aria-label="Dismiss"
       >
         <svg width="12" height="12" viewBox="0 0 12 12" fill="none">

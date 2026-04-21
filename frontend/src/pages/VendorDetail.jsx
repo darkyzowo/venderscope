@@ -276,9 +276,9 @@ export default function VendorDetail() {
   const hiddenCount = events.length - EVENTS_SHOWN
 
   return (
-    <div className="flex-1 flex flex-col" style={{ background: 'var(--bg)' }}>
+    <div className="flex-1 flex flex-col" style={{ background: 'var(--bg)', width: '100%', minWidth: 0, overflowX: 'clip' }}>
       <PageBackground />
-      <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-4 sm:py-6" style={{ position: 'relative', zIndex: 1 }}>
+      <div className="max-w-5xl mx-auto page-safe-x page-safe-y px-4 sm:px-6 py-4 sm:py-6" style={{ position: 'relative', zIndex: 1, width: '100%', minWidth: 0 }}>
 
         {/* Back nav */}
         <div className="mb-6">
@@ -301,18 +301,18 @@ export default function VendorDetail() {
 
         {/* Page header */}
         <div className="flex flex-col gap-4 sm:gap-5 lg:flex-row lg:items-start lg:justify-between mb-8">
-          <div className="flex items-center gap-3 sm:gap-4 min-w-0">
+          <div className="flex items-start gap-3 sm:gap-4 min-w-0">
             <VendorAvatar name={vendor.name} domain={vendor.domain} logoUrl={vendor.logo_url} size={48} />
             <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-bold truncate" style={{ color: 'var(--hi)' }}>{vendor.name}</h1>
-              <p className="text-sm mt-0.5" style={{ color: 'var(--lo)' }}>{vendor.domain}</p>
-              {vendor.company_number && (
-                <p className="text-xs mt-0.5" style={{ color: 'var(--lo)' }}>CH: {vendor.company_number}</p>
-              )}
+              <h1 className="text-xl sm:text-2xl font-bold leading-tight break-words" style={{ color: 'var(--hi)' }}>{vendor.name}</h1>
+              <p className="text-sm mt-0.5 break-all" style={{ color: 'var(--lo)' }}>{vendor.domain}</p>
+              <p className="text-xs mt-0.5 min-h-[1rem]" style={{ color: 'var(--lo)' }}>
+                {vendor.company_number ? `CH: ${vendor.company_number}` : 'CH: not available'}
+              </p>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto shrink-0">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full lg:w-auto shrink-0 min-w-0">
             <button
               onClick={handleScan}
               disabled={scanning}
@@ -431,7 +431,7 @@ export default function VendorDetail() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-5">
                     <div
-                      className="rounded-xl px-3.5 py-3"
+                      className="rounded-xl px-3.5 py-3 min-h-[84px]"
                       style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
                     >
                       <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
@@ -440,20 +440,20 @@ export default function VendorDetail() {
                       <p className="text-sm font-semibold leading-tight" style={{ color: 'var(--hi)' }}>
                         {vendor.last_scanned ? relativeTime(vendor.last_scanned) : '—'}
                       </p>
-                      {vendor.last_scanned && (
-                        <p className="text-[10px] mt-1" style={{ color: 'var(--lo)' }}>
-                          {formatApiDateTime(vendor.last_scanned, [], {
-                            month: 'short',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
-                      )}
+                      <p className="text-[10px] mt-1 min-h-[1rem]" style={{ color: 'var(--lo)' }}>
+                        {vendor.last_scanned
+                          ? formatApiDateTime(vendor.last_scanned, [], {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit',
+                            })
+                          : 'No completed scan yet'}
+                      </p>
                     </div>
 
                     <div
-                      className="rounded-xl px-3.5 py-3"
+                      className="rounded-xl px-3.5 py-3 min-h-[84px]"
                       style={{ background: 'rgba(255,255,255,0.025)', border: '1px solid rgba(255,255,255,0.05)' }}
                     >
                       <p className="text-[10px] font-bold tracking-[0.12em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
@@ -775,47 +775,46 @@ export default function VendorDetail() {
         })()}
 
         {/* Vendor Profile */}
-        {(vendor.description || vendor.auth_method || vendor.two_factor) && (
-          <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 50ms both' }}>
-            <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
-            {vendor.description && (
-              <p className="text-sm leading-relaxed mb-5" style={{ color: 'var(--mid)' }}>
-                {vendor.description}
+        {/* Vendor Profile — always rendered for stable layout */}
+        <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 50ms both' }}>
+          <PanelTitle meta="(auto-discovered)">Vendor Profile</PanelTitle>
+          <div className="mb-5 min-h-[3.5rem]">
+            <p className="text-sm leading-relaxed" style={{ color: vendor.description ? 'var(--mid)' : 'var(--lo)' }}>
+              {vendor.description || 'No vendor profile description detected from public sources.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <div>
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
+                Auth Method
               </p>
-            )}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
-                  Auth Method
-                </p>
-                <p className="text-sm" style={{ color: 'var(--mid)' }}>
-                  {vendor.auth_method || (
-                    <span style={{ color: 'var(--lo)' }}>Not detected</span>
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
-                  2FA Support
-                </p>
-                {vendor.two_factor === 'Yes' ? (
-                  <span
-                    className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full"
-                    style={{
-                      background: 'rgba(34,197,94,0.08)',
-                      border: '1px solid rgba(34,197,94,0.2)',
-                      color: 'var(--risk-low)',
-                    }}
-                  >
-                    Yes
-                  </span>
-                ) : (
-                  <span className="text-sm" style={{ color: 'var(--lo)' }}>Not detected</span>
+              <p className="text-sm" style={{ color: 'var(--mid)' }}>
+                {vendor.auth_method || (
+                  <span style={{ color: 'var(--lo)' }}>Not detected</span>
                 )}
-              </div>
+              </p>
             </div>
-          </Panel>
-        )}
+            <div>
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase mb-1.5" style={{ color: 'var(--lo)' }}>
+                2FA Support
+              </p>
+              {vendor.two_factor === 'Yes' ? (
+                <span
+                  className="inline-flex items-center text-xs px-2.5 py-0.5 rounded-full"
+                  style={{
+                    background: 'rgba(34,197,94,0.08)',
+                    border: '1px solid rgba(34,197,94,0.2)',
+                    color: 'var(--risk-low)',
+                  }}
+                >
+                  Yes
+                </span>
+              ) : (
+                <span className="text-sm" style={{ color: 'var(--lo)' }}>Not detected</span>
+              )}
+            </div>
+          </div>
+        </Panel>
 
         {/* Compliance */}
         <Panel className="mb-4" style={{ animation: 'fade-up 260ms cubic-bezier(0.16,1,0.3,1) 100ms both' }}>
