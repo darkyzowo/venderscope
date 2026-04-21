@@ -1,3 +1,4 @@
+import gc
 import uuid
 from datetime import datetime, timedelta, timezone
 
@@ -113,6 +114,7 @@ def scheduled_scan(owner_id: str):
                 print(f"[Scheduler] Error scanning {vendor_label}: {e}")
             finally:
                 vendor_db.close()
+                gc.collect()  # Release BeautifulSoup parse trees and HTML between vendors
         print(f"[Scheduler] Nightly scan complete — scanned {scanned}, skipped {skipped}")
     finally:
         db.close()

@@ -5,6 +5,8 @@ from services.compliance_discovery import _is_safe_domain
 
 HEADERS = {"User-Agent": "VenderScope/1.0 Vendor Profile Bot (security research)"}
 
+MAX_RESPONSE_BYTES = 1_048_576  # 1 MB — prevents large pages from spiking RSS
+
 # Auth patterns — ordered most-specific to least-specific so the first match wins
 AUTH_PATTERNS = [
     ("SSO (SAML 2.0)",  ["saml 2.0", "saml2.0", "saml-based sso", "saml-based authentication"]),
@@ -51,7 +53,10 @@ def _fetch(url: str, timeout: int = 7) -> str | None:
         try:
             r = requests.get(current_url, headers=HEADERS, timeout=timeout, allow_redirects=False)
             if r.status_code == 200:
-                return r.text
+                raw = r.content
+                if len(raw) > MAX_RESPONSE_BYTES:
+                    raw = raw[:MAX_RESPONSE_BYTES]
+                return raw.decode("utf-8", errors="replace")
             if r.status_code in (301, 302, 303, 307, 308):
                 location = r.headers.get("Location", "")
                 if not location:
@@ -72,8 +77,7 @@ def _to_text(html: str) -> str:
     return BeautifulSoup(html, "html.parser").get_text(" ", strip=True).lower()
 
 
-def _meta_description(html: str) -> str | None:
-    soup = BeautifulSoup(html, "html.parser")
+def _meta_description(soup: BeautifulSoup) -> str | None:
     for attr, val in [("property", "og:description"), ("name", "description")]:
         tag = soup.find("meta", attrs={attr: val})
         if tag:
@@ -112,8 +116,7 @@ def _icon_score(rel: str, href: str, sizes: str) -> tuple[int, int, int]:
     return (primary, size_value, extension_bias)
 
 
-def _discover_logo_url(base: str, home_url: str, home_html: str) -> str | None:
-    soup = BeautifulSoup(home_html, "html.parser")
+def _discover_logo_url(base: str, home_url: str, soup: BeautifulSoup) -> str | None:
     candidates: list[tuple[tuple[int, int, int], str]] = []
 
     for link in soup.find_all("link", href=True):
@@ -171,9 +174,12 @@ def discover_vendor_profile(domain: str) -> dict:
             print(f"[Profile] Could not fetch homepage for {base}")
             return result
 
-        result["description"] = _meta_description(home_html)
-        result["logo_url"] = _discover_logo_url(base, home_url, home_html)
-        home_text = _to_text(home_html)
+        home_soup = BeautifulSoup(home_html, "html.parser")
+        home_html = None  # Release raw HTML — one parse covers all three extractions
+        result["description"] = _meta_description(home_soup)
+        result["logo_url"] = _discover_logo_url(base, home_url, home_soup)
+        home_text = home_soup.get_text(" ", strip=True).lower()
+        home_soup = None  # Release parse tree before next fetches
 
         # Fetch login page — best source for auth method signals
         login_text = ""

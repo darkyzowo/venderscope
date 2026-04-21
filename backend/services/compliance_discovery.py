@@ -138,6 +138,8 @@ CREDIBLE_DOMAINS = [
 # ── Security contact email prefixes ───────────────────────────────────────────
 SECURITY_EMAIL_PREFIXES = ["security", "privacy", "dpo", "compliance", "legal", "infosec", "gdpr"]
 
+MAX_RESPONSE_BYTES = 1_048_576  # 1 MB — prevents oversized pages from spiking RSS
+
 RELEVANT_PAGE_HINTS = [
     "trust", "security", "privacy", "legal", "compliance", "gdpr",
     "dpa", "data-processing", "data-processing-agreement", "data-processing-addendum",
@@ -196,7 +198,10 @@ def _fetch_page(url: str, timeout: int = 8) -> str | None:
         try:
             r = requests.get(current_url, headers=HEADERS, timeout=timeout, allow_redirects=False)
             if r.status_code == 200:
-                return r.text
+                raw = r.content
+                if len(raw) > MAX_RESPONSE_BYTES:
+                    raw = raw[:MAX_RESPONSE_BYTES]
+                return raw.decode("utf-8", errors="replace")
             if r.status_code in (301, 302, 303, 307, 308):
                 location = r.headers.get("Location", "")
                 if not location:
@@ -620,7 +625,9 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
         }
 
     # ── Security contact ─────────────────────────────────────────────────────
+    # Move refs to list then clear dict — reduces peak HTML copies from 3× to 1×
     scraped_pages = list(pages.values())
+    pages.clear()
     contact       = _find_security_contact_with_quota(base, scraped_pages, quota_state)
 
     found_count = sum(1 for v in certifications.values() if v["status"] == "found")
