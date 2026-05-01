@@ -47,6 +47,27 @@ if not _is_sqlite:
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS data_sensitivity VARCHAR(20) DEFAULT 'standard'"))
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS review_interval_days INTEGER"))
         _conn.execute(text("ALTER TABLE vendors ADD COLUMN IF NOT EXISTS last_reviewed_at TIMESTAMP"))
+
+        # M-03: enforce NOT NULL on vendors.user_id (orphaned rows have no owner and are useless)
+        _conn.execute(text("DELETE FROM vendors WHERE user_id IS NULL"))
+        _conn.execute(text("ALTER TABLE vendors ALTER COLUMN user_id SET NOT NULL"))
+
+        # M-04: add FK constraints on vendor_notes.user_id and risk_acceptances.user_id
+        # Delete orphaned rows first to avoid FK violation on existing data
+        _conn.execute(text("DELETE FROM vendor_notes WHERE user_id NOT IN (SELECT id FROM users)"))
+        _conn.execute(text("DELETE FROM risk_acceptances WHERE user_id NOT IN (SELECT id FROM users)"))
+        _conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE vendor_notes ADD CONSTRAINT fk_vn_user_id FOREIGN KEY (user_id) REFERENCES users(id);
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """))
+        _conn.execute(text("""
+            DO $$ BEGIN
+                ALTER TABLE risk_acceptances ADD CONSTRAINT fk_ra_user_id FOREIGN KEY (user_id) REFERENCES users(id);
+            EXCEPTION WHEN duplicate_object THEN NULL;
+            END $$
+        """))
         _conn.commit()
 
 # ── Security headers middleware ─────────────────────────────────────────────

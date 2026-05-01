@@ -6,7 +6,10 @@ export default function QuotaBanner() {
   const [dismissed, setDismissed] = useState(false)
 
   useEffect(() => {
-    api.get('/quota/').then((r) => setQuota(r.data)).catch(() => setQuota(null))
+    const fetch = () => api.get('/quota/').then((r) => setQuota(r.data)).catch(() => setQuota(null))
+    fetch()
+    const id = setInterval(fetch, 30_000)
+    return () => clearInterval(id)
   }, [])
 
   if (!quota || dismissed) return null

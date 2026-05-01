@@ -1,11 +1,14 @@
 from datetime import datetime, timezone
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response
 from pydantic import BaseModel, field_validator
 from typing import Literal
+from sqlalchemy.orm import Session
+from database import get_db
 from limiter import limiter
 from services.scanner import scan_ephemeral
 from services.compliance_discovery import _is_safe_domain
+from services.audit import audit
 
 router = APIRouter()
 
@@ -113,7 +116,7 @@ class GuestReportRequest(BaseModel):
 
 @router.post("/scan")
 @limiter.limit("3/hour")
-def guest_scan(request: Request, payload: GuestScanRequest):
+def guest_scan(request: Request, payload: GuestScanRequest, db: Session = Depends(get_db)):
     """
     Unauthenticated CVE-only scan. Rate limited 3/hour per real IP.
     Domain validated against SSRF blocklist before any external call is made.
@@ -121,16 +124,18 @@ def guest_scan(request: Request, payload: GuestScanRequest):
     """
     if not _is_safe_domain(payload.domain):
         raise HTTPException(status_code=400, detail="Invalid or unsafe domain")
+    audit(db, "guest.scan", request, detail=payload.domain)
     return scan_ephemeral(payload.domain, payload.name)
 
 
 @router.post("/report")
 @limiter.limit("5/hour")
-def guest_report(request: Request, payload: GuestReportRequest):
+def guest_report(request: Request, payload: GuestReportRequest, db: Session = Depends(get_db)):
     """
     Generate a guest PDF from a scan result. Rate limited 5/hour per real IP.
     All user-supplied fields are XML-escaped before reaching ReportLab.
     """
+    audit(db, "guest.report", request, detail=payload.domain)
     from services.pdf_export import generate_guest_pdf
     pdf_bytes = generate_guest_pdf(
         name=payload.name,

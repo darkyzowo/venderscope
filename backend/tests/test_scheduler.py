@@ -5,7 +5,7 @@ from database import Base, SessionLocal, engine
 from models import SchedulerLease, User, Vendor
 
 
-def test_scheduled_scan_skips_orphan_and_reserved_vendors(monkeypatch):
+def test_scheduled_scan_skips_reserved_vendors(monkeypatch):
     suffix = uuid.uuid4().hex[:8]
     Base.metadata.create_all(bind=engine)
     db = SessionLocal()
@@ -29,12 +29,7 @@ def test_scheduled_scan_skips_orphan_and_reserved_vendors(monkeypatch):
             name="Debug Vendor",
             domain="debug-a2a9f867.example",
         )
-        orphan_vendor = Vendor(
-            user_id=None,
-            name="Orphan Vendor",
-            domain="orphan-company.com",
-        )
-        db.add_all([real_vendor, reserved_vendor, orphan_vendor])
+        db.add_all([real_vendor, reserved_vendor])
         db.commit()
         db.refresh(real_vendor)
     finally:

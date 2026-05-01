@@ -28,7 +28,7 @@ class Vendor(Base):
     __tablename__ = "vendors"
 
     id             = Column(String(36), primary_key=True, default=_new_uuid)
-    user_id        = Column(String(36), ForeignKey("users.id"), nullable=True, index=True)
+    user_id        = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     name           = Column(String, nullable=False)
     domain         = Column(String, nullable=False)  # unique per user, not globally
     company_number = Column(String, nullable=True)
@@ -107,7 +107,7 @@ class VendorNote(Base):
 
     id         = Column(Integer, primary_key=True, index=True)
     vendor_id  = Column(String(36), ForeignKey("vendors.id"), nullable=False)
-    user_id    = Column(String(36), nullable=False, index=True)
+    user_id    = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     content    = Column(Text, nullable=False)
     created_at = Column(DateTime, default=_utcnow)
 
@@ -119,7 +119,7 @@ class RiskAcceptance(Base):
 
     id            = Column(String(36), primary_key=True, default=_new_uuid)
     vendor_id     = Column(String(36), ForeignKey("vendors.id"), nullable=False)
-    user_id       = Column(String(36), nullable=False, index=True)
+    user_id       = Column(String(36), ForeignKey("users.id"), nullable=False, index=True)
     event_id      = Column(Integer, ForeignKey("risk_events.id"), nullable=True)
     finding_ref   = Column(String(150), nullable=False)
     finding_type  = Column(String(20),  nullable=False)

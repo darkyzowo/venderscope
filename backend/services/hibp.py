@@ -12,8 +12,8 @@ _hibp_lock = _threading.Lock()
 
 def _domain_matches(breach_domain: str, vendor_domain: str) -> bool:
     """Exact domain match with www normalisation."""
-    b = breach_domain.lower().lstrip("www.").strip()
-    v = vendor_domain.lower().lstrip("www.").strip()
+    b = breach_domain.lower().removeprefix("www.")
+    v = vendor_domain.lower().removeprefix("www.")
     return b == v
 
 

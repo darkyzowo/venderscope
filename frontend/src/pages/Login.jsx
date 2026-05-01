@@ -132,7 +132,7 @@ export default function Login() {
             Sign in to your workspace
           </p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleSubmit} method="post" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             <div style={reveal(460)}>
               <LoginField

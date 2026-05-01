@@ -197,6 +197,7 @@ def refresh_token_endpoint(
 
 
 @router.post("/logout")
+@limiter.limit("20/minute")
 def logout(
     request: Request,
     response: Response,
@@ -230,7 +231,8 @@ def logout(
 
 
 @router.get("/me")
-def get_me(current_user: User = Depends(get_current_user)):
+@limiter.limit("60/minute")
+def get_me(request: Request, current_user: User = Depends(get_current_user)):
     return {"email": current_user.email}
 
 

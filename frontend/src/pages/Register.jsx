@@ -119,7 +119,7 @@ export default function Register() {
             Create your account
           </p>
 
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <form onSubmit={handleSubmit} method="post" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
 
             <div style={reveal(430)}>
               <LoginField
