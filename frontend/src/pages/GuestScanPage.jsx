@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { guestScan, downloadGuestReport } from '../api/client'
+import { guestScan, downloadGuestReport, ping } from '../api/client'
 import VSLogo from '../components/VSLogo'
 
 const riskColor = (s) => s >= 70 ? 'var(--risk-high)' : s >= 35 ? 'var(--risk-medium)' : 'var(--risk-low)'
@@ -14,6 +14,11 @@ export default function GuestScanPage() {
   const [result,      setResult]      = useState(null)
   const [error,       setError]       = useState('')
   const [downloading, setDownloading] = useState(false)
+  const [warming,     setWarming]     = useState(true)
+
+  useEffect(() => {
+    ping().finally(() => setWarming(false))
+  }, [])
 
   const validate = () => {
     const d = domain.trim().replace(/^https?:\/\//i, '').replace(/\/$/, '')
@@ -101,6 +106,15 @@ export default function GuestScanPage() {
           <p style={{ fontSize: 13, color: 'var(--mid)', margin: 0 }}>
             Quick CVE lookup · No account required · Results not saved
           </p>
+          {warming && (
+            <p style={{ fontSize: 11, color: 'var(--lo)', marginTop: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <svg className="animate-spin" width="10" height="10" viewBox="0 0 14 14" fill="none" aria-hidden="true">
+                <circle cx="7" cy="7" r="5" stroke="rgba(255,255,255,0.2)" strokeWidth="2" />
+                <path d="M7 2a5 5 0 0 1 5 5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+              Connecting to server…
+            </p>
+          )}
         </div>
 
         {/* Scan form card */}

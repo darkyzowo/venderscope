@@ -1,6 +1,7 @@
 import axios from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
+const _BACKEND_ORIGIN = BASE_URL.replace(/\/api$/, '')
 
 // Access token stored in memory — never in localStorage or cookies
 // This prevents XSS-based token theft
@@ -104,6 +105,7 @@ export const getMe          = ()     => api.get('/auth/me')
 export const deleteAccount  = (body) => api.delete('/auth/account', { data: body })
 // Axios DELETE with a body uses the `data` key, not `body`
 
+export const ping                = ()     => axios.get(`${_BACKEND_ORIGIN}/`)
 export const guestScan           = (data) => api.post('/guest/scan', data)
 export const downloadGuestReport = (data) => api.post('/guest/report', data, { responseType: 'blob' })
 

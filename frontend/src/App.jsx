@@ -1,4 +1,4 @@
-import { Suspense, lazy } from 'react'
+import { Suspense, lazy, useState, useEffect } from 'react'
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { AuthProvider, useAuth } from './auth/AuthContext'
 import SiteConsentBanner from './components/SiteConsentBanner'
@@ -49,13 +49,21 @@ function PageTransition({ children }) {
 
 /** Auth check spinner — fades in only if loading takes >150ms */
 function LoadingScreen() {
+  const [slow, setSlow] = useState(false)
+  useEffect(() => {
+    const t = setTimeout(() => setSlow(true), 4000)
+    return () => clearTimeout(t)
+  }, [])
   return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg)' }}>
-      <div className="animate-spinner-in">
+      <div className="animate-spinner-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 16 }}>
         <svg className="animate-spin" width="22" height="22" viewBox="0 0 24 24" fill="none" aria-hidden="true">
           <circle cx="12" cy="12" r="9" stroke="var(--line)" strokeWidth="2" />
           <path d="M12 3a9 9 0 0 1 9 9" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round" />
         </svg>
+        {slow && (
+          <p style={{ fontSize: 12, color: 'var(--lo)', margin: 0 }}>Server is starting up…</p>
+        )}
       </div>
     </div>
   )
