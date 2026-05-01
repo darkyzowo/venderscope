@@ -5,7 +5,7 @@ EPSS_URL = "https://api.first.org/data/v1/epss"
 def get_epss_scores(cve_ids: list[str]) -> dict[str, float]:
     """
     Fetches EPSS (Exploit Prediction Scoring System) scores for a list of CVE IDs.
-    Returns a dict of {cve_id: epss_score} where score is 0.0–1.0 (probability of exploitation).
+    Returns a dict of {cve_id: epss_score} where score is 0-100 (percentage probability of exploitation).
     Free API, no key needed.
     """
     if not cve_ids:

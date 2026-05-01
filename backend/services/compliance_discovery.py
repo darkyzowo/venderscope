@@ -625,7 +625,7 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
         }
 
     # ── Security contact ─────────────────────────────────────────────────────
-    # Move refs to list then clear dict — reduces peak HTML copies from 3× to 1×
+    # Move refs to list then clear dict — reduces peak HTML copies from 3x to 1x
     scraped_pages = list(pages.values())
     pages.clear()
     contact       = _find_security_contact_with_quota(base, scraped_pages, quota_state)
@@ -633,7 +633,7 @@ def run_compliance_discovery(domain: str, vendor_name: str = "", use_web_search:
     found_count = sum(1 for v in certifications.values() if v["status"] == "found")
     tp_count    = sum(1 for v in certifications.values() if v["status"] == "third_party")
     ext_count   = sum(1 for v in certifications.values() if v.get("source") == "external")
-    print(f"[Compliance] Done — {len(doc_links)} docs, {len(pages)} pages checked, "
+    print(f"[Compliance] Done — {len(doc_links)} docs, {len(scraped_pages)} pages checked, "
           f"{found_count} certs direct, {tp_count} via infra partners "
           f"({ext_count} via web search), {quota_state['used']} search unit(s) used, "
           f"trust centre: {'yes' if trust else 'no'}, "
