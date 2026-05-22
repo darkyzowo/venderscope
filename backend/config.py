@@ -17,7 +17,7 @@ _LOCAL_FRONTEND_ORIGINS = (
 
 
 def is_production() -> bool:
-    return bool(os.getenv("RENDER"))
+    return os.getenv("ENV", "").lower() == "production"
 
 
 def _normalize_origin(value: str) -> str:

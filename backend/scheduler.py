@@ -12,7 +12,7 @@ from models import RevokedToken, SchedulerLease, Vendor
 from services.alerts import _is_reserved_test_domain
 from services.scanner import run_full_scan
 
-RENDER_URL = "https://venderscope-api.onrender.com"
+_SELF_URL = os.getenv("SELF_URL", "").rstrip("/")
 LEASE_NAME = "primary"
 LEASE_TTL = timedelta(minutes=15)
 
@@ -121,11 +121,11 @@ def scheduled_scan(owner_id: str):
 
 
 def keep_alive(owner_id: str):
-    """Pings the API every 10 minutes to prevent Render free tier spin-down."""
-    if not _has_scheduler_lease(owner_id):
+    """Pings the API to prevent scale-to-zero spin-down. No-op if SELF_URL not set."""
+    if not _has_scheduler_lease(owner_id) or not _SELF_URL:
         return
     try:
-        httpx.get(f"{RENDER_URL}/", timeout=10)
+        httpx.get(f"{_SELF_URL}/", timeout=10)
         print("[KeepAlive] Pinged successfully")
     except Exception as e:
         print(f"[KeepAlive] Ping failed: {e}")

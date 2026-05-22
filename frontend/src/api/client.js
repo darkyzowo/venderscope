@@ -1,6 +1,6 @@
 import axios from 'axios'
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://venderscope-api.onrender.com/api'
+const BASE_URL = import.meta.env.VITE_API_URL || 'https://darkitowo-venderscope-api.hf.space/api'
 const _BACKEND_ORIGIN = BASE_URL.replace(/\/api$/, '')
 
 // Access token stored in memory — never in localStorage or cookies

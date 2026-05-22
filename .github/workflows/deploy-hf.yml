@@ -1,0 +1,34 @@
+name: Deploy to Hugging Face Space
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
+
+      - name: Deploy backend to HF Space
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          pip install -q huggingface_hub
+          python - <<'EOF'
+          import os
+          from huggingface_hub import HfApi
+          api = HfApi(token=os.environ["HF_TOKEN"])
+          api.upload_folder(
+              folder_path="backend",
+              repo_id="darkitowo/venderscope-api",
+              repo_type="space",
+              ignore_patterns=["*.pyc", "__pycache__/", ".env", "vendorscope.db", "tests/", ".pytest_cache/", "*.db"],
+          )
+          print("Deployed to darkitowo/venderscope-api")
+          EOF
