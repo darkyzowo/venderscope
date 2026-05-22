@@ -2,10 +2,10 @@
 
 > **Still running annual vendor audits? Your next breach won't wait 12 months.**
 
-[![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
+[![Live Beta - v4.5](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
 [![API](https://img.shields.io/badge/API-darkitowo--venderscope--api.hf.space-10b981?style=for-the-badge)](https://darkitowo-venderscope-api.hf.space/docs)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
-[![Version](https://img.shields.io/badge/version-v4.0-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases)
+[![Version](https://img.shields.io/badge/version-v4.5-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases)
 
 > **Performance note:** VenderScope backend runs on Hugging Face Spaces (Docker, 2vCPU/16GB RAM). The space stays warm via UptimeRobot pings every 5 minutes. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
@@ -37,7 +37,7 @@ Verification after this release:
 
 ---
 
-## Infrastructure Migration — Render → Hugging Face Spaces + Supabase
+## What's New in v4.5 — Infrastructure Migration & Security Hardening
 
 Render free tier compute hours were exhausted (191.9h/month depleted in ~8 days due to always-on connection pooling). Neon PostgreSQL free tier compute quota was simultaneously exhausted. Both services were migrated to genuinely free alternatives with no compute time quotas.
 
@@ -580,9 +580,10 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] Site-wide text color standardization — four-level contrast palette (v3.7)
 - [x] VendorCard review status line + Dashboard Reviews Due amber pill (v3.7)
 - [x] PDF export enriched with review schedule and risk acceptance table (v3.7)
-- [x] Backend migration: Render → Hugging Face Spaces Docker (2vCPU/16GB, no compute quota)
-- [x] Database migration: Neon → Supabase (no compute quota, 500MB free tier)
-- [x] GitHub Actions CI/CD deploy pipeline to HF Spaces
+- [x] Backend migration: Render → Hugging Face Spaces Docker (2vCPU/16GB, no compute quota) (v4.5)
+- [x] Database migration: Neon → Supabase (no compute quota, 500MB free tier) (v4.5)
+- [x] GitHub Actions CI/CD deploy pipeline to HF Spaces (v4.5)
+- [x] `is_production()` generalised — ENV-based, not host-specific (v4.5)
 - [ ] Vendor Comparison View — side-by-side risk posture for two vendors
 - [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
 - [ ] Bulk CSV Import — add multiple vendors at once

@@ -151,7 +151,7 @@ VenderScope undergoes a full white-box security audit before every significant r
 
 ---
 
-### Infrastructure Migration Audit — 22 May 2026 (Render → HF Spaces, Neon → Supabase)
+### v4.5 Infrastructure Migration Audit — 22 May 2026 (Render → HF Spaces, Neon → Supabase)
 **Scope:** Backend host migration from Render to Hugging Face Spaces Docker; database migration from Neon PostgreSQL to Supabase PostgreSQL.
 
 | ID | Severity | Finding | Resolution |
