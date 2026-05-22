@@ -3,11 +3,11 @@
 > **Still running annual vendor audits? Your next breach won't wait 12 months.**
 
 [![Live Beta - v3](https://img.shields.io/badge/Live%20Demo-venderscope.vercel.app-6366f1?style=for-the-badge)](https://venderscope.vercel.app)
-[![API](https://img.shields.io/badge/API-venderscope--api.onrender.com-10b981?style=for-the-badge)](https://venderscope-api.onrender.com/docs)
+[![API](https://img.shields.io/badge/API-darkitowo--venderscope--api.hf.space-10b981?style=for-the-badge)](https://darkitowo-venderscope-api.hf.space/docs)
 [![LinkedIn](https://img.shields.io/badge/LinkedIn-Zarak%20Hassan-0A66C2?style=for-the-badge&logo=linkedin)](https://www.linkedin.com/in/zarak-hassan7/)
 [![Version](https://img.shields.io/badge/version-v4.0-violet?style=for-the-badge)](https://github.com/darkyzowo/venderscope/releases)
 
-> **Performance note:** VenderScope runs on Render's free tier. The first request after inactivity includes a ~50s cold start. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
+> **Performance note:** VenderScope backend runs on Hugging Face Spaces (Docker, 2vCPU/16GB RAM). The space stays warm via UptimeRobot pings every 5 minutes. Actual scan time is 8–15s using concurrent API calls to HIBP, NVD, Companies House, Shodan, and the compliance engine simultaneously.
 
 VenderScope is a continuous, passive vendor risk intelligence platform built for GRC and Information Security professionals. Instead of point-in-time annual reviews, VenderScope monitors your vendor estate 24/7 across multiple threat intelligence sources and surfaces risk drift in real time — with full user authentication, production-grade security hardening, and a cloud PostgreSQL backend.
 
@@ -34,6 +34,18 @@ Verification after this release:
 
 - `python -m pytest` → `70 passed`
 - `npm run build` → passed
+
+---
+
+## Infrastructure Migration — Render → Hugging Face Spaces + Supabase
+
+Render free tier compute hours were exhausted (191.9h/month depleted in ~8 days due to always-on connection pooling). Neon PostgreSQL free tier compute quota was simultaneously exhausted. Both services were migrated to genuinely free alternatives with no compute time quotas.
+
+- **Backend:** Render → Hugging Face Spaces (Docker, 2vCPU/16GB RAM, no compute quota). Deployed via GitHub Actions on push to `backend/`
+- **Database:** Neon PostgreSQL → Supabase PostgreSQL (500MB free tier, no compute quota, pauses only after 7 days of zero traffic)
+- **Keep-alive:** UptimeRobot pings `https://darkitowo-venderscope-api.hf.space/` every 5 minutes — prevents HF sleep and keeps APScheduler alive
+- **`is_production()` generalised:** No longer keys on the `RENDER` env var; now uses `ENV=production` for portability across any host
+- **SSL fix for Supabase pooler:** `database.py` disables certificate hostname verification (`ssl.CERT_NONE`) to accommodate Supabase's self-signed certificate in the pooler chain while retaining SSL encryption
 
 ---
 
@@ -197,7 +209,7 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 - **All 20 audit vulnerabilities resolved** (see `docs/security-architecture.md`)
 
 ### Infrastructure
-- **PostgreSQL (Neon)** — migrated from SQLite to cloud PostgreSQL for production; SQLite retained for local dev
+- **PostgreSQL (Supabase)** — migrated from SQLite to cloud PostgreSQL for production; SQLite retained for local dev
 - **pg8000 pure-Python driver** — compatible with Python 3.14+, no C dependencies, works on Render without build tools
 - **Connection pool** — `pool_pre_ping`, `pool_size=5`, `max_overflow=10` for stable cloud connections
 - **Revoked token cleanup** — APScheduler purges expired JTI blacklist entries every 6 hours
@@ -259,7 +271,7 @@ A full security audit was conducted before guest mode launch. Findings resolved:
 | Layer         | Technology                                                                   |
 |---------------|------------------------------------------------------------------------------|
 | Backend       | Python 3.11+, FastAPI, SQLAlchemy 2.0, APScheduler, Uvicorn                 |
-| Database      | PostgreSQL (Neon, production) / SQLite (local dev)                           |
+| Database      | PostgreSQL (Supabase, production) / SQLite (local dev)                       |
 | DB Driver     | pg8000 (pure Python, Python 3.14+ compatible)                                |
 | Authentication| JWT (python-jose), bcrypt, httpOnly cookies                                  |
 | Frontend      | React 19, Vite 8, React Router 7, TailwindCSS 3, Axios                      |
@@ -511,7 +523,7 @@ During every scan, VenderScope passively discovers three data points at no quota
 
 ## Known Limitations
 
-**Cold starts on Render free tier:** First request after inactivity incurs ~50s cold start. Keep-alive pings run every 10 minutes to minimise this.
+**HF Space sleep:** Hugging Face Spaces sleep after 48 hours of zero traffic. UptimeRobot pings every 5 minutes keep the space warm in practice. If the space does sleep, first request triggers a ~30s cold start.
 
 **JS-rendered trust centres:** Vendors using Vanta or similar platforms load certifications dynamically. VenderScope's scraper fetches raw HTML and relies on the Google CSE fallback for these.
 
@@ -545,7 +557,7 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] Append-only audit log (v3)
 - [x] Security headers middleware (v3)
 - [x] UUID vendor IDs (v3)
-- [x] PostgreSQL (Neon) + pg8000 migration (v3)
+- [x] PostgreSQL (Supabase) + pg8000 migration (v3 → migrated from Neon)
 - [x] Resend HTTP API email dispatcher (v3, pending sending domain)
 - [x] Account deletion with cascade + password reconfirmation (v3)
 - [x] Legal and security documentation pages (v3)
@@ -568,6 +580,9 @@ During every scan, VenderScope passively discovers three data points at no quota
 - [x] Site-wide text color standardization — four-level contrast palette (v3.7)
 - [x] VendorCard review status line + Dashboard Reviews Due amber pill (v3.7)
 - [x] PDF export enriched with review schedule and risk acceptance table (v3.7)
+- [x] Backend migration: Render → Hugging Face Spaces Docker (2vCPU/16GB, no compute quota)
+- [x] Database migration: Neon → Supabase (no compute quota, 500MB free tier)
+- [x] GitHub Actions CI/CD deploy pipeline to HF Spaces
 - [ ] Vendor Comparison View — side-by-side risk posture for two vendors
 - [ ] Shareable Risk Report — time-limited public read-only vendor snapshot link
 - [ ] Bulk CSV Import — add multiple vendors at once
@@ -581,14 +596,17 @@ During every scan, VenderScope passively discovers three data points at no quota
 
 ## Deployment
 
-### Backend (Render)
+### Backend (Hugging Face Spaces)
 
-Required environment variables on Render:
+Deploy via GitHub Actions (`.github/workflows/deploy-hf.yml`) — triggers on push to `backend/`. Set `HF_TOKEN` as a GitHub secret.
+
+Required secrets on HF Space (Settings → Variables and secrets):
 
 ```
-DATABASE_URL        postgresql://...neon.tech/neondb?sslmode=require&channel_binding=require
+DATABASE_URL        postgresql://postgres.[ref]:PASSWORD@aws-X-eu-west-2.pooler.supabase.com:5432/postgres
 JWT_SECRET          64-char hex string
 FRONTEND_URL        https://venderscope.vercel.app
+ENV                 production
 NVD_API_KEY
 COMPANIES_HOUSE_API_KEY
 SHODAN_API_KEY
@@ -598,13 +616,14 @@ GMAIL_ADDRESS       (optional — local email fallback)
 GMAIL_APP_PASSWORD  (optional)
 EMAIL_ENABLED       1 (set to 0 to disable all outbound email)
 ALERT_THRESHOLD     70
-RENDER               true   (enables HSTS + SameSite=None cookies)
 ```
+
+**Keep-alive:** Set up UptimeRobot (free) to ping `https://darkitowo-venderscope-api.hf.space/` every 5 minutes using HTTP GET. This prevents HF sleep and keeps APScheduler alive.
 
 ### Frontend (Vercel)
 
 ```
-VITE_API_URL        https://venderscope-api.onrender.com/api
+VITE_API_URL        https://darkitowo-venderscope-api.hf.space/api
 ```
 
 ---
