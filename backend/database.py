@@ -31,6 +31,8 @@ else:
     DATABASE_URL = urlunparse(_parsed._replace(query=urlencode(_params)))
 
     _ssl_ctx = ssl.create_default_context()
+    _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = ssl.CERT_NONE
     _connect_args = {"ssl_context": _ssl_ctx}
 
 # Cloud PostgreSQL needs pre-ping to recover stale connections after idle periods
