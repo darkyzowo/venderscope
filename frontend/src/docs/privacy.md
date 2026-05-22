@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 18 April 2026
+**Last updated:** 22 May 2026
 **Effective date:** 23 March 2026
 
 This Privacy Policy explains how VenderScope ("we", "us", "our") collects, uses, stores, and protects your information when you use our vendor risk intelligence platform.
@@ -102,8 +102,8 @@ We share data only in the following limited circumstances:
 ### 5.1 Third-Party Services We Use
 | Service | Purpose | Data Shared | Location |
 |---------|---------|-------------|----------|
-| Render | API hosting | All platform data (except database) | USA (EU-equivalent safeguards) |
-| Neon | Database hosting (PostgreSQL) | All stored vendor and account data | USA (EU-equivalent safeguards) |
+| Hugging Face | API hosting (Docker Spaces) | All platform data (except database) | USA (EU-equivalent safeguards) |
+| Supabase | Database hosting (PostgreSQL) | All stored vendor and account data | USA (EU-equivalent safeguards) |
 | Vercel | Hosting (frontend) | No personal data | USA (EU-equivalent safeguards) |
 | HaveIBeenPwned | Breach lookups | Vendor domain (not user data) | USA |
 | NIST NVD | CVE lookups | Vendor name (not user data) | USA |
@@ -208,7 +208,7 @@ Declining optional cookies does **not** prevent you from logging in, using the d
 
 We protect your data through:
 - **Encryption in transit:** All data transmitted over HTTPS (TLS 1.2+)
-- **Encryption at rest:** Database encrypted at rest on Neon (PostgreSQL)
+- **Encryption at rest:** Database encrypted at rest on Supabase (PostgreSQL)
 - **Password security:** bcrypt hashing with minimum 12 rounds — we cannot recover your password
 - **Access control:** Authentication required for all data access; data scoped to your account only
 - **Token security:** Authentication tokens stored in httpOnly cookies inaccessible to JavaScript

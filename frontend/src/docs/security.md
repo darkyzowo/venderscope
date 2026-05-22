@@ -78,7 +78,7 @@ Guest mode was introduced in v3.5 with security as the primary design constraint
 - **CVE-only scope** — only the NIST NVD API is called. HIBP, Shodan, Companies House, compliance scraping, and vendor profiling are excluded
 - **Strict input validation** — Pydantic validators enforce length limits on all fields, a severity allowlist (CRITICAL/HIGH/MEDIUM/LOW), score range 0–100, and a maximum of 50 events per report request
 - **XML injection prevention** — every user-supplied string is passed through `_xml_escape()` before reaching ReportLab in PDF generation
-- **Rate limiting** — 3 scans/hour and 5 reports/hour per real client IP (XFF[-1], Render-appended)
+- **Rate limiting** — 3 scans/hour and 5 reports/hour per real client IP (XFF[-1], proxy-appended)
 - **No auth cookie consumed** — guest endpoints do not read or use the `vs_refresh` cookie
 
 ### Data in Transit
@@ -87,7 +87,7 @@ Guest mode was introduced in v3.5 with security as the primary design constraint
 - CORS restricted to known frontend origins only
 
 ### Data at Rest
-- Database encrypted at rest (PostgreSQL on Neon)
+- Database encrypted at rest (PostgreSQL on Supabase)
 - No sensitive data stored in application logs
 - Secrets managed via environment variables — never committed to source code
 - Google Custom Search quota usage is persisted in the database and survives restarts/redeploys
@@ -108,7 +108,7 @@ DNS resolution is performed and the resolved IP is checked, not just the hostnam
 
 ### Search Quota Enforcement
 - Google Custom Search usage is capped to the configured free-tier budget
-- Quota state is stored in the database, not local disk, so it survives Render restarts
+- Quota state is stored in the database, not local disk, so it survives container restarts
 - Quota consumption is serialized against the daily row to reduce concurrent oversubscription risk
 - Search units are refunded when a Google CSE request fails before a successful 200 response
 - When search quota is exhausted, scans fall back to vendor-site discovery rather than failing outright
@@ -136,7 +136,7 @@ This provides browser-level XSS mitigation in addition to React's built-in outpu
 - Registration: 3 requests per hour per IP
 - Guest scan: 3 requests per hour per IP
 - Guest report: 5 requests per hour per IP
-- All limits enforced per real client IP — resolved from `X-Forwarded-For[-1]` (Render-appended, unforgeable)
+- All limits enforced per real client IP — resolved from `X-Forwarded-For[-1]` (proxy-appended, unforgeable)
 
 ### Audit Logging
 - All authentication events (login, logout, failed attempts, account deletion) are logged with IP and timestamp
@@ -148,6 +148,17 @@ This provides browser-level XSS mitigation in addition to React's built-in outpu
 ## Security Audits & Disclosures
 
 VenderScope undergoes a full white-box security audit before every significant release. All findings are disclosed below.
+
+---
+
+### Infrastructure Migration Audit — 22 May 2026 (Render → HF Spaces, Neon → Supabase)
+**Scope:** Backend host migration from Render to Hugging Face Spaces Docker; database migration from Neon PostgreSQL to Supabase PostgreSQL.
+
+| ID | Severity | Finding | Resolution |
+|----|----------|---------|------------|
+| INF-01 | LOW | **SSL certificate verification disabled on DB connection** — Supabase's Session Pooler presents a self-signed certificate in its chain that Python's `ssl.create_default_context()` rejects. `ssl.CERT_NONE` disables hostname verification. The connection remains TLS-encrypted; only certificate authenticity is unverified. | Accepted for free-tier deployment. Documented here. Mitigation path: download Supabase root CA and pin it in `database.py`. |
+| INF-02 | INFO | **`is_production()` generalised** — previously keyed on `RENDER` env var; Koyeb/HF would not set this, silently putting the app in dev mode (Lax cookies, no HSTS). | Changed to `os.getenv("ENV", "").lower() == "production"`. `ENV=production` set as HF Space secret. |
+| INF-03 | INFO | **XFF[-1] proxy behaviour unverified on HF Spaces** — HF Spaces uses nginx. `--forwarded-allow-ips='*'` is set. Rate limiting and audit log IP accuracy depend on HF's proxy appending (not prepending) the real client IP. | Accepted. Behavioural equivalent to Render's proxy. Monitor in production logs if rate-limit bypasses are observed. |
 
 ---
 
@@ -196,7 +207,7 @@ VenderScope undergoes a full white-box security audit before every significant r
 |----|----------|---------|------------|
 | HIGH-01 | HIGH | Per-client rate limiting broken behind Render proxy — all users shared one IP bucket | Fixed via `--proxy-headers` in `render.yaml` + `_real_ip()` key function |
 | MED-01 | MEDIUM | Account deletion had no password reconfirmation — brief access token compromise could silently delete account | Password reconfirmation required before deletion |
-| MED-02 | MEDIUM | Audit log IP sourced from `XFF[0]` — spoofable by clients | Changed to `XFF[-1]` (Render-appended) |
+| MED-02 | MEDIUM | Audit log IP sourced from `XFF[0]` — spoofable by clients | Changed to `XFF[-1]` (proxy-appended) |
 | MED-03 | MEDIUM | No CSRF protection on `logout`, `refresh`, `delete_account` cookie endpoints | `_verify_origin()` added — compares scheme+netloc via `urlparse` (a previous `startswith` bypass was also closed) |
 | SSRF | MEDIUM | `_is_safe_domain()` had multiple bypasses: URL-encoding, decimal IP, IPv6-mapped IPv4, cloud metadata endpoints, 3-hop redirect chain | Full hardening applied |
 | HIBP | LOW | Substring domain match caused false positives; no cache on the 1MB breach list | Exact match + www-normalisation; 1hr in-process cache |
@@ -221,7 +232,7 @@ Full technical detail in `tasks/security-architecture.md`.
 ## Known Limitations
 
 - **Email alerts:** Currently use SMTP in development. Production deployments should configure Resend (HTTP API) via the `RESEND_API_KEY` environment variable once a verified sending domain is available.
-- **Rate limiting on Render free tier:** Rate limits are enforced per real client IP via `XFF[-1]`. Render free tier does not offer a fixed load balancer IP, so `--forwarded-allow-ips="*"` is required — a motivated attacker with control of an upstream proxy could theoretically influence the XFF chain. This is a known Render free-tier architectural constraint.
+- **Rate limiting on free-tier hosting:** Rate limits are enforced per real client IP via `XFF[-1]`. Hugging Face Spaces routes traffic through its own proxy layer, so `--forwarded-allow-ips="*"` is required on uvicorn — a motivated attacker with control of an upstream proxy could theoretically influence the XFF chain. This is a known free-tier hosting architectural constraint.
 - **Global search budget:** Google CSE quota is enforced globally for the app today, not per-user. Per-user daily budgets are planned as a future layer on top of the new DB-backed global quota.
 - **Self-hosted deployments:** Security of self-hosted instances is the responsibility of the operator.
 

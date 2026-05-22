@@ -108,14 +108,14 @@ You retain ownership of the vendor data you add. By using the platform, you gran
 
 ## 9. Third-Party Services
 
-VenderScope integrates with third-party services (HIBP, NIST, Shodan, Google, Render, Vercel). Your use of these services through VenderScope is also subject to their respective terms. We are not responsible for the availability, accuracy, or practices of third-party services.
+VenderScope integrates with third-party services (HIBP, NIST, Shodan, Google, Hugging Face, Supabase, Vercel). Your use of these services through VenderScope is also subject to their respective terms. We are not responsible for the availability, accuracy, or practices of third-party services.
 
 ---
 
 ## 10. Availability & Modifications
 
 ### 10.1 Service Availability
-VenderScope is provided on a best-effort basis. We do not guarantee 100% uptime, particularly on the free tier (Render free tier has cold-start delays of approximately 50 seconds after inactivity).
+VenderScope is provided on a best-effort basis. We do not guarantee 100% uptime. The backend runs on Hugging Face Spaces free tier, which may sleep after extended inactivity. UptimeRobot keep-alive pings minimise this in practice.
 
 ### 10.2 Modifications
 We may modify, suspend, or discontinue any part of VenderScope at any time. We will provide reasonable notice for material changes where possible.
