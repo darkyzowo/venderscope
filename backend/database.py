@@ -2,7 +2,6 @@
 import config  # Loads backend/.env once with process env precedence.
 import os
 import ssl
-import certifi
 from urllib.parse import urlparse, urlencode, parse_qs, urlunparse
 from sqlalchemy import create_engine
 from sqlalchemy.orm import declarative_base, sessionmaker
@@ -31,10 +30,11 @@ else:
                if k not in ("sslmode", "channel_binding")}
     DATABASE_URL = urlunparse(_parsed._replace(query=urlencode(_params)))
 
-    # Use certifi's Mozilla CA bundle — fixes Supabase pooler self-signed chain rejection
-    # check_hostname=False: pooler SNI may not match cert CN; CERT_REQUIRED still verifies chain
-    _ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+    # Supabase Session Pooler uses a self-signed cert not in any standard CA bundle.
+    # CERT_NONE: cert authenticity unverified, but connection is still TLS-encrypted.
+    _ssl_ctx = ssl.create_default_context()
     _ssl_ctx.check_hostname = False
+    _ssl_ctx.verify_mode = ssl.CERT_NONE
     _connect_args = {"ssl_context": _ssl_ctx}
 
 # Cloud PostgreSQL needs pre-ping to recover stale connections after idle periods
