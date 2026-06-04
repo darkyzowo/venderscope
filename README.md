@@ -49,6 +49,20 @@ Render free tier compute hours were exhausted (191.9h/month depleted in ~8 days 
 
 ---
 
+## Known Limitations & Deferred Work
+
+### Email (Transactional)
+- **HF Spaces blocks outbound SMTP** — ports 587 and 465 return `[Errno 101] Network is unreachable`. Gmail SMTP will never work on HF.
+- **Resend requires a verified custom domain** — `venderscope.app` is a placeholder; no domain is currently owned. Resend code is complete (`alerts.py`); it just needs a real domain pointed at it.
+- **Current state:** welcome emails and alert emails are silently skipped on HF. No broken logs, no user-facing errors.
+- **To fix:** buy a domain (e.g. `venderscope.app` ~$14/yr), add Resend DNS records (DKIM TXT + SPF MX/TXT), set `RESEND_API_KEY` + `RESEND_FROM_EMAIL=noreply@<domain>` in HF env vars. All send logic already exists.
+
+### Password Reset / Profile Page
+- No password reset flow exists. Custom auth (bcrypt + JWT) — Supabase Auth is not used.
+- Plan: `PasswordResetToken` model + `POST /api/auth/forgot-password` + `POST /api/auth/reset-password` + `/reset-password` frontend page. Blocked on email working first.
+
+---
+
 ## Latest Maintenance Update
 
 This repo has had a full cleanup and stabilization pass across backend safety, frontend logic, and responsive UX.

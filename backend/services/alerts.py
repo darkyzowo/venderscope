@@ -64,7 +64,7 @@ def _is_reserved_test_domain(domain: str) -> bool:
 
 def _resend_domain_configured() -> bool:
     """Returns True only if RESEND_FROM_EMAIL uses a custom domain (not the placeholder)."""
-    placeholder_domains = {"venderscope.app", "resend.dev", "example.com"}
+    placeholder_domains = {"resend.dev", "example.com"}
     try:
         domain = RESEND_FROM.split("@")[-1].rstrip(">").strip().lower()
         return domain not in placeholder_domains
