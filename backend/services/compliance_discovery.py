@@ -433,8 +433,9 @@ def _google_search(query: str, quota_state: dict | None = None) -> list[dict]:
             if quota_state is not None and reserved_unit:
                 quota_state["used"] = quota_state.get("used", 0) + 1
             return r.json().get("items", [])
-    except Exception:
-        pass
+        print(f"[Google CSE] {r.status_code}: {r.text[:300]}")
+    except Exception as e:
+        print(f"[Google CSE] Request failed: {e}")
     if reserved_unit:
         refund_search_units(1)
     return []
