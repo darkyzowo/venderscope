@@ -7,7 +7,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from config import is_allowed_frontend_origin, is_production
-from database import get_db
+from database import SessionLocal, get_db
 from datetime import datetime, timezone, timedelta
 from models import User, RevokedToken, AuditLog
 from limiter import limiter
@@ -47,6 +47,35 @@ def _account_key(email: str) -> str:
     """Stable, non-reversible identifier for an email — keeps plaintext PII out
     of the audit log while still allowing per-account failure counting."""
     return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:32]
+
+
+def _recent_login_failures(account_key: str) -> int:
+    """Count recent failed logins in an ISOLATED session.
+
+    Must not share the request-scoped ``db`` session: on PostgreSQL any error
+    (e.g. naive vs tz-aware datetime compare) aborts the whole transaction, and
+    every subsequent query on that session raises InFailedSqlTransaction → 500.
+    SQLite is lenient, which is why pytest missed this. Fail-open always.
+    """
+    lock_db = SessionLocal()
+    try:
+        window_start = (
+            datetime.now(timezone.utc).replace(tzinfo=None)
+            - timedelta(minutes=_LOGIN_LOCKOUT_WINDOW_MIN)
+        )
+        return (
+            lock_db.query(AuditLog)
+            .filter(
+                AuditLog.event == "login.failed",
+                AuditLog.detail == f"account={account_key}",
+                AuditLog.created_at >= window_start,
+            )
+            .count()
+        )
+    except Exception:
+        return 0
+    finally:
+        lock_db.close()
 
 
 class RegisterRequest(BaseModel):
@@ -158,25 +187,7 @@ def login(
     email = payload.email.lower()
     account_key = _account_key(email)
 
-    # Per-account lockout check (fail-open). Counts recent failures for this
-    # account; never reveals whether the account exists (generic 429).
-    try:
-        # AuditLog.created_at is a naive (timezone-less) column. Compare against a
-        # naive UTC value — a tz-aware value raises on PostgreSQL and aborts the
-        # transaction (SQLite is lenient, which is why tests didn't catch it).
-        window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=_LOGIN_LOCKOUT_WINDOW_MIN)
-        recent_failures = (
-            db.query(AuditLog)
-            .filter(
-                AuditLog.event == "login.failed",
-                AuditLog.detail == f"account={account_key}",
-                AuditLog.created_at >= window_start,
-            )
-            .count()
-        )
-    except Exception:
-        db.rollback()  # clear any aborted transaction so the user lookup below still works
-        recent_failures = 0  # fail-open — never block a legitimate login on a lockout-query hiccup
+    recent_failures = _recent_login_failures(account_key)
     if recent_failures >= _LOGIN_LOCKOUT_THRESHOLD:
         audit(db, "login.locked", request, detail=f"account={account_key}")
         raise HTTPException(
