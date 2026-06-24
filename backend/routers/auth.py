@@ -1,15 +1,14 @@
 import os
 import uuid
-import hashlib
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Cookie, Response, Request
 from sqlalchemy.orm import Session
 from pydantic import BaseModel, EmailStr, field_validator
 import jwt
 from jwt.exceptions import PyJWTError as JWTError
 from config import is_allowed_frontend_origin, is_production
-from database import SessionLocal, get_db
-from datetime import datetime, timezone, timedelta
-from models import User, RevokedToken, AuditLog
+from database import get_db
+from datetime import datetime, timezone
+from models import User, RevokedToken
 from limiter import limiter
 from services.alerts import send_welcome_email
 from services.audit import audit
@@ -28,54 +27,6 @@ router = APIRouter()
 
 # Detect production (Render sets RENDER=true)
 _IS_PROD = is_production()
-
-# Per-account lockout — defence-in-depth on top of the per-IP login rate limit.
-# Throttles a distributed/IP-rotating attacker targeting one account. Counts
-# recent failed logins for the (hashed) account identifier; fail-open so a DB
-# or logging hiccup never blocks a legitimate sign-in.
-try:
-    _LOGIN_LOCKOUT_THRESHOLD = max(1, int(os.getenv("LOGIN_LOCKOUT_THRESHOLD", "8")))
-except ValueError:
-    _LOGIN_LOCKOUT_THRESHOLD = 8
-try:
-    _LOGIN_LOCKOUT_WINDOW_MIN = max(1, int(os.getenv("LOGIN_LOCKOUT_WINDOW_MIN", "15")))
-except ValueError:
-    _LOGIN_LOCKOUT_WINDOW_MIN = 15
-
-
-def _account_key(email: str) -> str:
-    """Stable, non-reversible identifier for an email — keeps plaintext PII out
-    of the audit log while still allowing per-account failure counting."""
-    return hashlib.sha256(email.strip().lower().encode()).hexdigest()[:32]
-
-
-def _recent_login_failures(account_key: str) -> int:
-    """Count recent failed logins in an ISOLATED session.
-
-    Must not share the request-scoped ``db`` session: on PostgreSQL any error
-    (e.g. naive vs tz-aware datetime compare) aborts the whole transaction, and
-    every subsequent query on that session raises InFailedSqlTransaction → 500.
-    SQLite is lenient, which is why pytest missed this. Fail-open always.
-    """
-    lock_db = SessionLocal()
-    try:
-        window_start = (
-            datetime.now(timezone.utc).replace(tzinfo=None)
-            - timedelta(minutes=_LOGIN_LOCKOUT_WINDOW_MIN)
-        )
-        return (
-            lock_db.query(AuditLog)
-            .filter(
-                AuditLog.event == "login.failed",
-                AuditLog.detail == f"account={account_key}",
-                AuditLog.created_at >= window_start,
-            )
-            .count()
-        )
-    except Exception:
-        return 0
-    finally:
-        lock_db.close()
 
 
 class RegisterRequest(BaseModel):
@@ -184,25 +135,13 @@ def login(
     response: Response,
     db: Session = Depends(get_db),
 ):
-    email = payload.email.lower()
-    account_key = _account_key(email)
-
-    recent_failures = _recent_login_failures(account_key)
-    if recent_failures >= _LOGIN_LOCKOUT_THRESHOLD:
-        audit(db, "login.locked", request, detail=f"account={account_key}")
-        raise HTTPException(
-            status_code=429,
-            detail="Too many failed login attempts. Please try again later.",
-        )
-
-    user = db.query(User).filter(User.email == email).first()
+    user = db.query(User).filter(User.email == payload.email.lower()).first()
     # Always run bcrypt to prevent timing-based user enumeration (CRIT-01)
     dummy_hash = "$2b$12$LJ3m4ys3Lk0TDBGfGgsZKeDUxPlvMNnbBOHJbEHYsV3eIEfpyQ1SK"
     pw_hash = user.password_hash if user else dummy_hash
     password_ok = verify_password(payload.password, pw_hash)
     if not (user is not None and password_ok):
-        # Hashed account key only — no plaintext email PII in the audit log (LOW-3)
-        audit(db, "login.failed", request, detail=f"account={account_key}")
+        audit(db, "login.failed", request, detail=f"email={payload.email.lower()}")
         raise HTTPException(status_code=401, detail="Invalid credentials")
 
     audit(db, "login.success", request, user_id=user.id)

@@ -1,13 +1,7 @@
-# Environment variables (never commit real env files — even .env.production,
-# which Vite inlines into the public bundle). Templates with placeholders are OK.
+# Environment variables
 .env
-.env.*
-frontend/.env
-frontend/.env.*
-!.env.example
-!.env.sample
-!frontend/.env.example
-!frontend/.env.sample
+.env.local
+frontend/.env.local
 
 # Python cache
 __pycache__/

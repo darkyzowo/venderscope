@@ -7,7 +7,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from sqlalchemy import text
-from config import get_frontend_origins, is_production, validate_frontend_config, is_allowed_frontend_origin
+from config import get_frontend_origins, is_production, validate_frontend_config
 from database import engine, Base, _is_sqlite
 import models
 from limiter import limiter
@@ -80,10 +80,6 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
-        # frame-ancestors only — anti-clickjacking parity with X-Frame-Options.
-        # Deliberately not a restrictive default-src: this app's API also serves
-        # the Swagger /docs HTML (CDN scripts), which default-src 'none' breaks.
-        response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
         if _IS_PROD:
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains"
@@ -137,17 +133,7 @@ def root():
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     traceback.print_exc()  # Still logged server-side for debugging
-    # Unhandled 500s are produced by the outermost error middleware, which runs
-    # OUTSIDE CORSMiddleware — so without this the browser sees an opaque "CORS
-    # error" instead of the real 500. Echo CORS headers for allowed origins.
-    headers = {}
-    origin = request.headers.get("origin")
-    if origin and is_allowed_frontend_origin(origin):
-        headers["Access-Control-Allow-Origin"] = origin
-        headers["Access-Control-Allow-Credentials"] = "true"
-        headers["Vary"] = "Origin"
     return JSONResponse(
         status_code=500,
         content={"detail": "Internal server error"},
-        headers=headers,
     )
