@@ -80,6 +80,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
         response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
+        # frame-ancestors only — anti-clickjacking parity with X-Frame-Options.
+        # Deliberately not a restrictive default-src: this app's API also serves
+        # the Swagger /docs HTML (CDN scripts), which default-src 'none' breaks.
+        response.headers["Content-Security-Policy"] = "frame-ancestors 'none'"
         if _IS_PROD:
             response.headers["Strict-Transport-Security"] = (
                 "max-age=31536000; includeSubDomains"

@@ -41,6 +41,9 @@ def test_fetch_page_allows_same_site_relative_redirect(monkeypatch):
             self.status_code = status_code
             self.headers = {"Location": location} if location else {}
             self.text = text
+            # _fetch_page reads .content (bytes) to enforce MAX_RESPONSE_BYTES
+            # before decoding — mirror the real requests.Response interface.
+            self.content = text.encode("utf-8")
 
     responses = [
         FakeResponse(302, location="/security"),

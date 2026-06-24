@@ -1,7 +1,13 @@
-# Environment variables
+# Environment variables (never commit real env files — even .env.production,
+# which Vite inlines into the public bundle). Templates with placeholders are OK.
 .env
-.env.local
-frontend/.env.local
+.env.*
+frontend/.env
+frontend/.env.*
+!.env.example
+!.env.sample
+!frontend/.env.example
+!frontend/.env.sample
 
 # Python cache
 __pycache__/
@@ -29,3 +35,5 @@ tasks/
 
 # Runtime state
 backend/quota.json
+# machina cursor state (do not commit)
+.machina/

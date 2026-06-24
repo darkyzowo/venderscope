@@ -20,8 +20,11 @@ function Inline({ text }) {
         }}>{match[3]}</code>
       )
     } else {
+      // Only allow safe link schemes — blocks javascript:/data: URIs (defence-in-depth)
+      const href = match[5].trim()
+      const safeHref = /^(https?:\/\/|mailto:|\/|#)/i.test(href) ? href : '#'
       parts.push(
-        <a key={key++} href={match[5]} target="_blank" rel="noreferrer"
+        <a key={key++} href={safeHref} target="_blank" rel="noreferrer"
            style={{ color: '#8b5cf6', textDecoration: 'underline' }}>{match[4]}</a>
       )
     }

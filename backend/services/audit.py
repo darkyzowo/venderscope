@@ -39,12 +39,7 @@ def audit(
 
 
 def _get_ip(request: Request) -> str:
-    """Extract real client IP, respecting X-Forwarded-For from Render's proxy."""
-    forwarded = request.headers.get("x-forwarded-for")
-    if forwarded:
-        # XFF[-1] is appended by Render's load balancer — unforgeable.
-        # XFF[0] is client-controlled. With --proxy-headers + trusted_hosts="*",
-        # uvicorn resolves client.host to XFF[0] (leftmost), not XFF[-1].
-        # Manual split is intentional — do NOT simplify to request.client.host.
-        return forwarded.split(",")[-1].strip()
-    return request.client.host if request.client else "unknown"
+    """Extract real client IP — single source of truth in limiter.client_ip,
+    which honours TRUSTED_PROXY_HOPS so audit IPs match rate-limiter IPs."""
+    from limiter import client_ip
+    return client_ip(request)

@@ -171,22 +171,31 @@ def _is_safe_domain(domain: str) -> bool:
     except (ValueError, TypeError):
         pass  # Not a numeric IP, continue to DNS resolution
 
-    # Resolve DNS and check the resolved IP — prevents DNS rebinding attacks
+    # Resolve DNS and check EVERY resolved address (A + AAAA). Validating all
+    # records (not just the first) blocks hosts that return a mix of public and
+    # private addresses and narrows the DNS-rebinding window. NOTE: full closure
+    # requires connection-time IP pinning; this is a strong mitigation, not a
+    # complete fix.
     try:
-        resolved_ip = socket.gethostbyname(clean)
-        try:
-            ip_obj = ipaddress.ip_address(resolved_ip)
-            # ipaddress handles is_private, is_loopback, is_link_local natively
-            if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local:
-                return False
-            # Block IPv4-mapped IPv6 addresses (::ffff:127.0.0.1 etc)
-            if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj.ipv4_mapped:
-                if ip_obj.ipv4_mapped.is_private or ip_obj.ipv4_mapped.is_loopback:
-                    return False
-        except ValueError:
-            return False  # Unparseable IP → block
+        infos = socket.getaddrinfo(clean, None)
     except socket.gaierror:
         return False
+    if not infos:
+        return False
+    for info in infos:
+        resolved_ip = info[4][0]
+        try:
+            ip_obj = ipaddress.ip_address(resolved_ip)
+        except ValueError:
+            return False  # Unparseable IP → block
+        # ipaddress handles is_private, is_loopback, is_link_local natively
+        if ip_obj.is_private or ip_obj.is_loopback or ip_obj.is_link_local or ip_obj.is_unspecified:
+            return False
+        # Block IPv4-mapped IPv6 addresses (::ffff:127.0.0.1 etc)
+        if isinstance(ip_obj, ipaddress.IPv6Address) and ip_obj.ipv4_mapped:
+            mapped = ip_obj.ipv4_mapped
+            if mapped.is_private or mapped.is_loopback or mapped.is_link_local:
+                return False
 
     return True
 

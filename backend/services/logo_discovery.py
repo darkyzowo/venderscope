@@ -28,16 +28,32 @@ def _is_same_vendor_site(url: str, base: str) -> bool:
 
 
 def _safe_get(url: str, timeout: int = 6) -> requests.Response | None:
-    try:
-        response = requests.get(url, headers=HEADERS, timeout=timeout, allow_redirects=True, stream=True)
-        final_url = response.url
-        final_host = urlparse(final_url).netloc
-        if not final_host or not _is_safe_domain(final_host):
-            response.close()
+    # Follow redirects manually, validating EVERY hop against the SSRF blocklist
+    # before issuing the request. allow_redirects=True would let requests fetch
+    # intermediate hops (e.g. a 302 to 169.254.169.254) before any check runs —
+    # a blind-SSRF vector. This mirrors compliance_discovery._fetch_page.
+    max_hops = 4
+    current_url = url
+    for _ in range(max_hops):
+        host = urlparse(current_url).netloc
+        if not host or not _is_safe_domain(host):
             return None
+        try:
+            response = requests.get(
+                current_url, headers=HEADERS, timeout=timeout,
+                allow_redirects=False, stream=True,
+            )
+        except Exception:
+            return None
+        if response.status_code in (301, 302, 303, 307, 308):
+            location = response.headers.get("Location", "")
+            response.close()
+            if not location:
+                return None
+            current_url = urljoin(current_url, location)
+            continue
         return response
-    except Exception:
-        return None
+    return None
 
 
 def _icon_score(url: str, rel: str = "", sizes: str = "") -> tuple[int, int, int]:
