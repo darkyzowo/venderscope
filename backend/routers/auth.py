@@ -161,7 +161,10 @@ def login(
     # Per-account lockout check (fail-open). Counts recent failures for this
     # account; never reveals whether the account exists (generic 429).
     try:
-        window_start = datetime.now(timezone.utc) - timedelta(minutes=_LOGIN_LOCKOUT_WINDOW_MIN)
+        # AuditLog.created_at is a naive (timezone-less) column. Compare against a
+        # naive UTC value — a tz-aware value raises on PostgreSQL and aborts the
+        # transaction (SQLite is lenient, which is why tests didn't catch it).
+        window_start = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(minutes=_LOGIN_LOCKOUT_WINDOW_MIN)
         recent_failures = (
             db.query(AuditLog)
             .filter(
@@ -172,7 +175,8 @@ def login(
             .count()
         )
     except Exception:
-        recent_failures = 0  # fail-open — don't block legitimate logins on a DB/logging hiccup
+        db.rollback()  # clear any aborted transaction so the user lookup below still works
+        recent_failures = 0  # fail-open — never block a legitimate login on a lockout-query hiccup
     if recent_failures >= _LOGIN_LOCKOUT_THRESHOLD:
         audit(db, "login.locked", request, detail=f"account={account_key}")
         raise HTTPException(
